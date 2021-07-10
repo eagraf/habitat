@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 
+	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/rs/zerolog/log"
 )
 
@@ -33,12 +36,29 @@ func main() {
 }
 
 func handleRequest(conn net.Conn) error {
-	buf, err := ioutil.ReadAll(conn)
+	buf, err := bufio.NewReader(conn).ReadBytes('\n')
 	if err != nil {
 		return err
 	}
 
 	fmt.Println(string(buf))
+
+	marshalled, err := json.Marshal(&ctl.Response{Status: 0})
+	if err != nil {
+		return err
+	}
+
+	// base64 encode to make sure newlines are not present in bytes sent
+	encoded := base64.StdEncoding.EncodeToString(marshalled)
+
+	msg := append([]byte(encoded), '\n')
+
+	_, err = conn.Write(msg)
+	if err != nil {
+		return err
+	}
+
+	conn.Close()
 
 	return nil
 }
