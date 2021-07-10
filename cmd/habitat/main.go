@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/rs/zerolog/log"
 )
@@ -16,7 +17,18 @@ const (
 	ListenerPort = "2040"
 )
 
+// TODO dependency inject this state so we don't use globals
+var (
+	ProcessManager *procs.Manager
+)
+
 func main() {
+	ProcessManager = procs.NewManager()
+
+	listen()
+}
+
+func listen() {
 	// TODO make port number configurable
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", ListenerHost, ListenerPort))
 	if err != nil {
@@ -95,12 +107,40 @@ func decodeRequest(buf []byte) (*ctl.Request, error) {
 func requestRouter(req *ctl.Request) (*ctl.Response, error) {
 	switch req.Command {
 	case ctl.CommandStart:
+		if len(req.Args) != 1 {
+			return nil, fmt.Errorf("start has %d arguments, expected 1", len(req.Args))
+		}
+
+		err := ProcessManager.StartProcess(req.Args[0])
+		if err != nil {
+			return &ctl.Response{
+				Status:  ctl.StatusInternalServerError,
+				Message: err.Error(),
+			}, nil
+		}
+		fmt.Println(ProcessManager.Procs)
+
 		return &ctl.Response{
-			Status: ctl.StatusOK,
+			Status:  ctl.StatusOK,
+			Message: fmt.Sprintf("started process %s", req.Args[0]),
 		}, nil
 	case ctl.CommandStop:
+		if len(req.Args) != 1 {
+			return nil, fmt.Errorf("stop has %d arguments, expected 1", len(req.Args))
+		}
+
+		err := ProcessManager.StopProcess(req.Args[0])
+		if err != nil {
+			return &ctl.Response{
+				Status:  ctl.StatusInternalServerError,
+				Message: err.Error(),
+			}, nil
+		}
+		fmt.Println(ProcessManager.Procs)
+
 		return &ctl.Response{
-			Status: ctl.StatusOK,
+			Status:  ctl.StatusOK,
+			Message: fmt.Sprintf("stopped process %s", req.Args[0]),
 		}, nil
 	default:
 		return &ctl.Response{

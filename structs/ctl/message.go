@@ -3,6 +3,7 @@ package ctl
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 )
 
 const (
@@ -15,12 +16,13 @@ const (
 )
 
 type Request struct {
-	Command string `json:"command"`
+	Command string   `json:"command"`
+	Args    []string `json:"args"`
 }
 
 type Response struct {
-	Status  int
-	Message string
+	Status  int    `json:"status"`
+	Message string `json:"message"`
 }
 
 func (r *Response) Encode() ([]byte, error) {
@@ -35,4 +37,11 @@ func (r *Response) Encode() ([]byte, error) {
 	msg := append([]byte(encoded), '\n')
 
 	return msg, nil
+}
+
+func (r *Response) String() string {
+	if r.Status != 0 {
+		return fmt.Sprintf("Error: %s", r.Message)
+	}
+	return r.Message
 }

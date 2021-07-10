@@ -5,30 +5,30 @@ import (
 
 	"github.com/eagraf/habitat/cmd/habitatctl/client"
 	"github.com/eagraf/habitat/structs/ctl"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
-	Use:   "start",
+	Use:   "start [process]",
 	Short: "Starts a habitat process",
 	Long:  `TODO create long description`,
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("start called")
-
 		client, err := client.NewClient()
 		if err != nil {
-			log.Error().Msgf("error creating client: %s", err)
+			fmt.Println("Error: couldn't connect to habitat service")
+			return
 		}
 
 		client.WriteRequest(&ctl.Request{
 			Command: "start",
+			Args:    args,
 		})
 
 		res, err := client.ReadResponse()
 		if err != nil {
-			log.Error().Msgf("error reading response: %s", err)
+			fmt.Println("Error: couldn't read response from habitat service")
 		}
 		fmt.Println(res)
 	},
