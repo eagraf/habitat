@@ -10,4 +10,4 @@ clean :
 	rm -rf $(BIN_DIR)
 
 run-dev : build
-	$(BIN_DIR)/habitat
+	$(BIN_DIR)/habitat --procdir $(DEV_PROC_DIR)

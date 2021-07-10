@@ -1,18 +1,19 @@
 package procs
 
-import "fmt"
-
-type Proc struct {
-	Name string
-}
+import (
+	"fmt"
+	"path/filepath"
+)
 
 type Manager struct {
-	Procs map[string]*Proc
+	ProcDir string
+	Procs   map[string]*Proc
 }
 
-func NewManager() *Manager {
+func NewManager(procDir string) *Manager {
 	return &Manager{
-		Procs: make(map[string]*Proc),
+		ProcDir: procDir,
+		Procs:   make(map[string]*Proc),
 	}
 }
 
@@ -20,9 +21,15 @@ func (m *Manager) StartProcess(name string) error {
 	if _, ok := m.Procs[name]; ok {
 		return fmt.Errorf("process with name %s already exists", name)
 	}
-	m.Procs[name] = &Proc{
-		Name: name,
+	procDir := filepath.Join(m.ProcDir, name)
+
+	proc := NewProc(name, procDir)
+	err := proc.Start()
+	if err != nil {
+		return err
 	}
+
+	m.Procs[name] = proc
 	return nil
 }
 

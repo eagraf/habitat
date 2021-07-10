@@ -6,10 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -23,7 +26,19 @@ var (
 )
 
 func main() {
-	ProcessManager = procs.NewManager()
+	pflag.String("procdir", "", "directory where process configs are stored")
+
+	pflag.Parse()
+	viper.BindPFlags(pflag.CommandLine)
+
+	procDir := viper.GetString("procdir")
+
+	_, err := os.Stat(procDir)
+	if err != nil {
+		log.Fatal().Msgf("invalid proc directory: %s", err)
+	}
+
+	ProcessManager = procs.NewManager(procDir)
 
 	listen()
 }
