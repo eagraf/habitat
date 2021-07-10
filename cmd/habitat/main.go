@@ -43,15 +43,30 @@ func handleRequest(conn net.Conn) error {
 
 	fmt.Println(string(buf))
 
-	marshalled, err := json.Marshal(&ctl.Response{Status: 0})
+	req, err := decodeRequest(buf)
+	if err != nil {
+		return writeResponse(conn, &ctl.Response{
+			Status:  ctl.StatusBadRequest,
+			Message: err.Error(),
+		})
+	}
+
+	res, err := requestRouter(req)
+	if err != nil {
+		return writeResponse(conn, &ctl.Response{
+			Status:  ctl.StatusInternalServerError,
+			Message: err.Error(),
+		})
+	}
+
+	return writeResponse(conn, res)
+}
+
+func writeResponse(conn net.Conn, res *ctl.Response) error {
+	msg, err := res.Encode()
 	if err != nil {
 		return err
 	}
-
-	// base64 encode to make sure newlines are not present in bytes sent
-	encoded := base64.StdEncoding.EncodeToString(marshalled)
-
-	msg := append([]byte(encoded), '\n')
 
 	_, err = conn.Write(msg)
 	if err != nil {
@@ -59,6 +74,38 @@ func handleRequest(conn net.Conn) error {
 	}
 
 	conn.Close()
-
 	return nil
+}
+
+func decodeRequest(buf []byte) (*ctl.Request, error) {
+	decoded, err := base64.StdEncoding.DecodeString(string(buf))
+	if err != nil {
+		return nil, err
+	}
+
+	var req ctl.Request
+	err = json.Unmarshal(decoded, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &req, nil
+}
+
+func requestRouter(req *ctl.Request) (*ctl.Response, error) {
+	switch req.Command {
+	case ctl.CommandStart:
+		return &ctl.Response{
+			Status: ctl.StatusOK,
+		}, nil
+	case ctl.CommandStop:
+		return &ctl.Response{
+			Status: ctl.StatusOK,
+		}, nil
+	default:
+		return &ctl.Response{
+			Status:  ctl.StatusBadRequest,
+			Message: fmt.Sprintf("command %s does not exist", req.Command),
+		}, nil
+	}
 }

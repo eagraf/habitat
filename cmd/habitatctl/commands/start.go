@@ -24,7 +24,6 @@ var startCmd = &cobra.Command{
 
 		client.WriteRequest(&ctl.Request{
 			Command: "start",
-			Text:    "Hola senor",
 		})
 
 		res, err := client.ReadResponse()
