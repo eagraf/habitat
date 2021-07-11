@@ -1,17 +1,19 @@
 package procs
 
 import (
-	"context"
+	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 )
 
 type Proc struct {
-	Name   string
-	Path   string
-	cancel context.CancelFunc
+	Name string
+	Path string
+
+	cmd *exec.Cmd
 }
 
 func NewProc(name, path string) *Proc {
@@ -22,9 +24,6 @@ func NewProc(name, path string) *Proc {
 }
 
 func (p *Proc) Start() error {
-	ctx, cancel := context.WithCancel(context.Background())
-	p.cancel = cancel
-
 	// make sure that proc dir exists
 	fileInfo, err := os.Stat(p.Path)
 	if err != nil {
@@ -36,17 +35,43 @@ func (p *Proc) Start() error {
 
 	// start process
 	startPath := filepath.Join(p.Path, "start.sh")
-	cmd := exec.CommandContext(ctx, startPath)
-	buf, err := cmd.Output()
+	cmd := exec.Command(startPath)
+
+	// start this process with a groupd id equal to its pid. this allows for all of its subprocesses to be killed
+	// at once by passing in the negative pid to syscall.Kill
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	p.cmd = cmd
+
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(buf))
+
+	scanner := bufio.NewScanner(stdout)
+
+	// TODO log output without blocking
+	// TODO watch stderr as well
+	err = cmd.Start()
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for scanner.Scan() {
+			line := scanner.Text()
+			fmt.Println(line)
+		}
+	}()
 
 	return nil
 }
 
 func (p *Proc) Stop() error {
-	p.cancel()
+	// TODO make sure this works on all operating systems
+	// passing in negative pid makes sure all child processes are killed as well
+	err := syscall.Kill(-p.cmd.Process.Pid, syscall.SIGKILL)
+	if err != nil {
+		return err
+	}
 	return nil
 }
