@@ -67,6 +67,34 @@ func (p *Proc) Start() error {
 }
 
 func (p *Proc) Stop() error {
+	// if stop.sh script exists, execute it
+	stopPath := filepath.Join(p.Path, "stop.sh")
+	if _, err := os.Stat(stopPath); err == nil {
+		// stop process
+		cmd := exec.Command(stopPath)
+
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			return err
+		}
+
+		errScanner := bufio.NewScanner(stderr)
+
+		// TODO log output without blocking
+		err = cmd.Start()
+		if err != nil {
+			return err
+		}
+
+		go func() {
+			for errScanner.Scan() {
+				line := errScanner.Text()
+				fmt.Println(line)
+			}
+		}()
+	}
+
+	// force kill process afterwards
 	// TODO make sure this works on all operating systems
 	// passing in negative pid makes sure all child processes are killed as well
 	err := syscall.Kill(-p.cmd.Process.Pid, syscall.SIGKILL)
