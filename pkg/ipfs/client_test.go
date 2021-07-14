@@ -20,3 +20,17 @@ func TestVersion(t *testing.T) {
 
 	fmt.Println(version)
 }
+
+func TestListFiles(t *testing.T) {
+	client, err := NewClient("http://localhost:5001/api/v0")
+	if err != nil {
+		t.Error(err)
+	}
+
+	version, err := client.ListFiles()
+	if err != nil {
+		t.Error(err)
+	}
+
+	fmt.Println(version)
+}

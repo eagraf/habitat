@@ -69,3 +69,24 @@ func (c *Client) GetVersion() (*VersionResponse, error) {
 
 	return &res, nil
 }
+
+type ListFilesResponseEntry struct {
+	Hash string
+	Name string
+	Size int64
+	Type int
+}
+
+type ListFilesResponse struct {
+	Entries []*ListFilesResponseEntry
+}
+
+func (c *Client) ListFiles() (*ListFilesResponse, error) {
+	var res ListFilesResponse
+	err := c.postRequest("files/ls", nil, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
