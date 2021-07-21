@@ -47,10 +47,14 @@ func (p *Proc) Start() error {
 		return err
 	}
 
-	scanner := bufio.NewScanner(stdout)
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
 
-	// TODO log output without blocking
-	// TODO watch stderr as well
+	scanner := bufio.NewScanner(stdout)
+	errScanner := bufio.NewScanner(stderr)
+
 	err = cmd.Start()
 	if err != nil {
 		return err
@@ -59,6 +63,13 @@ func (p *Proc) Start() error {
 	go func() {
 		for scanner.Scan() {
 			line := scanner.Text()
+			fmt.Println(line)
+		}
+	}()
+
+	go func() {
+		for errScanner.Scan() {
+			line := errScanner.Text()
 			fmt.Println(line)
 		}
 	}()
@@ -73,18 +84,30 @@ func (p *Proc) Stop() error {
 		// stop process
 		cmd := exec.Command(stopPath)
 
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			return err
+		}
+
 		stderr, err := cmd.StderrPipe()
 		if err != nil {
 			return err
 		}
 
+		scanner := bufio.NewScanner(stdout)
 		errScanner := bufio.NewScanner(stderr)
 
-		// TODO log output without blocking
 		err = cmd.Start()
 		if err != nil {
 			return err
 		}
+
+		go func() {
+			for scanner.Scan() {
+				line := scanner.Text()
+				fmt.Println(line)
+			}
+		}()
 
 		go func() {
 			for errScanner.Scan() {
