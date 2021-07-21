@@ -1,4 +1,4 @@
 #!/bin/bash
 
-docker stop nginx
-docker rm nginx
+docker stop habitat_nginx
+docker rm habitat_nginx
