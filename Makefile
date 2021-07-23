@@ -12,8 +12,8 @@ clean :
 run-dev : build
 	$(BIN_DIR)/habitat --procdir $(DEV_PROC_DIR)
 
-
-install-notes : apps/notes/out
+install-notes : 
+	$(MAKE) -C apps/notes all
 	mkdir -p $(DEV_PROC_DIR)/notes_backend/bin
 	cp -r $(APPS_DIR)/notes/out/backend/* $(DEV_PROC_DIR)/notes_backend/bin
 	cp -r $(APPS_DIR)/notes/out/frontend/* $(DEV_PROC_DIR)/nginx/content
