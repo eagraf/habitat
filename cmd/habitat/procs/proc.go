@@ -7,19 +7,24 @@ import (
 	"os/exec"
 	"path/filepath"
 	"syscall"
+
+	"github.com/rs/zerolog/log"
 )
 
 type Proc struct {
 	Name string
 	Path string
 
-	cmd *exec.Cmd
+	cmd     *exec.Cmd
+	errChan chan ProcError
 }
 
-func NewProc(name, path string) *Proc {
+func NewProc(name, path string, errChan chan ProcError) *Proc {
 	return &Proc{
 		Name: name,
 		Path: path,
+
+		errChan: errChan,
 	}
 }
 
@@ -71,6 +76,21 @@ func (p *Proc) Start() error {
 		for errScanner.Scan() {
 			line := errScanner.Text()
 			fmt.Println(line)
+		}
+	}()
+
+	go func() {
+		err := cmd.Wait()
+		if err != nil {
+			if _, ok := err.(*exec.ExitError); ok {
+				procErr := ProcError{
+					proc:    p,
+					message: err.Error(),
+				}
+				p.errChan <- procErr
+			} else {
+				log.Error().Msgf("process %s encountered error: %s", p.Name, err)
+			}
 		}
 	}()
 

@@ -39,6 +39,7 @@ func main() {
 	}
 
 	ProcessManager = procs.NewManager(procDir)
+	go ProcessManager.ListenForErrors()
 
 	listen()
 }
