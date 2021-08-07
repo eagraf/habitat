@@ -2,9 +2,10 @@
 
 export SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 export IPFS_PATH=$SCRIPT_DIR/ipfs
-echo $IPFS_PATH
 
-if [ -f "$IPFS_PATH" ]; then
+if [ ! -f "$IPFS_PATH" ]; then
+    a="initializing IPFS in "
+    echo $a$IPFS_PATH
     ipfs init
 else 
     echo "ipfs already initialized"
