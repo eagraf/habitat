@@ -15,5 +15,6 @@ run-dev : build
 install-notes : 
 	$(MAKE) -C apps/notes all
 	mkdir -p $(DEV_PROC_DIR)/notes_backend/bin
-	cp -r $(APPS_DIR)/notes/out/backend/* $(DEV_PROC_DIR)/notes_backend/bin
-	cp -r $(APPS_DIR)/notes/out/frontend/* $(DEV_PROC_DIR)/nginx/content
+	mkdir -p $(DEV_PROC_DIR)/nginx/content
+	cp -R $(APPS_DIR)/notes/out/backend/* $(DEV_PROC_DIR)/notes_backend/bin
+	cp -R $(APPS_DIR)/notes/out/frontend/* $(DEV_PROC_DIR)/nginx/content

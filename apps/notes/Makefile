@@ -11,7 +11,7 @@ build-frontend :
 	rm -rf $(MKFILE_PATH)frontend/build/*
 	mkdir -p $(OUT_DIR)/frontend
 	$(MAKE) -C frontend build-frontend
-	cp -r $(MKFILE_PATH)frontend/build/* $(OUT_DIR)/frontend
+	cp -R $(MKFILE_PATH)frontend/build/* $(OUT_DIR)/frontend
 
 build-backend : 
 	mkdir -p $(OUT_DIR)/backend
