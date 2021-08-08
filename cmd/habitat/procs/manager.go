@@ -3,6 +3,7 @@ package procs
 import (
 	"fmt"
 	"path/filepath"
+	"sync"
 
 	"github.com/rs/zerolog/log"
 )
@@ -12,6 +13,7 @@ type Manager struct {
 	Procs   map[string]*Proc
 
 	errChan chan ProcError
+	lock    *sync.Mutex
 }
 
 func NewManager(procDir string) *Manager {
@@ -20,10 +22,14 @@ func NewManager(procDir string) *Manager {
 		Procs:   make(map[string]*Proc),
 
 		errChan: make(chan ProcError),
+		lock:    &sync.Mutex{},
 	}
 }
 
 func (m *Manager) StartProcess(name string) error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	if _, ok := m.Procs[name]; ok {
 		return fmt.Errorf("process with name %s already exists", name)
 	}
@@ -40,6 +46,9 @@ func (m *Manager) StartProcess(name string) error {
 }
 
 func (m *Manager) StopProcess(name string) error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	if _, ok := m.Procs[name]; !ok {
 		return fmt.Errorf("process with name %s does not exist", name)
 	}
@@ -55,13 +64,9 @@ func (m *Manager) ListenForErrors() {
 	for {
 		procErr := <-m.errChan
 		log.Error().Msg(procErr.String())
+
 		// try stop command in case it has any clean up, don't worry too much about errors
-		err := m.Procs[procErr.proc.Name].Stop()
-		if err != nil {
-			log.Error().Msg(err.Error())
-		}
-		// remove process, since we know it exited
-		delete(m.Procs, procErr.proc.Name)
+		m.StopProcess(procErr.proc.Name)
 	}
 }
 
