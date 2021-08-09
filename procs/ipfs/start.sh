@@ -11,4 +11,4 @@ else
     echo "ipfs already initialized"
 fi
 
-docker run --net=host --name=habitat_ipfs --mount type=bind,src=$IPFS_PATH,dst=/data/ipfs --mount type=bind,src=$SCRIPT_DIR/start_ipfs_with_config.sh,dst=/usr/local/bin/start.sh --entrypoint /usr/local/bin/start.sh -p 4001:4001 -p 5001:5001 -p 8080:8080 ipfs/go-ipfs  daemon --migrate=true
+ipfs daemon
