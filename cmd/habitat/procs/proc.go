@@ -98,6 +98,17 @@ func (p *Proc) Start() error {
 }
 
 func (p *Proc) Stop() error {
+	terminateProcess := func(pid int) {
+		// force kill process afterwards
+		// TODO make sure this works on all operating systems
+		// passing in negative pid makes sure all child processes are killed as well
+		err := syscall.Kill(-pid, syscall.SIGTERM)
+		if err != nil {
+			log.Error().Msg(err.Error())
+		}
+	}
+	defer terminateProcess(p.cmd.Process.Pid)
+
 	// if stop.sh script exists, execute it
 	stopPath := filepath.Join(p.Path, "stop.sh")
 	if _, err := os.Stat(stopPath); err == nil {
@@ -137,12 +148,5 @@ func (p *Proc) Stop() error {
 		}()
 	}
 
-	// force kill process afterwards
-	// TODO make sure this works on all operating systems
-	// passing in negative pid makes sure all child processes are killed as well
-	err := syscall.Kill(-p.cmd.Process.Pid, syscall.SIGKILL)
-	if err != nil {
-		return err
-	}
 	return nil
 }
