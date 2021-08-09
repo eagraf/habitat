@@ -70,6 +70,15 @@ func (m *Manager) ListenForErrors() {
 	}
 }
 
+func (m *Manager) StopAllProcesses() {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	for _, proc := range m.Procs {
+		proc.Stop()
+	}
+}
+
 type ProcError struct {
 	message string
 	proc    *Proc

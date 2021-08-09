@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/signal"
 
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/structs/ctl"
@@ -40,6 +41,7 @@ func main() {
 
 	ProcessManager = procs.NewManager(procDir)
 	go ProcessManager.ListenForErrors()
+	go handleInterupt(ProcessManager)
 
 	listen()
 }
@@ -164,4 +166,12 @@ func requestRouter(req *ctl.Request) (*ctl.Response, error) {
 			Message: fmt.Sprintf("command %s does not exist", req.Command),
 		}, nil
 	}
+}
+
+func handleInterupt(manager *procs.Manager) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	<-c
+	manager.StopAllProcesses()
+	os.Exit(1)
 }
