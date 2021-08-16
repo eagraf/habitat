@@ -16,6 +16,7 @@ build-frontend :
 build-backend : 
 	mkdir -p $(OUT_DIR)/backend
 	go build -o $(OUT_DIR)/backend/notes-api github.com/eagraf/habitat/apps/notes/backend/cmd/api
+	GOOS=linux GOARCH=amd64 go build -o $(OUT_DIR)/backend/amd64-linux/notes-api github.com/eagraf/habitat/apps/notes/backend/cmd/api
 
 .PHONY: out
 out : build-frontend build-backend
