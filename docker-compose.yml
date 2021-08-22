@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+    habitat:
+        working_dir: /habitat
+        volumes:
+            - ./procs:/habitat/procs
+            - ./bin:/habitat/bin
+        command: /habitat/bin/amd64-linux/habitat --procdir /habitat/procs
+        image: ubuntu:latest
+        build: .
+        ports:
+            - 2040:2040
+            - 8000:8000
