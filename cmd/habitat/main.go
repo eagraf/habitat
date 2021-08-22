@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	ListenerHost = "localhost"
+	ListenerHost = "0.0.0.0"
 	ListenerPort = "2040"
 )
 
