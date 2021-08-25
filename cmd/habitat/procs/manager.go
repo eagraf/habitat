@@ -3,6 +3,7 @@ package procs
 import (
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -14,6 +15,8 @@ type Manager struct {
 
 	errChan chan ProcError
 	lock    *sync.Mutex
+
+	archOS string
 }
 
 func NewManager(procDir string) *Manager {
@@ -23,6 +26,8 @@ func NewManager(procDir string) *Manager {
 
 		errChan: make(chan ProcError),
 		lock:    &sync.Mutex{},
+
+		archOS: runtime.GOARCH + "-" + runtime.GOOS,
 	}
 }
 
@@ -33,9 +38,10 @@ func (m *Manager) StartProcess(name string) error {
 	if _, ok := m.Procs[name]; ok {
 		return fmt.Errorf("process with name %s already exists", name)
 	}
-	procDir := filepath.Join(m.ProcDir, name)
 
-	proc := NewProc(name, procDir, m.errChan)
+	cmdPath := filepath.Join(m.ProcDir, "bin", m.archOS, name)
+	dataPath := filepath.Join(m.ProcDir, "data", name)
+	proc := NewProc(name, cmdPath, dataPath, m.errChan)
 	err := proc.Start()
 	if err != nil {
 		return err
