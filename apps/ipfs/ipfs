@@ -1,7 +1,6 @@
 #!/bin/bash
 
-export SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-export IPFS_PATH=$SCRIPT_DIR/ipfs
+export IPFS_PATH=$DATA_DIR
 
 if [ ! -f "$IPFS_PATH" ]; then
     a="initializing IPFS in "
