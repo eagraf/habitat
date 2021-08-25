@@ -13,9 +13,26 @@ clean :
 run-dev : build
 	$(BIN_DIR)/habitat --procdir $(DEV_PROC_DIR)
 
+install-setup :
+	rm -rf $(DEV_PROC_DIR)/bin/*
+	rm -rf $(DEV_PROC_DIR)/web/*
+	mkdir -p $(DEV_PROC_DIR)/bin/amd64-linux $(DEV_PROC_DIR)/bin/amd64-darwin
+	mkdir -p $(DEV_PROC_DIR)/web
+	mkdir -p $(DEV_PROC_DIR)/data
+
+install-ipfs :
+	mkdir -p $(DEV_PROC_DIR)/bin/amd64-linux $(DEV_PROC_DIR)/bin/amd64-darwin
+	mkdir -p $(DEV_PROC_DIR)/web
+	mkdir -p $(DEV_PROC_DIR)/data
+	cp $(APPS_DIR)/ipfs/ipfs $(DEV_PROC_DIR)/bin/amd64-linux
+	cp $(APPS_DIR)/ipfs/ipfs $(DEV_PROC_DIR)/bin/amd64-darwin
+
 install-notes : 
 	$(MAKE) -C apps/notes all
-	mkdir -p $(DEV_PROC_DIR)/notes_backend/bin
-	mkdir -p $(DEV_PROC_DIR)/nginx/content
-	cp -R $(APPS_DIR)/notes/out/backend/* $(DEV_PROC_DIR)/notes_backend/bin
-	cp -R $(APPS_DIR)/notes/out/frontend/* $(DEV_PROC_DIR)/nginx/content
+	cp $(APPS_DIR)/notes/out/backend/amd64-linux/notes_backend $(DEV_PROC_DIR)/bin/amd64-linux/notes_backend
+	cp $(APPS_DIR)/notes/out/backend/amd64-darwin/notes_backend $(DEV_PROC_DIR)/bin/amd64-darwin/notes_backend
+
+	mkdir -p $(DEV_PROC_DIR)/web/notes_backend
+	cp -R $(APPS_DIR)/notes/out/frontend/* $(DEV_PROC_DIR)/web/notes_backend
+
+install: install-setup install-notes install-ipfs
