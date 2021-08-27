@@ -1,6 +1,8 @@
 import React from 'react';
 import axios, { CancelTokenSource } from 'axios';
 import './App.css';
+import SideMenu from './SideMenu';
+import Editor from './Editor';
 
 interface ListFilesResponse {
   name: string
@@ -88,9 +90,9 @@ const FileList = () => {
 
 function App() {
   return (
-    <div className="App">
-      Welcome to Notes
-      <FileList></FileList>
+    <div className="app">
+        <SideMenu />
+        <Editor />
     </div>
   );
 }
