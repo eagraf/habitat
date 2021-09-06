@@ -32,7 +32,7 @@ install-notes :
 	cp $(APPS_DIR)/notes/out/backend/amd64-linux/notes_backend $(DEV_PROC_DIR)/bin/amd64-linux/notes_backend
 	cp $(APPS_DIR)/notes/out/backend/amd64-darwin/notes_backend $(DEV_PROC_DIR)/bin/amd64-darwin/notes_backend
 
-	mkdir -p $(DEV_PROC_DIR)/web/notes_backend
-	cp -R $(APPS_DIR)/notes/out/frontend/* $(DEV_PROC_DIR)/web/notes_backend
+	mkdir -p $(DEV_PROC_DIR)/web/notes
+	cp -R $(APPS_DIR)/notes/out/frontend/* $(DEV_PROC_DIR)/web/notes
 
 install: install-setup install-notes install-ipfs
