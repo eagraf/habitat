@@ -6,12 +6,16 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/eagraf/habitat/cmd/habitat/proxy"
+	"github.com/eagraf/habitat/structs/configuration"
 	"github.com/rs/zerolog/log"
 )
 
 type Manager struct {
-	ProcDir string
-	Procs   map[string]*Proc
+	ProcDir    string
+	Procs      map[string]*Proc
+	ProxyRules proxy.RuleSet
+	AppConfigs *configuration.AppConfiguration
 
 	errChan chan ProcError
 	lock    *sync.Mutex
@@ -19,10 +23,12 @@ type Manager struct {
 	archOS string
 }
 
-func NewManager(procDir string) *Manager {
+func NewManager(procDir string, rules proxy.RuleSet, appConfigs *configuration.AppConfiguration) *Manager {
 	return &Manager{
-		ProcDir: procDir,
-		Procs:   make(map[string]*Proc),
+		ProcDir:    procDir,
+		Procs:      make(map[string]*Proc),
+		ProxyRules: rules,
+		AppConfigs: appConfigs,
 
 		errChan: make(chan ProcError),
 		lock:    &sync.Mutex{},
@@ -35,16 +41,30 @@ func (m *Manager) StartProcess(name string) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
+	appConfig, ok := m.AppConfigs.Apps[name]
+	if !ok {
+		return fmt.Errorf("no app with name %s in app configurations", name)
+	}
+
 	if _, ok := m.Procs[name]; ok {
 		return fmt.Errorf("process with name %s already exists", name)
 	}
 
-	cmdPath := filepath.Join(m.ProcDir, "bin", m.archOS, name)
+	cmdPath := filepath.Join(m.ProcDir, "bin", m.archOS, appConfig.Bin)
 	dataPath := filepath.Join(m.ProcDir, "data", name)
 	proc := NewProc(name, cmdPath, dataPath, m.errChan)
 	err := proc.Start()
 	if err != nil {
 		return err
+	}
+
+	// Update reverse proxy ruleset
+	for _, ruleConfig := range appConfig.ProxyRules {
+		rule, err := proxy.GetRuleFromConfig(ruleConfig, m.ProcDir)
+		if err != nil {
+			return err
+		}
+		m.ProxyRules.Add(ruleConfig.Hash(), rule)
 	}
 
 	m.Procs[name] = proc
@@ -63,6 +83,18 @@ func (m *Manager) StopProcess(name string) error {
 		return err
 	}
 	delete(m.Procs, name)
+
+	appConfig, ok := m.AppConfigs.Apps[name]
+	if !ok {
+		return fmt.Errorf("no app with name %s in app configurations", name)
+	}
+
+	// Remove from proxy ruleset
+	for _, rule := range appConfig.ProxyRules {
+		fmt.Printf("removing rule %s", rule.Hash())
+		m.ProxyRules.Remove(rule.Hash())
+	}
+
 	return nil
 }
 

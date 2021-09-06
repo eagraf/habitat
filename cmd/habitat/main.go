@@ -8,8 +8,11 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 
 	"github.com/eagraf/habitat/cmd/habitat/procs"
+	"github.com/eagraf/habitat/cmd/habitat/proxy"
+	"github.com/eagraf/habitat/structs/configuration"
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/pflag"
@@ -17,8 +20,10 @@ import (
 )
 
 const (
-	ListenerHost = "0.0.0.0"
-	ListenerPort = "2040"
+	HabitatCTLHost   = "0.0.0.0"
+	HabitatCTLPort   = "2040"
+	ReverseProxyHost = "0.0.0.0"
+	ReverseProxyPort = "2041"
 )
 
 // TODO dependency inject this state so we don't use globals
@@ -39,7 +44,18 @@ func main() {
 		log.Fatal().Msgf("invalid proc directory: %s", err)
 	}
 
-	ProcessManager = procs.NewManager(procDir)
+	// Read apps configuration in proc dir
+	appConfigs, err := configuration.ReadAppConfigs(filepath.Join(procDir, "apps.yml"))
+	if err != nil {
+		log.Fatal().Msgf("proc dir does not contain apps.yml")
+	}
+
+	// Start reverse proxy
+	reverseProxy := proxy.NewServer()
+	go reverseProxy.Start(fmt.Sprintf("%s:%s", ReverseProxyHost, ReverseProxyPort))
+
+	// Start process manager
+	ProcessManager = procs.NewManager(procDir, reverseProxy.Rules, appConfigs)
 	go ProcessManager.ListenForErrors()
 	go handleInterupt(ProcessManager)
 
@@ -48,13 +64,13 @@ func main() {
 
 func listen() {
 	// TODO make port number configurable
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", ListenerHost, ListenerPort))
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", HabitatCTLHost, HabitatCTLPort))
 	if err != nil {
 		log.Fatal().Msgf("habitat service listener failed to start: %s", err)
 	}
 	defer listener.Close()
 
-	log.Info().Msgf("habitat service listening on %s:%s", ListenerHost, ListenerPort)
+	log.Info().Msgf("habitat service listening on %s:%s", HabitatCTLHost, HabitatCTLPort)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {

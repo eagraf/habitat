@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/eagraf/habitat/structs/configuration"
 	"github.com/rs/zerolog/log"
 )
 
@@ -129,5 +130,26 @@ func (r *RedirectRule) Handler() http.Handler {
 			rw.WriteHeader(http.StatusInternalServerError)
 			rw.Write([]byte(err.Error()))
 		},
+	}
+}
+
+func GetRuleFromConfig(config *configuration.ProxyRule, procDir string) (Rule, error) {
+	switch config.Type {
+	case configuration.ProxyRuleFileServer:
+		return &FileServerRule{
+			Matcher: config.Matcher,
+			Path:    filepath.Join(procDir, "web", config.Target),
+		}, nil
+	case configuration.ProxyRuleRedirect:
+		targetURL, err := url.Parse(config.Target)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing url for RedirectRule: %s", err)
+		}
+		return &RedirectRule{
+			Matcher:         config.Matcher,
+			ForwardLocation: targetURL,
+		}, nil
+	default:
+		return nil, fmt.Errorf("no proxy rule type %s", config.Type)
 	}
 }
