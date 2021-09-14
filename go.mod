@@ -5,6 +5,10 @@ go 1.15
 require (
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
+	github.com/ipfs/go-ipfs v0.11.0
+	github.com/ipfs/interface-go-ipfs-core v0.5.2
+	github.com/libp2p/go-libp2p-core v0.13.0
+	github.com/multiformats/go-multiaddr v0.5.0
 	github.com/ogier/pflag v0.0.1 // indirect
 	github.com/rs/zerolog v1.23.0
 	github.com/spf13/cobra v1.2.1
