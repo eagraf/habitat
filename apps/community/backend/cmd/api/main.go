@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"os/exec"
 
 	"github.com/eagraf/habitat/pkg/ipfs"
 	"github.com/gorilla/mux"
@@ -23,11 +24,22 @@ type CommunityConfig struct {
 	Peers          []string // peer identities of nodes that are just peers
 }
 
+// This is a data structure that represents all the communities the user is a part of
+type UserCommunities struct {
+	Communities []CommunityConfig
+}
+
+
 func main() {
 	log.Info().Msg("starting communities api")
 
 	r := mux.NewRouter()
-
+	r.HandleFunc("/home", HomeHandler)
+	r.HandleFunc("/create", CreateHandler)
+	r.HandleFunc("/join", JoinHandler)
+	// at some point this should be abstracted away from user
+	// I'm imagining a side panel and when you click on a community name it connects
+	r.HandleFunc("/connect", ConnectHandler)
 	http.Handle("/", r)
 
 	srv := &http.Server{
@@ -68,14 +80,49 @@ func KeyGen() string {
 		swarm key and name of it and peer ids in it
 */
 func CreateCommunity(name string, path string) (error, string, string) {
+
+	// how to get / set env var for root dir?
+	cmdCreate := &exec.Cmd {
+		Path: root + "/procs/bin/" + ostype + "/commstart.sh",
+		Args: []string{ bashcmd , path, },
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
+
+	fmt.Println("Command is ", cmdCreate.String())
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	api, err := ipfs.createNode(ctx, path, true)
+
+	api, err := ipfs.createNode(ctx, path, true) // change this to use CLI NOT coreapi
 	if err != nil {
 		return err, "", ""
 	}
 
 	return nil, KeyGen(), api.identity
+}
+
+type CommunityInfo struct {
+	Name string 		  `json:"name"`
+	Key string 			  `json:"key"`
+	BootstrapPeer string  `json:"bootstrap"`
+}
+
+func CreateHandler(w http.ResponseWriter, r http.Request) {
+	args := r.URL.Query()
+	name := args.Get("name")
+	if name == nil {
+		// error here
+		return
+	}
+
+	err, key, peerid := CreateCommunity(name, name)
+
+	resComm = &CommunityInfo{
+		Name: 			name,
+		Key: 			key,
+		BootstrapPeer:  peerid
+	}
 }
 
 /*
