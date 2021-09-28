@@ -1,16 +1,18 @@
 package main
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
-	"time"
+	"os"
 	"os/exec"
+	"time"
 
-	"github.com/eagraf/habitat/pkg/ipfs"
 	"github.com/gorilla/mux"
+	config "github.com/ipfs/go-ipfs-config"
 	"github.com/rs/zerolog/log"
 )
 
@@ -20,37 +22,13 @@ import (
 type CommunityConfig struct {
 	Name           string
 	SwarmKey       string
-	BootstrapPeers []string // peer identities of nodes that are bootstrap
-	Peers          []string // peer identities of nodes that are just peers
+	BootstrapPeers []string // addresses of nodes that are bootstrap
+	Peers          []string // peer ids of nodes
 }
 
 // This is a data structure that represents all the communities the user is a part of
 type UserCommunities struct {
 	Communities []CommunityConfig
-}
-
-
-func main() {
-	log.Info().Msg("starting communities api")
-
-	r := mux.NewRouter()
-	r.HandleFunc("/home", HomeHandler)
-	r.HandleFunc("/create", CreateHandler)
-	r.HandleFunc("/join", JoinHandler)
-	// at some point this should be abstracted away from user
-	// I'm imagining a side panel and when you click on a community name it connects
-	r.HandleFunc("/connect", ConnectHandler)
-	http.Handle("/", r)
-
-	srv := &http.Server{
-		Handler:      r,
-		Addr:         "0.0.0.0:8008",
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
-	}
-
-	log.Info().Msg("communities api listening on localhost:8000")
-	log.Fatal().Err(srv.ListenAndServe())
 }
 
 // from https://github.com/Kubuxu/go-ipfs-swarm-key-gen/blob/master/ipfs-swarm-key-gen/main.go
@@ -79,50 +57,72 @@ func KeyGen() string {
  TODO: 	create CommunityConfig struct which contains globals for the community like
 		swarm key and name of it and peer ids in it
 */
-func CreateCommunity(name string, path string) (error, string, string) {
+func CreateCommunity(name string, path string) (error, string, string, []string) {
 
+	root := os.Getenv("ROOT")
 	// how to get / set env var for root dir?
-	cmdCreate := &exec.Cmd {
-		Path: root + "/procs/bin/" + ostype + "/commstart.sh",
-		Args: []string{ bashcmd , path, },
+	cmdCreate := &exec.Cmd{
+		Path:   root + "/procs/start.sh",
+		Args:   []string{root + "/procs/start.sh", root + "/ipfs/" + path},
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
 
-	fmt.Println("Command is ", cmdCreate.String())
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	api, err := ipfs.createNode(ctx, path, true) // change this to use CLI NOT coreapi
-	if err != nil {
-		return err, "", ""
+	s := make([]string, 0)
+	fmt.Println(cmdCreate.String())
+	if err := cmdCreate.Run(); err != nil {
+		return err, "", "", s
 	}
 
-	return nil, KeyGen(), api.identity
+	bytes, _ := ioutil.ReadFile(root + "/ipfs/" + path + "/config")
+	var data config.Config
+	err := json.Unmarshal(bytes, &data)
+
+	if err != nil {
+		return err, "", "", s
+	}
+
+	// json struct of config : here we can modify it and write back
+
+	key := KeyGen()
+	keyBytes := []byte("/key/swarm/psk/1.0.0/\n/base16/\n" + key + "\n")
+	err = ioutil.WriteFile(root+"/ipfs/"+path+"/swarm.key", keyBytes, 0755)
+
+	return nil, key, data.Identity.PeerID, data.Addresses.Swarm
 }
 
 type CommunityInfo struct {
-	Name string 		  `json:"name"`
-	Key string 			  `json:"key"`
-	BootstrapPeer string  `json:"bootstrap"`
+	Name          string `json:"name"`
+	Key           string `json:"key"`
+	BootstrapPeer string `json:"bootstrap"`
 }
 
-func CreateHandler(w http.ResponseWriter, r http.Request) {
+func CreateHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Create handler called")
 	args := r.URL.Query()
 	name := args.Get("name")
-	if name == nil {
+	if name == "" {
 		// error here
+		log.Error().Msg("create handler: name argument not suppled")
 		return
 	}
 
-	err, key, peerid := CreateCommunity(name, name)
+	err, key, peerid, addrs := CreateCommunity(name, name)
 
-	resComm = &CommunityInfo{
-		Name: 			name,
-		Key: 			key,
-		BootstrapPeer:  peerid
+	if err != nil {
+		fmt.Println(err.Error())
 	}
+
+	CommConfig := &CommunityConfig{
+		Name:           name,
+		SwarmKey:       key,
+		BootstrapPeers: addrs,
+		Peers:          []string{peerid},
+	}
+
+	fmt.Println("Community Config is ", CommConfig)
+	bytes, err := json.Marshal(CommConfig)
+	w.Write(bytes)
 }
 
 /*
@@ -132,19 +132,74 @@ func CreateHandler(w http.ResponseWriter, r http.Request) {
  - Add swarm to swarm.key
  - Add bootstrap peers
  - Run daemon
- - Add regular peers
+ - Add regular peers ?
  - Return peer id: need to kick off some way for all other nodes to add this node
   can either use the api returned by createNode or connect to a new client
 */
-func JoinCommunity(name string, path string, key string, btsppeers []string, peers []string) string {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	api, err := ipfs.createNode(ctx, path, true)
-	if err != nil {
-		return err, "", ""
+func JoinCommunity(name string, path string, key string, btsppeers []string, peers []string) (error, string) {
+	root := os.Getenv("ROOT")
+	// how to get / set env var for root dir?
+	cmdJoin := &exec.Cmd{
+		Path:   root + "/procs/start.sh",
+		Args:   []string{root + "/procs/start.sh", root + "/ipfs/" + path},
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
 	}
 
-	return nil, api.identity
+	fmt.Println(cmdJoin.String())
+	if err := cmdJoin.Run(); err != nil {
+		return err, ""
+	}
+
+	bytes, _ := ioutil.ReadFile(root + "/ipfs/" + path + "/config")
+	var data config.Config
+	err := json.Unmarshal(bytes, &data)
+
+	if err != nil {
+		return err, ""
+	}
+
+	// json struct of config : here we can modify it and write back
+	// ignore the peers for now (connect after bootstrapping?)
+	data.Bootstrap = btsppeers
+	fmt.Println("data ", data)
+	bytes, err = json.Marshal(data)
+	ioutil.WriteFile(root+"/ipfs/"+path+"/config", bytes, 0755)
+
+	keyBytes := []byte("/key/swarm/psk/1.0.0/\n/base16/\n" + key + "\n")
+	err = ioutil.WriteFile(root+"/ipfs/"+path+"/swarm.key", keyBytes, 0755)
+
+	return nil, data.Identity.PeerID
+}
+
+func JoinHandler(w http.ResponseWriter, r *http.Request) {
+	args := r.URL.Query()
+	name := args.Get("name")
+	key := args.Get("key")
+	addr := args.Get("addr")
+	if name == "" || key == "" || addr == "" {
+		// error here
+		fmt.Errorf("Error: name or key or addr arg is empty string")
+		return
+	}
+
+	btsppeers := []string{addr}
+	err, peerid := JoinCommunity(name, name, key, btsppeers, make([]string, 0))
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	CommConfig := &CommunityConfig{
+		Name:           name,
+		SwarmKey:       key,
+		BootstrapPeers: btsppeers,
+		Peers:          []string{peerid},
+	}
+
+	fmt.Println("Community Config is ", CommConfig)
+	bytes, err := json.Marshal(CommConfig)
+	w.Write(bytes)
 }
 
 /*
@@ -152,6 +207,53 @@ func JoinCommunity(name string, path string, key string, btsppeers []string, pee
  - meant to be used by nodes that are already in a community
  - just run the daemon & return the API or IPFS Client
 */
-func ConnectCommunity() {
+func ConnectCommunity(name string) error {
+	root := os.Getenv("ROOT")
+	// how to get / set env var for root dir?
+	cmdConnect := &exec.Cmd{
+		Path:   root + "/procs/connect.sh",
+		Args:   []string{root + "/procs/connect.sh", root + "/ipfs/" + name},
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
+	fmt.Println(cmdConnect.String())
+	go cmdConnect.Run()
+	/*
+		if err := cmdConnect.Run(); err != nil {
+			return err
+		}
+	*/
+	return nil
+}
 
+func ConnectHandler(w http.ResponseWriter, r *http.Request) {
+	args := r.URL.Query()
+	name := args.Get("name")
+	err := ConnectCommunity(name)
+	if err == nil {
+		w.Write([]byte("success!"))
+	}
+}
+
+func main() {
+	log.Info().Msg("starting communities api")
+
+	r := mux.NewRouter()
+	// r.HandleFunc("/home", HomeHandler)
+	r.HandleFunc("/create", CreateHandler)
+	r.HandleFunc("/join", JoinHandler)
+	// at some point this should be abstracted away from user
+	// I'm imagining a side panel and when you click on a community name it connects
+	r.HandleFunc("/connect", ConnectHandler)
+	http.Handle("/", r)
+
+	srv := &http.Server{
+		Handler:      r,
+		Addr:         "0.0.0.0:8008",
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+
+	log.Info().Msg("communities api listening on localhost:8008")
+	log.Fatal().Err(srv.ListenAndServe())
 }
