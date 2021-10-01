@@ -98,6 +98,23 @@ func (m *Manager) StopProcess(name string) error {
 	return nil
 }
 
+// Return a readonly list of processes
+func (m *Manager) ListProcesses() ([]*Proc, error) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	res := make([]*Proc, len(m.Procs))
+	i := 0
+	for _, p := range m.Procs {
+		res[i] = &Proc{
+			Name: p.Name,
+		}
+		i++
+	}
+
+	return res, nil
+}
+
 func (m *Manager) ListenForErrors() {
 	for {
 		procErr := <-m.errChan
