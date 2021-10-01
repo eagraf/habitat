@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
@@ -172,6 +173,27 @@ func requestRouter(req *ctl.Request) (*ctl.Response, error) {
 			Status:  ctl.StatusOK,
 			Message: fmt.Sprintf("stopped process %s", req.Args[0]),
 		}, nil
+
+	case ctl.CommandListProcesses:
+
+		procs, err := ProcessManager.ListProcesses()
+		if err != nil {
+			return &ctl.Response{
+				Status:  ctl.StatusInternalServerError,
+				Message: err.Error(),
+			}, nil
+		}
+
+		var b strings.Builder
+		for _, p := range procs {
+			fmt.Fprintf(&b, "%s\n", p.Name)
+		}
+
+		return &ctl.Response{
+			Status:  ctl.StatusOK,
+			Message: b.String(),
+		}, nil
+
 	default:
 		return &ctl.Response{
 			Status:  ctl.StatusBadRequest,

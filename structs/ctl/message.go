@@ -7,8 +7,9 @@ import (
 )
 
 const (
-	CommandStart = "start"
-	CommandStop  = "stop"
+	CommandStart         = "start"
+	CommandStop          = "stop"
+	CommandListProcesses = "ps"
 
 	StatusOK                  = 0
 	StatusBadRequest          = 1
