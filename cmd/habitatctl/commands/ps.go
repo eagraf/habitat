@@ -16,10 +16,6 @@ limitations under the License.
 package commands
 
 import (
-	"fmt"
-
-	"github.com/eagraf/habitat/cmd/habitatctl/client"
-	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/spf13/cobra"
 )
 
@@ -29,22 +25,7 @@ var psCmd = &cobra.Command{
 	Short: "List running habitat processes",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := client.NewClient()
-		if err != nil {
-			fmt.Println("Error: couldn't connect to habitat service")
-			return
-		}
-
-		client.WriteRequest(&ctl.Request{
-			Command: "ps",
-			Args:    args,
-		})
-
-		res, err := client.ReadResponse()
-		if err != nil {
-			fmt.Println("Error: couldn't read response from habitat service")
-		}
-		fmt.Println(res)
+		sendRequest("ps", args)
 	},
 }
 
