@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/eagraf/habitat/cmd/habitat/community"
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
 	"github.com/eagraf/habitat/structs/configuration"
@@ -194,6 +195,14 @@ func requestRouter(req *ctl.Request) (*ctl.Response, error) {
 			Message: b.String(),
 		}, nil
 
+	case ctl.CommandCommunityCreate:
+		return community.CommunityCreateHandler(req)
+	case ctl.CommandCommunityJoin:
+		return community.CommunityJoinHandler(req)
+	case ctl.CommandCommunityAddMember:
+		return community.CommunityAddMemberHandler(req)
+	case ctl.CommandCommunityPropose:
+		return community.CommunityProposeHandler(req)
 	default:
 		return &ctl.Response{
 			Status:  ctl.StatusBadRequest,
