@@ -1,10 +1,12 @@
 package fs
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 
 	"github.com/eagraf/habitat/pkg/ipfs"
+	"github.com/rs/zerolog/log"
 )
 
 type IPFSFile struct {
@@ -90,22 +92,53 @@ func NewIPFS(apiURL string) (*IPFS, error) {
 	}
 
 	// get ipfs version to check api
-	_, err = client.GetVersion()
+	buf, err := client.PostRequest("version")
 	if err != nil {
 		return nil, err
 	}
+	var version struct {
+		Commit  string
+		Golang  string
+		Repo    string
+		System  string
+		Version string
+	}
+
+	err = json.Unmarshal(buf, &version)
+	if err != nil {
+		return nil, err
+	}
+	log.Info().Msg("using IPFS HTTP API " + version.Version + " " + version.System)
 
 	return &IPFS{
 		client: client,
 	}, nil
 }
 
-func (ipfs *IPFS) Open(name string) (File, error) {
-	return nil, errors.New("unimplimented")
+func (ipfs *IPFS) Open(name string) ([]byte, error) {
+	buf, err := ipfs.client.PostRequest("files/read?arg=" + name)
+	if err != nil {
+		return nil, err
+	}
+	return buf, nil
 }
 
 func (ipfs *IPFS) ReadDir(name string) ([]DirEntry, error) {
-	files, err := ipfs.client.ListFiles()
+	buf, err := ipfs.client.PostRequest("files/ls")
+	if err != nil {
+		return nil, err
+	}
+
+	var files struct {
+		Entries []*struct {
+			Hash string
+			Name string
+			Size int64
+			Type int
+		}
+	}
+
+	err = json.Unmarshal(buf, &files)
 	if err != nil {
 		return nil, err
 	}
@@ -114,12 +147,12 @@ func (ipfs *IPFS) ReadDir(name string) ([]DirEntry, error) {
 	for i, f := range files.Entries {
 		res[i] = &IPFSDirEntry{
 			name:    f.Name,
-			isDir:   f.Type == 0,
+			isDir:   f.Type == 2,
 			dirType: 0,
 			info: &IPFSFileInfo{
 				name:  f.Name,
 				size:  f.Size,
-				isDir: f.Type == 0,
+				isDir: f.Type == 2,
 			},
 		}
 	}

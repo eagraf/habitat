@@ -23,6 +23,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/ls", s.ListFilesHandler)
+	r.HandleFunc("/open", s.OpenFileHandler)
 
 	http.Handle("/", r)
 
@@ -61,10 +62,12 @@ type ListFilesFileInfo struct {
 }
 
 func (s *FileSystemService) ListFilesHandler(w http.ResponseWriter, r *http.Request) {
+
 	files, err := s.fs.ReadDir("/")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
+		return
 	}
 
 	// TODO this is jank. this conversion happens because FS returns DirEntry interfaces, which json
@@ -92,8 +95,28 @@ func (s *FileSystemService) ListFilesHandler(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(marshaled)
+}
+
+func (s *FileSystemService) OpenFileHandler(w http.ResponseWriter, r *http.Request) {
+
+	filename := r.URL.Query().Get("file")
+	log.Debug().Msg("filename is " + filename)
+	body, err := s.fs.Open(filename)
+
+	if err != nil {
+		log.Debug().Msg("error")
+
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	log.Debug().Msg(string(body))
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(body)
 }

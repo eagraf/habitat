@@ -10,4 +10,4 @@ else
     echo "ipfs already initialized"
 fi
 
-ipfs daemon
+ipfs daemon --routing=dhtclient

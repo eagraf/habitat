@@ -34,7 +34,7 @@ type DirEntry interface {
 
 // FS interface loosely based off of os/fs FS interface in go 1.16
 type FS interface {
-	Open(name string) (File, error)
+	Open(name string) ([]byte, error)
 	ReadDir(name string) ([]DirEntry, error)
 }
 
@@ -46,7 +46,7 @@ func NewFS(fsType string) (FS, error) {
 	switch fsType {
 	case IPFSType:
 		// TODO this api url is hardcoded right now, we need to create a better way for configuring it
-		return NewIPFS("http://localhost:5001/api/v0")
+		return NewIPFS("http://localhost:5001/api/v0/")
 	default:
 		return nil, fmt.Errorf("invalid FS type: %s", fsType)
 	}
