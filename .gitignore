@@ -1,5 +1,5 @@
 bin
-procs/*
-!procs/apps.yml
 .DS_Store
-data/
+data/procs/*
+data/communities/*
+!data/procs/apps.yml
