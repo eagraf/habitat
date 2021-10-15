@@ -1,0 +1,16 @@
+apps:
+  ipfs:
+    bin: ipfs
+    ports:
+    proxy_rules:
+  notes:
+    bin: notes_backend
+    ports:
+      - 8000
+    proxy_rules:
+      - type: file
+        matcher: /notes
+        target: notes
+      - type: redirect
+        matcher: /api_notes
+        target: http://0.0.0.0:8000
