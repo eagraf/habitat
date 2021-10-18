@@ -47,7 +47,7 @@ func main() {
 	// Read apps configuration in proc dir
 	appConfigs, err := configuration.ReadAppConfigs(filepath.Join(procDir, "apps.yml"))
 	if err != nil {
-		log.Fatal().Msgf("proc dir does not contain apps.yml")
+		log.Fatal().Msgf("unable to read apps.yml: %s", err)
 	}
 
 	// Start reverse proxy
