@@ -24,6 +24,7 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/ls", s.ListFilesHandler)
 	r.HandleFunc("/open", s.OpenFileHandler)
+	r.HandleFunc("/write", s.WriteFileHandler)
 
 	http.Handle("/", r)
 
@@ -105,8 +106,24 @@ func (s *FileSystemService) ListFilesHandler(w http.ResponseWriter, r *http.Requ
 func (s *FileSystemService) OpenFileHandler(w http.ResponseWriter, r *http.Request) {
 
 	filename := r.URL.Query().Get("file")
-	log.Debug().Msg("filename is " + filename)
 	body, err := s.fs.Open(filename)
+
+	if err != nil {
+		log.Debug().Msg("error")
+
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(body)
+}
+
+func (s *FileSystemService) WriteFileHandler(w http.ResponseWriter, r *http.Request) {
+
+	filename := r.URL.Query().Get("file")
+	body, err := s.fs.Write(filename, r.Body, r.Header.Get("Content-Type"))
 
 	if err != nil {
 		log.Debug().Msg("error")

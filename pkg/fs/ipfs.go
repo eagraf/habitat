@@ -3,6 +3,7 @@ package fs
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"time"
 
 	"github.com/eagraf/habitat/pkg/ipfs"
@@ -92,7 +93,7 @@ func NewIPFS(apiURL string) (*IPFS, error) {
 	}
 
 	// get ipfs version to check api
-	buf, err := client.PostRequest("version")
+	buf, err := client.PostRequest("version", "application/x-www-form-urlencoded", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +117,7 @@ func NewIPFS(apiURL string) (*IPFS, error) {
 }
 
 func (ipfs *IPFS) Open(name string) ([]byte, error) {
-	buf, err := ipfs.client.PostRequest("files/read?arg=" + name)
+	buf, err := ipfs.client.PostRequest("files/read?arg="+name, "application/x-www-form-urlencoded", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +125,7 @@ func (ipfs *IPFS) Open(name string) ([]byte, error) {
 }
 
 func (ipfs *IPFS) ReadDir(name string) ([]DirEntry, error) {
-	buf, err := ipfs.client.PostRequest("files/ls")
+	buf, err := ipfs.client.PostRequest("files/ls", "application/x-www-form-urlencoded", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -158,4 +159,12 @@ func (ipfs *IPFS) ReadDir(name string) ([]DirEntry, error) {
 	}
 
 	return res, nil
+}
+
+func (ipfs *IPFS) Write(name string, body io.Reader, contentType string) ([]byte, error) {
+	buf, err := ipfs.client.PostRequest("files/write?create=true&arg="+name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return buf, nil
 }

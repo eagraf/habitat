@@ -2,6 +2,7 @@ package ipfs
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -30,10 +31,19 @@ func (c *Client) getEndpointURL(endpointPath string) *url.URL {
 	return url
 }
 
-func (c *Client) PostRequest(endpointPath string) ([]byte, error) {
-	resp, err := http.Post(c.getEndpointURL(endpointPath).String(), "raw/json", nil)
+func (c *Client) PostRequest(endpointPath string, contentType string, body io.Reader) ([]byte, error) {
+	req, err := http.NewRequest("POST", c.getEndpointURL(endpointPath).String(), body)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %s", err)
+	}
+	req.Header.Set("Content-Type", contentType)
+
+	client := http.Client{}
+
+	resp, err := client.Do(req)
+
+	if err != nil {
+		return nil, fmt.Errorf("error doing request: %s", err)
 	}
 
 	buf, err := ioutil.ReadAll(resp.Body)

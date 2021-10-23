@@ -2,6 +2,7 @@ package fs
 
 import (
 	"fmt"
+	"io"
 	"time"
 )
 
@@ -36,6 +37,7 @@ type DirEntry interface {
 type FS interface {
 	Open(name string) ([]byte, error)
 	ReadDir(name string) ([]DirEntry, error)
+	Write(name string, body io.Reader, contentType string) ([]byte, error)
 }
 
 const (
