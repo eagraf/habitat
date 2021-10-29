@@ -20,7 +20,6 @@ const resetOnSplitBlockTypes = [
 ]
 
 function Title(props) {
-    console.log(props);
     return <h1>
         { 
             !props.block.getText().trim() ? 
@@ -45,27 +44,21 @@ function blockRenderer(contentBlock) {
     }
 }
 
-const blockRenderMap = Immutable.Map({
-})
+function Editor({ content }) {
+    const [editorState, setEditorState] = React.useState(() => EditorState.createEmpty());
 
-const extendedBlockRenderMap = DefaultDraftBlockRenderMap.merge(blockRenderMap);
-
-function blockStyle(contentBlock) {
-    const type = contentBlock.getType();
-    switch(type) {
-    }
-}
-
-function Editor() {
-    const [editorState, setEditorState] = React.useState(
-        () => EditorState.createWithContent(ContentState.createFromBlockArray([
+    React.useEffect(() => {
+        setEditorState(EditorState.createWithContent(ContentState.createFromBlockArray([
             new ContentBlock({
                 text: 'Hello world',
                 type: 'title',
                 key: 'titleKey'
+            }),
+            new ContentBlock({
+                text: content
             })
-        ])
-    ));
+        ])))
+    }, [content])
 
     function toggleStyle(type) {
         return () => {
@@ -91,13 +84,9 @@ function Editor() {
         <DraftEditor 
             editorState={ editorState } 
             onChange={ newState => {
-                if(newState.getCurrentContent().getBlockForKey('titleKey').getType() !== 'title') {
-                    //TODO: update newState with title
-                } 
                 setEditorState(newState) 
             }}
             handleKeyCommand={ (command, editorState) => {
-                console.log(command);
                 const currentContent = editorState.getCurrentContent(); 
                 const currentSelection = editorState.getSelection();
                 const currentKey = currentSelection.getStartKey();
@@ -132,12 +121,9 @@ function Editor() {
                     setEditorState(newState);
                     return 'handled';
                 }
-
                 return 'not-handled';
             }}
             blockRendererFn={ blockRenderer }
-            blockStyleFn={ blockStyle }
-            blockRenderMap={ extendedBlockRenderMap }
         />
     </div>
 };
