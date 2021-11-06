@@ -12,15 +12,14 @@ import (
 
 const (
 	ClientHost = "localhost"
-	ClientPort = "2040"
 )
 
 type Client struct {
 	conn net.Conn
 }
 
-func NewClient() (*Client, error) {
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", ClientHost, ClientPort))
+func NewClient(port string) (*Client, error) {
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", ClientHost, port))
 	if err != nil {
 		return nil, err
 	}

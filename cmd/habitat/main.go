@@ -35,6 +35,8 @@ var (
 
 func main() {
 	pflag.String("procdir", "", "directory where process configs are stored")
+	pflag.String("communitydir", "", "directory where communities are stored")
+	pflag.String("hostname", "", "hostname that this node can be reached at")
 
 	pflag.Parse()
 	viper.BindPFlags(pflag.CommandLine)
