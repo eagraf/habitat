@@ -20,10 +20,10 @@ import (
 //  does ipfs have a built in way to connect to all peers from the bootstrap?
 //  we might need some protocol to do this : get peers from bootstrap node and try to connect
 type CommunityConfig struct {
-	Name           string
-	SwarmKey       string
-	BootstrapPeers []string // addresses of nodes that are bootstrap
-	Peers          []string // peer ids of nodes
+	Name           string   `json:"name"`
+	SwarmKey       string   `json:"swarm_key"`
+	BootstrapPeers []string `json:"btstp_peers"` // addresses of nodes that are bootstrap
+	Peers          []string `json:"peers"`       // peer ids of nodes
 }
 
 // This is a data structure that represents all the communities the user is a part of
@@ -98,7 +98,7 @@ type CommunityInfo struct {
 }
 
 func CreateHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Create handler called")
+	log.Info().Msg("Create handler called")
 	args := r.URL.Query()
 	name := args.Get("name")
 	if name == "" {
@@ -120,8 +120,10 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		Peers:          []string{peerid},
 	}
 
-	fmt.Println("Community Config is ", CommConfig)
-	bytes, err := json.Marshal(CommConfig)
+	commstr, _ := json.Marshal(CommConfig)
+	log.Info().Msg("Community Config is " + string(commstr))
+	bytes, err := json.Marshal(*CommConfig)
+	fmt.Println("returning ", string(bytes))
 	w.Write(bytes)
 }
 
@@ -162,8 +164,8 @@ func JoinCommunity(name string, path string, key string, btsppeers []string, pee
 	// json struct of config : here we can modify it and write back
 	// ignore the peers for now (connect after bootstrapping?)
 	data.Bootstrap = btsppeers
-	fmt.Println("data ", data)
 	bytes, err = json.Marshal(data)
+	log.Info().Msg("data " + string(bytes))
 	ioutil.WriteFile(root+"/ipfs/"+path+"/config", bytes, 0755)
 
 	keyBytes := []byte("/key/swarm/psk/1.0.0/\n/base16/\n" + key + "\n")
@@ -236,7 +238,7 @@ func ConnectHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	log.Info().Msg("starting communities api")
+	log.Info().Msg("starting communities api root is" + os.Getenv("ROOT"))
 
 	r := mux.NewRouter()
 	// r.HandleFunc("/home", HomeHandler)
