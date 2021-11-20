@@ -69,7 +69,6 @@ func CreateCommunity(name string, path string) (error, string, string, []string)
 	}
 
 	s := make([]string, 0)
-	fmt.Println(cmdCreate.String())
 	if err := cmdCreate.Run(); err != nil {
 		return err, "", "", s
 	}
@@ -110,7 +109,7 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 	err, key, peerid, addrs := CreateCommunity(name, name)
 
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Error().Err(err)
 	}
 
 	CommConfig := &CommunityConfig{
@@ -123,7 +122,6 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 	commstr, _ := json.Marshal(CommConfig)
 	log.Info().Msg("Community Config is " + string(commstr))
 	bytes, err := json.Marshal(*CommConfig)
-	fmt.Println("returning ", string(bytes))
 	w.Write(bytes)
 }
 
@@ -148,7 +146,6 @@ func JoinCommunity(name string, path string, key string, btsppeers []string, pee
 		Stderr: os.Stderr,
 	}
 
-	fmt.Println(cmdJoin.String())
 	if err := cmdJoin.Run(); err != nil {
 		return err, ""
 	}
@@ -189,7 +186,7 @@ func JoinHandler(w http.ResponseWriter, r *http.Request) {
 	err, peerid := JoinCommunity(name, name, key, btsppeers, make([]string, 0))
 
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Error().Err(err)
 	}
 
 	CommConfig := &CommunityConfig{
@@ -199,9 +196,17 @@ func JoinHandler(w http.ResponseWriter, r *http.Request) {
 		Peers:          []string{peerid},
 	}
 
-	fmt.Println("Community Config is ", CommConfig)
 	bytes, err := json.Marshal(CommConfig)
 	w.Write(bytes)
+}
+
+type ConnectedConfig struct {
+	Id              string   `json:"ID"`
+	PublicKey       string   `json:"PublicKey"`
+	Addresses       []string `json:"Addresses"`
+	AgentVersion    string   `json:"AgentVersion"`
+	ProtocolVersion string   `json:"ProtocolVersion"`
+	Protocols       []string `json:"Protocols"`
 }
 
 /*
@@ -209,31 +214,43 @@ func JoinHandler(w http.ResponseWriter, r *http.Request) {
  - meant to be used by nodes that are already in a community
  - just run the daemon & return the API or IPFS Client
 */
-func ConnectCommunity(name string) error {
+func ConnectCommunity(name string) (ConnectedConfig, error) {
+	log.Info().Msg("connect to community " + name)
 	root := os.Getenv("ROOT")
-	// how to get / set env var for root dir?
-	cmdConnect := &exec.Cmd{
-		Path:   root + "/procs/connect.sh",
-		Args:   []string{root + "/procs/connect.sh", root + "/ipfs/" + name},
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}
-	fmt.Println(cmdConnect.String())
+
+	pathEnv := fmt.Sprintf("IPFS_PATH=%s/ipfs/%s", root, name)
+	cmdConnect := exec.Command("ipfs", "daemon")
+	cmdConnect.Stdout = os.Stdout
+	cmdConnect.Stderr = os.Stderr
+	cmdConnect.Env = []string{pathEnv}
 	go cmdConnect.Run()
-	/*
-		if err := cmdConnect.Run(); err != nil {
-			return err
-		}
-	*/
-	return nil
+
+	time.Sleep(2 * time.Second)
+
+	cmdId := exec.Command("ipfs", "id")
+	cmdId.Env = []string{pathEnv}
+	out, err := cmdId.Output()
+
+	if err != nil {
+		log.Err(err)
+	}
+
+	var data ConnectedConfig
+	err = json.Unmarshal(out, &data)
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+
+	return data, nil
 }
 
 func ConnectHandler(w http.ResponseWriter, r *http.Request) {
 	args := r.URL.Query()
 	name := args.Get("name")
-	err := ConnectCommunity(name)
+	conf, err := ConnectCommunity(name)
 	if err == nil {
-		w.Write([]byte("success!"))
+		bytes, _ := json.Marshal(conf)
+		w.Write(bytes)
 	}
 }
 

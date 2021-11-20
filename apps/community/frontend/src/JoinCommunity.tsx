@@ -16,7 +16,6 @@ const JoinCommunityContainer = () => {
         })
         axios.get<JoinCommunityResponse>(`http://localhost:8008/join?key=${key}&addr=${addr}&name=${name}`)
             .then(response => {
-                console.log(response)
                 setCommunity({
                     state: 'success',
                     data: response.data
@@ -51,7 +50,6 @@ const JoinCommunityContainer = () => {
         case "error":
             return joinForm(`Error: ${community.message}`)
         case "success":
-            console.log(community.data)
             return (
                 <div>
                     <h5>name: {community.data.name}</h5>

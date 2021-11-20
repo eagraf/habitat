@@ -14,9 +14,6 @@ const CreateCommunityContainer = () => {
         })
         axios.get<CreateCommunityResponse>(`http://localhost:8008/create?name=${name}`)
             .then(response => {
-                console.log("got response", response, JSON.stringify(response.data))
-                console.log("type ", typeof(response.data))
-                console.log("sdfsd", response.data.name, response.data.btstp_peers)
                 setCommunity({
                     state: 'success',
                     data: response.data
@@ -49,10 +46,8 @@ const CreateCommunityContainer = () => {
         case "loading":
             return <div>Joining community ...</div>
         case "error":
-            console.log(community.message)
             return createForm(`Error: ${community.message}`)
         case "success":
-            console.log("commdate", community.data)
             return (
                 <div>
                     <h5>name: {community.data.name}</h5>
