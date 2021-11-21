@@ -27,10 +27,7 @@ func TestProxy(t *testing.T) {
 	}
 
 	// Simulate a static file dir to be served
-	fileDir, err := os.MkdirTemp("", "fileservertest-")
-	if err != nil {
-		t.Fatalf(err.Error())
-	}
+	fileDir := t.TempDir()
 	defer os.RemoveAll(fileDir)
 
 	file, err := ioutil.TempFile(fileDir, "file")
