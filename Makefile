@@ -36,4 +36,11 @@ install-notes :
 	mkdir -p $(DEV_PROC_DIR)/web/notes
 	cp -R $(APPS_DIR)/notes/out/frontend/* $(DEV_PROC_DIR)/web/notes
 
-install: install-setup install-notes install-ipfs
+install-raft :
+	$(MAKE) -C apps/raft all
+	cp $(APPS_DIR)/raft/bin/amd64-linux/raft $(DEV_PROC_DIR)/bin/amd64-linux/raft
+	cp $(APPS_DIR)/raft/bin/amd64-darwin/raft $(DEV_PROC_DIR)/bin/amd64-darwin/raft
+
+
+install: install-setup install-notes install-ipfs install-raft
+

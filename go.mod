@@ -6,6 +6,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/raft v1.3.2
+	github.com/hashicorp/raft-boltdb v0.0.0-20210422161416-485fa74b0b01
 	github.com/ogier/pflag v0.0.1
 	github.com/rs/zerolog v1.23.0
 	github.com/spf13/cobra v1.2.1

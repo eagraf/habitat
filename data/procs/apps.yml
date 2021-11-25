@@ -1,4 +1,16 @@
 apps:
+  raft:
+    bin: raft
+    ports:
+      - 6000 # RAFT port
+      - 6001 # RPC Port 
+    proxy_rules:
+      - type: redirect
+        matcher: /raft/msg
+        target: http://0.0.0.0:6000
+      - type: redirect
+        matcher: /raft/rpc
+        target: http://0.0.0.0:6001
   ipfs:
     bin: ipfs
     ports:
