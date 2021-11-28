@@ -14,6 +14,7 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/community"
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
+	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/structs/configuration"
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/rs/zerolog/log"
@@ -34,22 +35,28 @@ var (
 )
 
 func main() {
-	pflag.String("procdir", "", "directory where process configs are stored")
-	pflag.String("communitydir", "", "directory where communities are stored")
 	pflag.String("hostname", "", "hostname that this node can be reached at")
+	pflag.BoolP("docker", "d", false, "use docker host rather than localhost")
 
 	pflag.Parse()
 	viper.BindPFlags(pflag.CommandLine)
 
-	procDir := viper.GetString("procdir")
+	procsDir := compass.ProcsPath()
 
-	_, err := os.Stat(procDir)
+	_, err := os.Stat(procsDir)
 	if err != nil {
-		log.Fatal().Msgf("invalid proc directory: %s", err)
+		log.Fatal().Msgf("invalid procs directory: %s", err)
 	}
 
+	// Get node id
+	nodeID := compass.NodeID()
+	if err != nil {
+		log.Fatal().Msgf("unable to read node ID", err)
+	}
+	viper.Set("node_id", nodeID)
+
 	// Read apps configuration in proc dir
-	appConfigs, err := configuration.ReadAppConfigs(filepath.Join(procDir, "apps.yml"))
+	appConfigs, err := configuration.ReadAppConfigs(filepath.Join(procsDir, "apps.yml"))
 	if err != nil {
 		log.Fatal().Msgf("unable to read apps.yml: %s", err)
 	}
@@ -59,7 +66,7 @@ func main() {
 	go reverseProxy.Start(fmt.Sprintf("%s:%s", ReverseProxyHost, ReverseProxyPort))
 
 	// Start process manager
-	ProcessManager = procs.NewManager(procDir, reverseProxy.Rules, appConfigs)
+	ProcessManager = procs.NewManager(procsDir, reverseProxy.Rules, appConfigs)
 	go ProcessManager.ListenForErrors()
 	go handleInterupt(ProcessManager)
 

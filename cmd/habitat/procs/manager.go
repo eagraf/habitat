@@ -3,10 +3,10 @@ package procs
 import (
 	"fmt"
 	"path/filepath"
-	"runtime"
 	"sync"
 
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
+	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/structs/configuration"
 	"github.com/rs/zerolog/log"
 )
@@ -25,15 +25,13 @@ type Manager struct {
 
 func NewManager(procDir string, rules proxy.RuleSet, appConfigs *configuration.AppConfiguration) *Manager {
 	return &Manager{
-		ProcDir:    procDir,
+		ProcDir:    compass.ProcsPath(),
 		Procs:      make(map[string]*Proc),
 		ProxyRules: rules,
 		AppConfigs: appConfigs,
 
 		errChan: make(chan ProcError),
 		lock:    &sync.Mutex{},
-
-		archOS: runtime.GOARCH + "-" + runtime.GOOS,
 	}
 }
 
@@ -50,8 +48,8 @@ func (m *Manager) StartProcess(name string) error {
 		return fmt.Errorf("process with name %s already exists", name)
 	}
 
-	cmdPath := filepath.Join(m.ProcDir, "bin", m.archOS, appConfig.Bin)
-	dataPath := filepath.Join(m.ProcDir, "data", name)
+	cmdPath := filepath.Join(compass.BinPath(), appConfig.Bin)
+	dataPath := filepath.Join(compass.DataPath(), name)
 	proc := NewProc(name, cmdPath, dataPath, m.errChan)
 	err := proc.Start()
 	if err != nil {

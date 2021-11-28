@@ -5,7 +5,7 @@ services:
         volumes:
             - ./data/procs:/habitat/procs
             - ./bin:/habitat/bin
-        command: /habitat/bin/amd64-linux/habitat --procdir /habitat/procs --communitydir /habitat/communites --hostname localhost 
+        command: /habitat/bin/amd64-linux/habitat --procdir /habitat/procs --communitydir /habitat/communites --hostname localhost --root /habitat
         image: ubuntu:latest
         build: .
         ports:
