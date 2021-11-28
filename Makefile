@@ -11,7 +11,7 @@ clean :
 	rm -rf $(BIN_DIR)
 
 run-dev : build
-	$(BIN_DIR)/habitat --procdir $(DEV_PROC_DIR) --communitydir $(DEV_COMMUNITY_DIR) --hostname localhost
+	$(BIN_DIR)/habitat --procdir $(DEV_PROC_DIR) --communitydir $(DEV_COMMUNITY_DIR) --hostname localhost --root $(DEV_DATA_DIR)
 
 install-setup :
 	rm -rf $(DEV_PROC_DIR)/bin/*
