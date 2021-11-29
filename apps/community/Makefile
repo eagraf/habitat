@@ -2,7 +2,7 @@ MKFILE_PATH := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 export OUT_DIR := $(MKFILE_PATH)out
 
-all : clean build-backend
+all : clean build-frontend build-backend
 
 clean :
 	rm -rf $(OUT_DIR)
@@ -15,8 +15,8 @@ build-frontend :
 
 build-backend : 
 	mkdir -p $(OUT_DIR)/backend
-	GOOS=linux GOARCH=amd64 go build -o $(OUT_DIR)/backend/amd64-linux/communities_backend github.com/eagraf/habitat/apps/communities/backend/cmd/api
-	GOOS=darwin GOARCH=amd64 go build -o $(OUT_DIR)/backend/amd64-darwin/communities_backend github.com/eagraf/habitat/apps/notes/communities/cmd/api
+	GOOS=linux GOARCH=amd64 go build -o $(OUT_DIR)/backend/amd64-linux/community_backend github.com/eagraf/habitat/apps/community/backend/cmd/api
+	GOOS=darwin GOARCH=amd64 go build -o $(OUT_DIR)/backend/amd64-darwin/community_backend github.com/eagraf/habitat/apps/community/backend/cmd/api
 
 .PHONY: out
-out : build-backend
+out : build-frontend build-backend
