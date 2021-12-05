@@ -8,6 +8,7 @@ import (
 
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
 	"github.com/eagraf/habitat/structs/configuration"
+	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/rs/zerolog/log"
 )
 
@@ -37,10 +38,11 @@ func NewManager(procDir string, rules proxy.RuleSet, appConfigs *configuration.A
 	}
 }
 
-func (m *Manager) StartProcess(name string) error {
+func (m *Manager) StartProcess(req *ctl.Request) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
+	name := req.Args[0]
 	appConfig, ok := m.AppConfigs.Apps[name]
 	if !ok {
 		return fmt.Errorf("no app with name %s in app configurations", name)
@@ -52,7 +54,7 @@ func (m *Manager) StartProcess(name string) error {
 
 	cmdPath := filepath.Join(m.ProcDir, "bin", m.archOS, appConfig.Bin)
 	dataPath := filepath.Join(m.ProcDir, "data", name)
-	proc := NewProc(name, cmdPath, dataPath, m.errChan)
+	proc := NewProc(name, cmdPath, dataPath, m.errChan, req.Env, req.Flags)
 	err := proc.Start()
 	if err != nil {
 		return err

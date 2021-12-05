@@ -145,7 +145,7 @@ func requestRouter(req *ctl.Request) (*ctl.Response, error) {
 			return nil, fmt.Errorf("start has %d arguments, expected 1", len(req.Args))
 		}
 
-		err := ProcessManager.StartProcess(req.Args[0])
+		err := ProcessManager.StartProcess(req)
 		if err != nil {
 			return &ctl.Response{
 				Status:  ctl.StatusInternalServerError,

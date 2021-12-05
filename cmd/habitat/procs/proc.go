@@ -1,6 +1,7 @@
 package procs
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,16 +14,20 @@ type Proc struct {
 	Name     string
 	CmdPath  string
 	DataPath string
+	Env      []string
+	Flags    []string
 
 	cmd     *exec.Cmd
 	errChan chan ProcError
 }
 
-func NewProc(name, cmdPath, dataPath string, errChan chan ProcError) *Proc {
+func NewProc(name, cmdPath, dataPath string, errChan chan ProcError, env []string, flags []string) *Proc {
 	return &Proc{
 		Name:     name,
 		CmdPath:  cmdPath,
 		DataPath: dataPath,
+		Env:      env,
+		Flags:    flags,
 
 		errChan: errChan,
 	}
@@ -31,10 +36,16 @@ func NewProc(name, cmdPath, dataPath string, errChan chan ProcError) *Proc {
 func (p *Proc) Start() error {
 	cmd := &exec.Cmd{
 		Path: p.CmdPath,
-		Env: []string{
-			fmt.Sprintf("DATA_DIR=%s", p.DataPath),
-		},
+		Args: append([]string{p.CmdPath}, p.Flags...),
+		Env:  p.Env, // require data dir to be passed in from client
+		/*
+			Env: []string{
+				fmt.Sprintf("DATA_DIR=%s", p.DataPath),
+			},
+		*/
 	}
+	fmt.Println("proc env: ", cmd.Env)
+	fmt.Println("start proc: ", cmd.String())
 
 	// start this process with a groupd id equal to its pid. this allows for all of its subprocesses to be killed
 	// at once by passing in the negative pid to syscall.Kill
@@ -46,6 +57,7 @@ func (p *Proc) Start() error {
 
 	err := cmd.Start()
 	if err != nil {
+		log.Err(errors.New("error starting cmd: " + err.Error()))
 		return err
 	}
 
