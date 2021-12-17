@@ -22,15 +22,44 @@ func parseFlags(args []string) ([]string, []string) {
 	return flags, nonflags
 }
 
-// startCmd represents the start command
-var startCmd = &cobra.Command{
-	Use:   "start [process] -- [env vars] [flags]",
+var procName string
+
+var ipfsCmd = &cobra.Command{
+	Use:   "ipfs --name=network_name -- DATA_DIR=/path/to/data IPFS_PATH=/path/to/ipfs/data",
 	Short: "Starts a habitat process",
 	Long:  `TODO create long description`,
-	Args:  cobra.MinimumNArgs(1),
+	Args:  cobra.MinimumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		process := args[0]
-		fmt.Println("start process ", process)
+		client, err := client.NewClient()
+		if err != nil {
+			fmt.Println("Error: couldn't connect to habitat service")
+			return
+		}
+
+		flags, nonflags := parseFlags(cmd.Flags().Args())
+
+		client.WriteRequest(&ctl.Request{
+			Command: "start",
+			Args:    []string{"ipfs", procName},
+			Flags:   flags,
+			Env:     nonflags,
+		})
+
+		res, err := client.ReadResponse()
+		if err != nil {
+			fmt.Println("Error: couldn't read response from habitat service")
+		}
+		fmt.Println(res)
+	},
+}
+
+// startCmd represents the start command
+var startCmd = &cobra.Command{
+	Use:   "start [process] [process args]",
+	Short: "Starts a habitat process",
+	Long:  `TODO create long description`,
+	Args:  cobra.MinimumNArgs(0),
+	Run: func(cmd *cobra.Command, args []string) {
 		if cmd.ArgsLenAtDash() != 1 && cmd.ArgsLenAtDash() != -1 {
 			fmt.Println("Error: only one process should be specified before -- number specified: ", cmd.ArgsLenAtDash())
 			return
@@ -42,12 +71,10 @@ var startCmd = &cobra.Command{
 		}
 
 		flags, nonflags := parseFlags(args[1:])
-		fmt.Println("flags ", flags)
-		fmt.Println("non flags", nonflags)
 
 		client.WriteRequest(&ctl.Request{
 			Command: "start",
-			Args:    []string{args[0]},
+			Args:    args,
 			Flags:   flags,
 			Env:     nonflags,
 		})
@@ -61,5 +88,9 @@ var startCmd = &cobra.Command{
 }
 
 func init() {
+	ipfsCmd.Flags().StringVarP(&procName, "name", "n", "", "name of process to start")
+	ipfsCmd.MarkFlagRequired("name")
+	startCmd.AddCommand(ipfsCmd)
 	rootCmd.AddCommand(startCmd)
+
 }

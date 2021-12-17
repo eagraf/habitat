@@ -41,20 +41,29 @@ func NewManager(procDir string, rules proxy.RuleSet, appConfigs *configuration.A
 func (m *Manager) StartProcess(req *ctl.Request) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
-
+	fmt.Println("starting process")
+	fmt.Println(req.Command)
+	fmt.Println(req.Args)
+	fmt.Println(req.Env)
+	fmt.Println(req.Flags)
 	name := req.Args[0]
+	subName := name
+	if len(req.Args) > 1 {
+		subName = name + "-" + req.Args[1]
+	}
+	fmt.Println("subname is", subName)
 	appConfig, ok := m.AppConfigs.Apps[name]
 	if !ok {
 		return fmt.Errorf("no app with name %s in app configurations", name)
 	}
 
-	if _, ok := m.Procs[name]; ok {
-		return fmt.Errorf("process with name %s already exists", name)
+	if _, ok := m.Procs[subName]; ok {
+		return fmt.Errorf("process with name %s already exists", subName)
 	}
 
 	cmdPath := filepath.Join(m.ProcDir, "bin", m.archOS, appConfig.Bin)
-	dataPath := filepath.Join(m.ProcDir, "data", name)
-	proc := NewProc(name, cmdPath, dataPath, m.errChan, req.Env, req.Flags)
+	dataPath := filepath.Join(m.ProcDir, "data", subName)
+	proc := NewProc(subName, cmdPath, dataPath, m.errChan, req.Env, req.Flags)
 	err := proc.Start()
 	if err != nil {
 		return err
@@ -69,7 +78,7 @@ func (m *Manager) StartProcess(req *ctl.Request) error {
 		m.ProxyRules.Add(ruleConfig.Hash(), rule)
 	}
 
-	m.Procs[name] = proc
+	m.Procs[subName] = proc
 	return nil
 }
 
@@ -103,7 +112,7 @@ func (m *Manager) StopProcess(name string) error {
 func (m *Manager) ListenForErrors() {
 	for {
 		procErr := <-m.errChan
-		log.Error().Msg(procErr.String())
+		log.Error().Msg("proc err listener got: " + procErr.String())
 
 		// try stop command in case it has any clean up, don't worry too much about errors
 		m.StopProcess(procErr.proc.Name)

@@ -141,10 +141,6 @@ func decodeRequest(buf []byte) (*ctl.Request, error) {
 func requestRouter(req *ctl.Request) (*ctl.Response, error) {
 	switch req.Command {
 	case ctl.CommandStart:
-		if len(req.Args) != 1 {
-			return nil, fmt.Errorf("start has %d arguments, expected 1", len(req.Args))
-		}
-
 		err := ProcessManager.StartProcess(req)
 		if err != nil {
 			return &ctl.Response{
@@ -156,7 +152,7 @@ func requestRouter(req *ctl.Request) (*ctl.Response, error) {
 
 		return &ctl.Response{
 			Status:  ctl.StatusOK,
-			Message: fmt.Sprintf("started process %s", req.Args[0]),
+			Message: fmt.Sprintf("started process %s", req.Args),
 		}, nil
 	case ctl.CommandStop:
 		if len(req.Args) != 1 {
