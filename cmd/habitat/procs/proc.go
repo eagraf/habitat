@@ -31,10 +31,9 @@ func NewProc(name, cmdPath, dataPath string, errChan chan ProcError) *Proc {
 func (p *Proc) Start() error {
 	cmd := &exec.Cmd{
 		Path: p.CmdPath,
-		Env: []string{
-			fmt.Sprintf("DATA_DIR=%s", p.DataPath),
-		},
 	}
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, fmt.Sprintf("DATA_DIR=%s", p.DataPath))
 
 	// start this process with a groupd id equal to its pid. this allows for all of its subprocesses to be killed
 	// at once by passing in the negative pid to syscall.Kill
