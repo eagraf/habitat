@@ -38,8 +38,9 @@ func (p *Proc) Start() error {
 	cmd := &exec.Cmd{
 		Path: p.CmdPath,
 		Args: append(append([]string{p.CmdPath}, p.Args...), p.Flags...), // command [args] [flags]
-		Env:  p.Env,                                                      // require data dir to be passed in from client
 	}
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, p.Env...)
 
 	// start this process with a groupd id equal to its pid. this allows for all of its subprocesses to be killed
 	// at once by passing in the negative pid to syscall.Kill
