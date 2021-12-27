@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
@@ -41,15 +42,11 @@ func NewManager(procDir string, rules proxy.RuleSet, appConfigs *configuration.A
 func (m *Manager) StartProcess(req *ctl.Request) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	fmt.Println("starting process")
-	fmt.Println(req.Command)
-	fmt.Println(req.Args)
-	fmt.Println(req.Env)
-	fmt.Println(req.Flags)
+	fmt.Printf("starting process %s \n", strings.Join(req.Args, " "))
 	name := req.Args[0]
 	subName := name
 	if len(req.Args) > 1 {
-		subName = name + "-" + req.Args[1]
+		subName = strings.Join(req.Args, "-")
 	}
 	fmt.Println("subname is", subName)
 	appConfig, ok := m.AppConfigs.Apps[name]

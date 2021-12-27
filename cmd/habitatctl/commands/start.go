@@ -22,10 +22,11 @@ func parseFlags(args []string) ([]string, []string) {
 	return flags, nonflags
 }
 
-var procName string
+var commName string
+var ipfsPath string
 
 var ipfsCmd = &cobra.Command{
-	Use:   "ipfs --name=network_name -- DATA_DIR=/path/to/data IPFS_PATH=/path/to/ipfs/data",
+	Use:   "ipfs --comm=community_name --path=/path/to/ipfs/data -- -other -flags ENV_VAR=other_env_vars",
 	Short: "Starts a habitat process",
 	Long:  `TODO create long description`,
 	Args:  cobra.MinimumNArgs(0),
@@ -40,9 +41,9 @@ var ipfsCmd = &cobra.Command{
 
 		client.WriteRequest(&ctl.Request{
 			Command: "start",
-			Args:    []string{"ipfs", procName},
+			Args:    []string{"ipfs", commName},
 			Flags:   flags,
-			Env:     nonflags,
+			Env:     append(nonflags, fmt.Sprintf("IPFS_PATH=%s", ipfsPath)),
 		})
 
 		res, err := client.ReadResponse()
@@ -74,7 +75,7 @@ var startCmd = &cobra.Command{
 
 		client.WriteRequest(&ctl.Request{
 			Command: "start",
-			Args:    args,
+			Args:    append(args, commName),
 			Flags:   flags,
 			Env:     nonflags,
 		})
@@ -88,8 +89,11 @@ var startCmd = &cobra.Command{
 }
 
 func init() {
-	ipfsCmd.Flags().StringVarP(&procName, "name", "n", "", "name of process to start")
-	ipfsCmd.MarkFlagRequired("name")
+	startCmd.PersistentFlags().StringVarP(&commName, "comm", "c", "", "name of community for which to start process")
+	startCmd.MarkPersistentFlagRequired("comm")
+	ipfsCmd.Flags().StringVarP(&ipfsPath, "path", "p", "", "path to ipfs folder")
+	ipfsCmd.MarkFlagRequired("ipfs")
+	ipfsCmd.MarkFlagDirname("ipfs")
 	startCmd.AddCommand(ipfsCmd)
 	rootCmd.AddCommand(startCmd)
 
