@@ -60,7 +60,7 @@ func (m *Manager) StartProcess(req *ctl.Request) error {
 
 	cmdPath := filepath.Join(m.ProcDir, "bin", m.archOS, appConfig.Bin)
 	dataPath := filepath.Join(m.ProcDir, "data", subName)
-	proc := NewProc(subName, cmdPath, dataPath, m.errChan, req.Env, req.Flags)
+	proc := NewProc(subName, cmdPath, dataPath, m.errChan, req.Env, req.Flags, req.Args[1:])
 	err := proc.Start()
 	if err != nil {
 		return err

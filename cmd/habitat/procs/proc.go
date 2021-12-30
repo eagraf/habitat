@@ -16,18 +16,20 @@ type Proc struct {
 	DataPath string
 	Env      []string
 	Flags    []string
+	Args     []string
 
 	cmd     *exec.Cmd
 	errChan chan ProcError
 }
 
-func NewProc(name, cmdPath, dataPath string, errChan chan ProcError, env []string, flags []string) *Proc {
+func NewProc(name, cmdPath, dataPath string, errChan chan ProcError, env []string, flags []string, args []string) *Proc {
 	return &Proc{
 		Name:     name,
 		CmdPath:  cmdPath,
 		DataPath: dataPath,
 		Env:      env,
 		Flags:    flags,
+		Args:     args,
 
 		errChan: errChan,
 	}
@@ -36,8 +38,8 @@ func NewProc(name, cmdPath, dataPath string, errChan chan ProcError, env []strin
 func (p *Proc) Start() error {
 	cmd := &exec.Cmd{
 		Path: p.CmdPath,
-		Args: append([]string{p.CmdPath}, p.Flags...),
-		Env:  p.Env, // require data dir to be passed in from client
+		Args: append(append([]string{p.CmdPath}, p.Args...), p.Flags...), // command [args] [flags]
+		Env:  p.Env,                                                      // require data dir to be passed in from client
 	}
 
 	fmt.Println("cmd env: ", cmd.Env)
