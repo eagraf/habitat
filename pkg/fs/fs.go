@@ -42,11 +42,11 @@ const (
 	IPFSType = "ipfs"
 )
 
-func NewFS(fsType string) (FS, error) {
+func NewFS(fsType string, fsUrl string) (FS, error) {
 	switch fsType {
 	case IPFSType:
 		// TODO this api url is hardcoded right now, we need to create a better way for configuring it
-		return NewIPFS("http://localhost:5001/api/v0")
+		return NewIPFS(fsUrl)
 	default:
 		return nil, fmt.Errorf("invalid FS type: %s", fsType)
 	}

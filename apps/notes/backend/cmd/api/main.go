@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/eagraf/habitat/pkg/fs"
@@ -11,8 +12,18 @@ import (
 )
 
 func main() {
+	var fsUrl string
+	if len(os.Args) < 2 {
+		// TODO: eventually we want this: (or rather, pass in a community name)
+		// log.Fatal().Msg("no local ipfs url specified as first argument, exiting")
+		// for now:
+		fsUrl = "http://localhost:5001/api/v0"
+	} else {
+		fsUrl = os.Args[1]
+	}
+
 	log.Info().Msg("starting notes api")
-	fs, err := fs.NewFS("ipfs")
+	fs, err := fs.NewFS("ipfs", fsUrl)
 	if err != nil {
 		log.Fatal().Msgf("failed to get file system driver: %s", err)
 	}
