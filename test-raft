@@ -1,0 +1,30 @@
+#!/bin/bash
+
+./bin/habitatctl -p 2000 start raft
+./bin/habitatctl -p 2001 start raft
+./bin/habitatctl -p 2002 start raft
+
+sleep 1
+
+COMMUNITY_UUID=`./bin/habitatctl -p 2000 community create | awk '{print $NF}'`
+echo "Alice created community $COMMUNITY_UUID"
+
+sleep 3
+
+./bin/habitatctl -p 2000 community propose -c $COMMUNITY_UUID
+./bin/habitatctl -p 2000 community propose -c $COMMUNITY_UUID
+
+echo "Alice appended two entries to log"
+
+ALICE_CONTAINER_ID=`docker ps | grep 'habitat_alice_1' | awk '{print $1}'`
+
+sleep 1
+./bin/habitatctl -p 2001 community join -c $COMMUNITY_UUID -a http://$ALICE_CONTAINER_ID:2041/raft/rpc/add
+./bin/habitatctl -p 2002 community join -c $COMMUNITY_UUID -a http://$ALICE_CONTAINER_ID:2041/raft/rpc/add
+
+echo "Bob attempted to join $COMMUNITY_ID"
+
+sleep 5
+./bin/habitatctl -p 2000 community propose -c $COMMUNITY_UUID
+
+
