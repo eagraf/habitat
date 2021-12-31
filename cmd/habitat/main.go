@@ -31,7 +31,8 @@ const (
 
 // TODO dependency inject this state so we don't use globals
 var (
-	ProcessManager *procs.Manager
+	ProcessManager   *procs.Manager
+	CommunityManager *community.Manager
 )
 
 func main() {
@@ -42,6 +43,7 @@ func main() {
 	viper.BindPFlags(pflag.CommandLine)
 
 	procsDir := compass.ProcsPath()
+	communityDir := viper.GetString("communitydir")
 
 	_, err := os.Stat(procsDir)
 	if err != nil {
@@ -60,6 +62,9 @@ func main() {
 	if err != nil {
 		log.Fatal().Msgf("unable to read apps.yml: %s", err)
 	}
+
+	// Create community manager
+	CommunityManager = community.NewManager(communityDir)
 
 	// Start reverse proxy
 	reverseProxy := proxy.NewServer()
@@ -150,6 +155,7 @@ func decodeRequest(buf []byte) (*ctl.Request, error) {
 }
 
 func requestRouter(req *ctl.Request) (*ctl.Response, error) {
+
 	switch req.Command {
 	case ctl.CommandStart:
 		if len(req.Args) != 1 {
@@ -209,13 +215,13 @@ func requestRouter(req *ctl.Request) (*ctl.Response, error) {
 		}, nil
 
 	case ctl.CommandCommunityCreate:
-		return community.CommunityCreateHandler(req)
+		return CommunityManager.CommunityCreateHandler(req)
 	case ctl.CommandCommunityJoin:
-		return community.CommunityJoinHandler(req)
+		return CommunityManager.CommunityJoinHandler(req)
 	case ctl.CommandCommunityAddMember:
-		return community.CommunityAddMemberHandler(req)
+		return CommunityManager.CommunityAddMemberHandler(req)
 	case ctl.CommandCommunityPropose:
-		return community.CommunityProposeHandler(req)
+		return CommunityManager.CommunityProposeHandler(req)
 	default:
 		return &ctl.Response{
 			Status:  ctl.StatusBadRequest,

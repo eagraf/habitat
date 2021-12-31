@@ -89,16 +89,41 @@ var communityJoinCmd = &cobra.Command{
 			return
 		}
 
-		sendRequest(ctl.CommandCommunityJoin, []string{address.Value.String()})
+		communityID := cmd.Flags().Lookup("community")
+		if communityID == nil {
+			fmt.Println("community flag needs to be set")
+			return
+		}
+
+		sendRequest(ctl.CommandCommunityJoin, []string{address.Value.String(), communityID.Value.String()})
+	},
+}
+
+var communityProposeTransitionCmd = &cobra.Command{
+	Use:   "propose",
+	Short: "propose a transition to this community's state",
+	Run: func(cmd *cobra.Command, args []string) {
+		communityID := cmd.Flags().Lookup("community")
+		if communityID == nil {
+			fmt.Println("community flag needs to be set")
+			return
+		}
+
+		sendRequest(ctl.CommandCommunityPropose, []string{communityID.Value.String()})
 	},
 }
 
 func init() {
 	communityCreateCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
+
 	communityJoinCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
+	communityJoinCmd.Flags().StringP("community", "c", "", "id of community to be joined")
+
+	communityProposeTransitionCmd.Flags().StringP("community", "c", "", "id of community to be joined")
 
 	communityCmd.AddCommand(communityCreateCmd)
 	communityCmd.AddCommand(communityJoinCmd)
+	communityCmd.AddCommand(communityProposeTransitionCmd)
 
 	rootCmd.AddCommand(communityCmd)
 }
