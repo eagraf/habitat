@@ -31,7 +31,8 @@ const (
 
 // TODO dependency inject this state so we don't use globals
 var (
-	ProcessManager *procs.Manager
+	ProcessManager   *procs.Manager
+	CommunityManager *community.Manager
 )
 
 func main() {
@@ -42,6 +43,7 @@ func main() {
 	viper.BindPFlags(pflag.CommandLine)
 
 	procsDir := compass.ProcsPath()
+	communityDir := compass.CommunitiesPath()
 
 	_, err := os.Stat(procsDir)
 	if err != nil {
@@ -64,6 +66,12 @@ func main() {
 	// Start reverse proxy
 	reverseProxy := proxy.NewServer()
 	go reverseProxy.Start(fmt.Sprintf("%s:%s", ReverseProxyHost, ReverseProxyPort))
+
+	// Create community manager
+	CommunityManager, err = community.NewManager(communityDir, &reverseProxy.Rules)
+	if err != nil {
+		log.Fatal().Msgf("unable to start community manager: %s", err)
+	}
 
 	// Start process manager
 	ProcessManager = procs.NewManager(procsDir, reverseProxy.Rules, appConfigs)
@@ -150,6 +158,7 @@ func decodeRequest(buf []byte) (*ctl.Request, error) {
 }
 
 func requestRouter(req *ctl.Request) (*ctl.Response, error) {
+
 	switch req.Command {
 	case ctl.CommandStart:
 		err, procName := ProcessManager.StartProcess(req)
@@ -205,13 +214,17 @@ func requestRouter(req *ctl.Request) (*ctl.Response, error) {
 		}, nil
 
 	case ctl.CommandCommunityCreate:
-		return community.CommunityCreateHandler(req)
+		return CommunityManager.CommunityCreateHandler(req)
 	case ctl.CommandCommunityJoin:
-		return community.CommunityJoinHandler(req)
+		return CommunityManager.CommunityJoinHandler(req)
 	case ctl.CommandCommunityAddMember:
-		return community.CommunityAddMemberHandler(req)
+		return CommunityManager.CommunityAddMemberHandler(req)
 	case ctl.CommandCommunityPropose:
-		return community.CommunityProposeHandler(req)
+		return CommunityManager.CommunityProposeHandler(req)
+	case ctl.CommandCommunityState:
+		return CommunityManager.CommunityStateHandler(req)
+	case ctl.CommandCommunityList:
+		return CommunityManager.CommunityListHandler(req)
 	default:
 		return &ctl.Response{
 			Status:  ctl.StatusBadRequest,

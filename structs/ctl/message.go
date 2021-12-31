@@ -14,6 +14,8 @@ const (
 	CommandCommunityJoin      = "community_join"
 	CommandCommunityAddMember = "community_add_member"
 	CommandCommunityPropose   = "community_propose"
+	CommandCommunityState     = "community_state"
+	CommandCommunityList      = "community_list"
 
 	StatusOK                  = 0
 	StatusBadRequest          = 1
