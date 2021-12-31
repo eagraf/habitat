@@ -3,6 +3,7 @@ module github.com/eagraf/habitat
 go 1.15
 
 require (
+	github.com/evanphx/json-patch v0.5.2
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/raft v1.3.2
