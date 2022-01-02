@@ -2,7 +2,6 @@ package procs
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"syscall"
@@ -42,8 +41,6 @@ func (p *Proc) Start() error {
 		Env:  p.Env,                                                      // require data dir to be passed in from client
 	}
 
-	fmt.Println("cmd env: ", cmd.Env)
-	fmt.Println("start cmd: ", cmd.String())
 	// start this process with a groupd id equal to its pid. this allows for all of its subprocesses to be killed
 	// at once by passing in the negative pid to syscall.Kill
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}

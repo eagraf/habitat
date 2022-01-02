@@ -48,7 +48,7 @@ func (m *Manager) StartProcess(req *ctl.Request) error {
 	if len(req.Args) > 1 {
 		subName = strings.Join(req.Args, "-")
 	}
-	fmt.Println("subname is", subName)
+
 	appConfig, ok := m.AppConfigs.Apps[name]
 	if !ok {
 		return fmt.Errorf("no app with name %s in app configurations", name)
