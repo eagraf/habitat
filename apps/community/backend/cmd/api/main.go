@@ -1,18 +1,13 @@
 package main
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
-	"os/exec"
 	"time"
 
+	"github.com/eagraf/habitat/pkg/ipfs"
 	"github.com/gorilla/mux"
-	config "github.com/ipfs/go-ipfs-config"
 	"github.com/rs/zerolog/log"
 )
 
@@ -31,63 +26,20 @@ type UserCommunities struct {
 	Communities []CommunityConfig
 }
 
-// from https://github.com/Kubuxu/go-ipfs-swarm-key-gen/blob/master/ipfs-swarm-key-gen/main.go
-func KeyGen() string {
-	key := make([]byte, 32)
-	_, err := rand.Read(key)
-	if err != nil {
-		fmt.Println("While trying to read random source:", err)
-	}
-
-	// when writing to swarm.key, add these to the top:
-	// fmt.Println("/key/swarm/psk/1.0.0/")
-	// fmt.Println("/base16/")
-	return hex.EncodeToString(key)
-}
-
 /*
  CreateCommunity: create a node with new peers, serves as default bootstrap for community
  - Create Node
  - Delete all peers
  - Create swarm key and add to swarm.key
  - Run daemon
- - return swarm + address to broadcast
+ - return error, secret key, peerid,swarm address to broadcast
  - this node automatically becomes the bootstrap peer (for now)
  can either use the api returned by createNode or connect to a new client
  TODO: 	create CommunityConfig struct which contains globals for the community like
 		swarm key and name of it and peer ids in it
 */
 func CreateCommunity(name string, path string) (error, string, string, []string) {
-
-	root := os.Getenv("ROOT")
-	// how to get / set env var for root dir?
-	cmdCreate := &exec.Cmd{
-		Path:   root + "/procs/start.sh",
-		Args:   []string{root + "/procs/start.sh", root + "/ipfs/" + path},
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}
-
-	s := make([]string, 0)
-	if err := cmdCreate.Run(); err != nil {
-		return err, "", "", s
-	}
-
-	bytes, _ := ioutil.ReadFile(root + "/ipfs/" + path + "/config")
-	var data config.Config
-	err := json.Unmarshal(bytes, &data)
-
-	if err != nil {
-		return err, "", "", s
-	}
-
-	// json struct of config : here we can modify it and write back
-
-	key := KeyGen()
-	keyBytes := []byte("/key/swarm/psk/1.0.0/\n/base16/\n" + key + "\n")
-	err = ioutil.WriteFile(root+"/ipfs/"+path+"/swarm.key", keyBytes, 0755)
-
-	return nil, key, data.Identity.PeerID, data.Addresses.Swarm
+	return ipfs.NewCommunityIPFSNode(name, path)
 }
 
 type CommunityInfo struct {
@@ -102,13 +54,17 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 	name := args.Get("name")
 	if name == "" {
 		// error here
-		log.Error().Msg("create handler: name argument not suppled")
+		log.Error().Msg("Error in community create handler: name argument not suppled")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("no name argument supplied in the request"))
 		return
 	}
 
 	err, key, peerid, addrs := CreateCommunity(name, name)
 
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 		log.Error().Err(err)
 	}
 
@@ -137,38 +93,7 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
   can either use the api returned by createNode or connect to a new client
 */
 func JoinCommunity(name string, path string, key string, btsppeers []string, peers []string) (error, string) {
-	root := os.Getenv("ROOT")
-	// how to get / set env var for root dir?
-	cmdJoin := &exec.Cmd{
-		Path:   root + "/procs/start.sh",
-		Args:   []string{root + "/procs/start.sh", root + "/ipfs/" + path},
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}
-
-	if err := cmdJoin.Run(); err != nil {
-		return err, ""
-	}
-
-	bytes, _ := ioutil.ReadFile(root + "/ipfs/" + path + "/config")
-	var data config.Config
-	err := json.Unmarshal(bytes, &data)
-
-	if err != nil {
-		return err, ""
-	}
-
-	// json struct of config : here we can modify it and write back
-	// ignore the peers for now (connect after bootstrapping?)
-	data.Bootstrap = btsppeers
-	bytes, err = json.Marshal(data)
-	log.Info().Msg("data " + string(bytes))
-	ioutil.WriteFile(root+"/ipfs/"+path+"/config", bytes, 0755)
-
-	keyBytes := []byte("/key/swarm/psk/1.0.0/\n/base16/\n" + key + "\n")
-	err = ioutil.WriteFile(root+"/ipfs/"+path+"/swarm.key", keyBytes, 0755)
-
-	return nil, data.Identity.PeerID
+	return ipfs.JoinCommunityIPFSNode(name, path, key, btsppeers, peers)
 }
 
 func JoinHandler(w http.ResponseWriter, r *http.Request) {
@@ -177,8 +102,9 @@ func JoinHandler(w http.ResponseWriter, r *http.Request) {
 	key := args.Get("key")
 	addr := args.Get("addr")
 	if name == "" || key == "" || addr == "" {
-		// error here
-		fmt.Errorf("Error: name or key or addr arg is empty string")
+		log.Error().Msg("Error in community join handler: name or key or addr arg is not supplied")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("name or key or addr arg is not supplied"))
 		return
 	}
 
@@ -186,6 +112,8 @@ func JoinHandler(w http.ResponseWriter, r *http.Request) {
 	err, peerid := JoinCommunity(name, name, key, btsppeers, make([]string, 0))
 
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 		log.Error().Err(err)
 	}
 
@@ -200,48 +128,13 @@ func JoinHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(bytes)
 }
 
-type ConnectedConfig struct {
-	Id              string   `json:"ID"`
-	PublicKey       string   `json:"PublicKey"`
-	Addresses       []string `json:"Addresses"`
-	AgentVersion    string   `json:"AgentVersion"`
-	ProtocolVersion string   `json:"ProtocolVersion"`
-	Protocols       []string `json:"Protocols"`
-}
-
 /*
  ConnectCommunity:
  - meant to be used by nodes that are already in a community
  - just run the daemon & return the API or IPFS Client
 */
-func ConnectCommunity(name string) (ConnectedConfig, error) {
-	log.Info().Msg("connect to community " + name)
-	root := os.Getenv("ROOT")
-
-	pathEnv := fmt.Sprintf("IPFS_PATH=%s/ipfs/%s", root, name)
-	cmdConnect := exec.Command("ipfs", "daemon")
-	cmdConnect.Stdout = os.Stdout
-	cmdConnect.Stderr = os.Stderr
-	cmdConnect.Env = []string{pathEnv}
-	go cmdConnect.Run()
-
-	time.Sleep(2 * time.Second)
-
-	cmdId := exec.Command("ipfs", "id")
-	cmdId.Env = []string{pathEnv}
-	out, err := cmdId.Output()
-
-	if err != nil {
-		log.Err(err)
-	}
-
-	var data ConnectedConfig
-	err = json.Unmarshal(out, &data)
-	if err != nil {
-		log.Fatal().Err(err)
-	}
-
-	return data, nil
+func ConnectCommunity(name string) (ipfs.ConnectedConfig, error) {
+	return ipfs.ConnectCommunityIPFSNode(name)
 }
 
 func ConnectHandler(w http.ResponseWriter, r *http.Request) {
@@ -251,6 +144,10 @@ func ConnectHandler(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		bytes, _ := json.Marshal(conf)
 		w.Write(bytes)
+	} else {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		log.Error().Err(err)
 	}
 }
 
