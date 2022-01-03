@@ -141,18 +141,18 @@ func decodeRequest(buf []byte) (*ctl.Request, error) {
 func requestRouter(req *ctl.Request) (*ctl.Response, error) {
 	switch req.Command {
 	case ctl.CommandStart:
-		err := ProcessManager.StartProcess(req)
+		err, procName := ProcessManager.StartProcess(req)
 		if err != nil {
 			return &ctl.Response{
 				Status:  ctl.StatusInternalServerError,
 				Message: err.Error(),
 			}, nil
 		}
-		fmt.Println(ProcessManager.Procs)
+		fmt.Println("Processes running: ", ProcessManager.Procs)
 
 		return &ctl.Response{
 			Status:  ctl.StatusOK,
-			Message: fmt.Sprintf("started process %s", req.Args),
+			Message: fmt.Sprintf("started process %s", procName),
 		}, nil
 	case ctl.CommandStop:
 		if len(req.Args) != 1 {
@@ -166,7 +166,7 @@ func requestRouter(req *ctl.Request) (*ctl.Response, error) {
 				Message: err.Error(),
 			}, nil
 		}
-		fmt.Println(ProcessManager.Procs)
+		fmt.Println("Processes running: ", ProcessManager.Procs)
 
 		return &ctl.Response{
 			Status:  ctl.StatusOK,
