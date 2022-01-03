@@ -1,3 +1,5 @@
 bin
 procs/*
 !procs/apps.yml
+.DS_Store
+data/

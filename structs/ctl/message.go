@@ -18,6 +18,8 @@ const (
 type Request struct {
 	Command string   `json:"command"`
 	Args    []string `json:"args"`
+	Env     []string `json:"env"`
+	Flags   []string `json:"flags"`
 }
 
 type Response struct {
