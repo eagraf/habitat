@@ -3,11 +3,11 @@ package procs
 import (
 	"fmt"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
+	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/structs/configuration"
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/rs/zerolog/log"
@@ -27,15 +27,13 @@ type Manager struct {
 
 func NewManager(procDir string, rules proxy.RuleSet, appConfigs *configuration.AppConfiguration) *Manager {
 	return &Manager{
-		ProcDir:    procDir,
+		ProcDir:    compass.ProcsPath(),
 		Procs:      make(map[string]*Proc),
 		ProxyRules: rules,
 		AppConfigs: appConfigs,
 
 		errChan: make(chan ProcError),
 		lock:    &sync.Mutex{},
-
-		archOS: runtime.GOARCH + "-" + runtime.GOOS,
 	}
 }
 
@@ -59,9 +57,9 @@ func (m *Manager) StartProcess(req *ctl.Request) (error, string) {
 		return fmt.Errorf("process with name %s already exists", subName), ""
 	}
 
-	cmdPath := filepath.Join(m.ProcDir, "bin", m.archOS, appConfig.Bin)
-	dataPath := filepath.Join(m.ProcDir, "data", subName)
-	proc := NewProc(subName, cmdPath, dataPath, m.errChan, req.Env, req.Flags, req.Args[1:])
+	cmdPath := filepath.Join(compass.BinPath(), appConfig.Bin)
+	dataPath := filepath.Join(compass.DataPath(), name)
+	proc := NewProc(name, cmdPath, dataPath, m.errChan, req.Env, req.Flags, req.Args[1:])
 	err := proc.Start()
 	if err != nil {
 		return err, ""
@@ -107,6 +105,23 @@ func (m *Manager) StopProcess(subName string) error {
 	}
 
 	return nil
+}
+
+// Return a readonly list of processes
+func (m *Manager) ListProcesses() ([]*Proc, error) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	res := make([]*Proc, len(m.Procs))
+	i := 0
+	for _, p := range m.Procs {
+		res[i] = &Proc{
+			Name: p.Name,
+		}
+		i++
+	}
+
+	return res, nil
 }
 
 func (m *Manager) ListenForErrors() {

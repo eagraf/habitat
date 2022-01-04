@@ -9,9 +9,12 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 
+	"github.com/eagraf/habitat/cmd/habitat/community"
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
+	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/structs/configuration"
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/rs/zerolog/log"
@@ -32,22 +35,30 @@ var (
 )
 
 func main() {
-	pflag.String("procdir", "", "directory where process configs are stored")
+	pflag.String("hostname", "", "hostname that this node can be reached at")
+	pflag.BoolP("docker", "d", false, "use docker host rather than localhost")
 
 	pflag.Parse()
 	viper.BindPFlags(pflag.CommandLine)
 
-	procDir := viper.GetString("procdir")
+	procsDir := compass.ProcsPath()
 
-	_, err := os.Stat(procDir)
+	_, err := os.Stat(procsDir)
 	if err != nil {
-		log.Fatal().Msgf("invalid proc directory: %s", err)
+		log.Fatal().Msgf("invalid procs directory: %s", err)
 	}
 
-	// Read apps configuration in proc dir
-	appConfigs, err := configuration.ReadAppConfigs(filepath.Join(procDir, "apps.yml"))
+	// Get node id
+	nodeID := compass.NodeID()
 	if err != nil {
-		log.Fatal().Msgf("proc dir does not contain apps.yml")
+		log.Fatal().Msgf("unable to read node ID", err)
+	}
+	viper.Set("node_id", nodeID)
+
+	// Read apps configuration in proc dir
+	appConfigs, err := configuration.ReadAppConfigs(filepath.Join(procsDir, "apps.yml"))
+	if err != nil {
+		log.Fatal().Msgf("unable to read apps.yml: %s", err)
 	}
 
 	// Start reverse proxy
@@ -55,7 +66,7 @@ func main() {
 	go reverseProxy.Start(fmt.Sprintf("%s:%s", ReverseProxyHost, ReverseProxyPort))
 
 	// Start process manager
-	ProcessManager = procs.NewManager(procDir, reverseProxy.Rules, appConfigs)
+	ProcessManager = procs.NewManager(procsDir, reverseProxy.Rules, appConfigs)
 	go ProcessManager.ListenForErrors()
 	go handleInterupt(ProcessManager)
 
@@ -172,6 +183,35 @@ func requestRouter(req *ctl.Request) (*ctl.Response, error) {
 			Status:  ctl.StatusOK,
 			Message: fmt.Sprintf("stopped process %s", req.Args[0]),
 		}, nil
+
+	case ctl.CommandListProcesses:
+
+		procs, err := ProcessManager.ListProcesses()
+		if err != nil {
+			return &ctl.Response{
+				Status:  ctl.StatusInternalServerError,
+				Message: err.Error(),
+			}, nil
+		}
+
+		var b strings.Builder
+		for _, p := range procs {
+			fmt.Fprintf(&b, "%s\n", p.Name)
+		}
+
+		return &ctl.Response{
+			Status:  ctl.StatusOK,
+			Message: b.String(),
+		}, nil
+
+	case ctl.CommandCommunityCreate:
+		return community.CommunityCreateHandler(req)
+	case ctl.CommandCommunityJoin:
+		return community.CommunityJoinHandler(req)
+	case ctl.CommandCommunityAddMember:
+		return community.CommunityAddMemberHandler(req)
+	case ctl.CommandCommunityPropose:
+		return community.CommunityProposeHandler(req)
 	default:
 		return &ctl.Response{
 			Status:  ctl.StatusBadRequest,

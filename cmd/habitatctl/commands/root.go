@@ -28,6 +28,8 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.habitatctl.yaml)")
+	rootCmd.PersistentFlags().StringP("port", "p", "2040", "port to reach habitat service at")
+	viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port"))
 }
 
 // initConfig reads in config file and ENV variables if set.
