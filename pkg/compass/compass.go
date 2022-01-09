@@ -3,6 +3,7 @@ package compass
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -88,4 +89,21 @@ func Hostname() string {
 		panic(fmt.Sprintf("can't get hostname: %s", err))
 	}
 	return hostname
+}
+
+func LocalIPv4() (net.IP, error) {
+	// Dial a dummy connection to get the default local IP address
+	// This solution is better than using net.Interfaces() because its possible the device
+	// is using multiple network interfaces with different IP addresses, which would make it
+	// difficult to establish which address it actually uses to communicate with the internet.
+	// Establishing the dummy connection is a good workaround for extracting the default IP address used.
+	conn, err := net.Dial("udp", "1.2.3.4:1")
+	if err != nil {
+		return nil, fmt.Errorf("error getting local IP address: %s", err)
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+
+	return localAddr.IP, nil
 }
