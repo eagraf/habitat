@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 
 	"github.com/google/uuid"
 )
@@ -84,12 +83,9 @@ func NodeID() string {
 
 // TODO this should probably figure out public IP stuff too
 func Hostname() string {
-	switch runtime.GOOS {
-	case osLinux:
-		fallthrough
-	case osDarwin:
-		return strings.TrimSpace(singleValueCommand("hostname"))
-	default:
-		panic(fmt.Sprintf("operating system %s not supported", runtime.GOOS))
+	hostname, err := os.Hostname()
+	if err != nil {
+		panic(fmt.Sprintf("can't get hostname: %s", err))
 	}
+	return hostname
 }
