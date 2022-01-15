@@ -107,3 +107,8 @@ func LocalIPv4() (net.IP, error) {
 
 	return localAddr.IP, nil
 }
+
+func InDockerContainer() bool {
+	_, err := os.Stat("/.dockerenv")
+	return err == nil
+}
