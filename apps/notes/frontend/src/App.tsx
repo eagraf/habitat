@@ -2,7 +2,7 @@ import React from 'react';
 import './App.css';
 import SideMenu from './SideMenu';
 import Editor from './Editor';
-import Content from './Content';
+
 import { 
     BrowserRouter as Router,
     Route,
@@ -10,10 +10,13 @@ import {
 
 function App() {
     return <Router>
+        <Route path={ "temp" /*["/notes/:file", "/notes"]*/ }>
+            <div className="app">
+            </div>
+        </Route>
         <Route path={ ["/notes/:file", "/notes"] }>
             <div className="app">
-                <SideMenu />
-                <Content />
+                <Editor />
             </div>
         </Route>
     </Router>
