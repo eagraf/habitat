@@ -1,6 +1,5 @@
 import React from 'react';
 import './App.css';
-import SideMenu from './SideMenu';
 import Editor from './Editor';
 
 import { 
