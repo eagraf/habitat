@@ -2,6 +2,7 @@ import React from 'react';
 import { AsyncState } from './types'
 import axios from 'axios';
 import { CreateCommunityResponse } from './community';
+import './Community.css'
 
 const CreateCommunityContainer = () => {
 
@@ -49,7 +50,7 @@ const CreateCommunityContainer = () => {
             return createForm(`Error: ${community.message}`)
         case "success":
             return (
-                <div>
+                <div className='CommunityInput'>
                     <h5>name: {community.data.name}</h5>
                     <h5>swarm key: {community.data.swarm_key}</h5>
                     <h5>bootstrap peers:</h5>

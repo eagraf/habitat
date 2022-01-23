@@ -30,7 +30,7 @@ const JoinCommunityContainer = () => {
 
     const joinForm = (err: string) => {
         return (
-            <div>
+            <div className='CommunityInput'>
                 <h5> {err} </h5>
                 <form>
                     <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="community name" name="name" />

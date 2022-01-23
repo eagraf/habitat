@@ -15,3 +15,10 @@ export type ConnectCommunityResponse = {
   Protocols: string[]
   PublicKey: string
 }
+
+export type ListCommunitiesResponse = {
+  Communities: string[]
+}
+
+// map from community name / "id" to url
+export type ConnectedCommunities = Map<string, string[]>

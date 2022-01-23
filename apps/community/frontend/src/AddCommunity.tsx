@@ -2,21 +2,26 @@ import './Community.css'
 import JoinCommunity from './JoinCommunity';
 import CreateCommunity from './CreateCommunity';
 import ConnectCommunity from './ConnectCommunity'
+import { ConnectedCommunities } from './community';
 
 type Props = {
-  id?: string
+  commId: string
+  communities: ConnectedCommunities
+  setCommunities: React.Dispatch<React.SetStateAction<ConnectedCommunities>>
 }
 
 function Community(props: Props) {
-  if (props.id) {
-    return <p>Show page for community {props.id} </p>
-  }
   return (
-    <div className="Community">
-        Welcome to community!
+    <div className="Community" style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+  }}>
+        <p className="CommunityInput" style={{paddingTop: '1%'}}>Welcome to community!</p>
         <CreateCommunity></CreateCommunity>
         <JoinCommunity></JoinCommunity>
-        <ConnectCommunity></ConnectCommunity>
+        <ConnectCommunity commId={props!.commId} communities={props.communities} setCommunities={props!.setCommunities}></ConnectCommunity>
       </div>
   );
 }

@@ -1,9 +1,16 @@
 import React from 'react';
 import { AsyncState } from './types'
 import axios from 'axios';
-import { ConnectCommunityResponse } from './community';
+import { ConnectCommunityResponse, ConnectedCommunities } from './community';
+import './Community.css'
 
-const ConnectCommunityContainer = () => {
+type Props = {
+    commId: string
+    communities: ConnectedCommunities
+    setCommunities: React.Dispatch<React.SetStateAction<ConnectedCommunities>>
+  }
+
+const ConnectCommunityContainer = (comms: Props) => {
 
     const [community, setCommunity] = React.useState<AsyncState<ConnectCommunityResponse>>({ state: 'init' });
     const [name, setName] = React.useState<string>('');
@@ -46,8 +53,10 @@ const ConnectCommunityContainer = () => {
         case "error":
             return connectForm(`Error: ${community.message}`)
         case "success":
+            comms.communities.set(comms.commId, community.data.Addresses)
+            comms.setCommunities(comms.communities)
             return (
-                <div>
+                <div className='CommunityInput'>
                     <h5>Addresses:</h5>
                     <ul className="addresses">
                     {community.data.Addresses.map((addr) => (
@@ -61,8 +70,8 @@ const ConnectCommunityContainer = () => {
     }
 }
 
-const ConnectCommunity = () => {
-    return <ConnectCommunityContainer/>
+function ConnectCommunity(props: Props) {
+    return <ConnectCommunityContainer commId={props.commId} communities={props.communities} setCommunities={props.setCommunities}/>
 }
 
 export default ConnectCommunity;

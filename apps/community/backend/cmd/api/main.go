@@ -2,10 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
+	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/ipfs"
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
@@ -151,8 +154,39 @@ func ConnectHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type CommunitiesListResponse struct {
+	Communities []string `json:"Communities"`
+}
+
+/*
+ GetCommunities:
+ - return all communities in user's data/ipfs folder
+*/
+func GetCommunitiesHandler(w http.ResponseWriter, r *http.Request) {
+	root := compass.HabitatPath()
+	ipfsDir, err := os.Open(filepath.Join(root, "/data/ipfs/"))
+	fmt.Println("Get communities from path ", root, "/data/ipfs/")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		log.Error().Err(err)
+		return
+	}
+	defer ipfsDir.Close()
+	communityNames, err := ipfsDir.Readdirnames(0)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		log.Error().Err(err)
+	} else {
+		fmt.Println("returning :", communityNames)
+		bytes, _ := json.Marshal(&CommunitiesListResponse{Communities: communityNames})
+		w.Write(bytes)
+	}
+}
+
 func main() {
-	log.Info().Msg("starting communities api root is" + os.Getenv("ROOT"))
+	log.Info().Msg("starting communities api root is" + compass.HabitatPath() + " communnities is " + compass.CommunitiesPath())
 
 	r := mux.NewRouter()
 	// r.HandleFunc("/home", HomeHandler)
@@ -161,6 +195,7 @@ func main() {
 	// at some point this should be abstracted away from user
 	// I'm imagining a side panel and when you click on a community name it connects
 	r.HandleFunc("/connect", ConnectHandler)
+	r.HandleFunc("/communities", GetCommunitiesHandler)
 	http.Handle("/", r)
 
 	srv := &http.Server{

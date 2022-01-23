@@ -1,22 +1,69 @@
-import {Navigation} from 'react-minimal-side-navigation';
+import {Navigation, NavItemProps} from 'react-minimal-side-navigation';
 import 'react-minimal-side-navigation/lib/ReactMinimalSideNavigation.css';
 
 import './App.css';
 import Community from './AddCommunity'
 import React from 'react';
 
-function GetCommunity(props: {commId: string}) {
-  console.log("get community for ", props.commId)
-  const blank = ["/add", "/communities"]
-  if (blank.includes(props.commId)) {
-    return <Community/>
-  } else {
-    return <Community id={props.commId}/>
-  }
+import { ConnectedCommunities, ListCommunitiesResponse } from './community';
+import { AsyncState } from './types';
+import axios from 'axios';
+
+
+function nameToNav(name: string): NavItemProps {
+  return {title: name, itemId: '/' + name}
 }
 
 function App() {
   const [comm, setComm] = React.useState<string>("");
+  const [communities, setCommunities] = React.useState<AsyncState<ListCommunitiesResponse>>({ state: 'init' });
+  const [subNav, setSubNav] = React.useState<NavItemProps[]>([{title: 'Fetching communities', itemId: '', }])
+  var emptyComms: Map<string, string[]> = new Map();
+  const [connectedCommunities, setConnectedCommunities] = React.useState<ConnectedCommunities>(emptyComms)
+    
+  function GetCommunity(props: {commId: string}) {
+
+    const blank = ["", "/add", "/communities"]
+    if (blank.includes(props.commId)) {
+      return <Community commId={props.commId} communities={connectedCommunities!} setCommunities={setConnectedCommunities}/>
+    } else {
+      console.log("get community for ", props.commId)
+      if (props.commId && connectedCommunities?.get(props.commId)) {
+        // not null or undefined: we are connected
+        return <div>
+          <p>Connected to community {props.commId} with addresses</p>
+          <ul className="addresses">
+                    {connectedCommunities.get(props.commId)!.map((addr) => (
+                        <li key={addr}>
+                            <h6>{addr}</h6>
+                        </li>
+                    ))}
+                    </ul>
+        </div>
+      } else {
+        return <Community commId={props.commId} communities={connectedCommunities!} setCommunities={setConnectedCommunities}/>
+      }
+    }
+  }
+
+  const fetchCommunities = () => {
+    axios.get<ListCommunitiesResponse>(`http://localhost:8008/communities`)
+          .then(response => {
+              setCommunities({
+                  state: 'success', 
+                  data: response.data
+              })
+              setSubNav(response.data.Communities.map((name) => nameToNav(name)))
+          }).catch((error: Error) => {
+              setCommunities({
+                  state: 'error',
+                  message: error.message,
+              })
+              console.log("ERRO!!", error)
+              setSubNav([{title: 'Error fetching communities!!', itemId: '', }])
+          });
+  };
+
   return (
     <>
       <Navigation
@@ -24,7 +71,16 @@ function App() {
         activeItemId="/addcommunity"
         onSelect={({itemId}) => {
           // maybe push to the route
-          setComm(itemId)
+          if (itemId === '/communities') {
+            if (communities.state === 'success') {
+              console.log("don't fetch communities, closing")
+            } else {
+              fetchCommunities();
+            }
+          } else {
+            console.log("on select ", itemId)
+            setComm(itemId)
+          }
         }}
         items={[
           {
@@ -38,12 +94,7 @@ function App() {
             title: 'Communities',
             itemId: '/communities',
             // make subNav map of communities
-            subNav: [
-              {
-                title: 'Put existing communities here',
-                itemId: '/somecommunity',
-              },
-            ],
+            subNav: subNav,
           },
         ]} />
     <GetCommunity commId={comm}/>
