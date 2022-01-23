@@ -11,7 +11,7 @@ clean :
 	rm -rf $(BIN_DIR)
 
 run-dev : build
-	$(BIN_DIR)/habitat --procdir $(DEV_PROC_DIR)
+	$(BIN_DIR)/habitat --procdir $(DEV_PROC_DIR) --communitydir $(DEV_COMMUNITY_DIR) --hostname localhost --root $(DEV_DATA_DIR)
 
 install-setup :
 	rm -rf $(DEV_PROC_DIR)/bin/*
@@ -19,6 +19,7 @@ install-setup :
 	mkdir -p $(DEV_PROC_DIR)/bin/amd64-linux $(DEV_PROC_DIR)/bin/amd64-darwin
 	mkdir -p $(DEV_PROC_DIR)/web
 	mkdir -p $(DEV_PROC_DIR)/data
+	mkdir -p $(DEV_COMMUNITY_DIR)
 
 install-ipfs :
 	mkdir -p $(DEV_PROC_DIR)/bin/amd64-linux $(DEV_PROC_DIR)/bin/amd64-darwin

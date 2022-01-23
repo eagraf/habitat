@@ -1,5 +1,6 @@
 bin
-procs/*
-!procs/apps.yml
-
-**/.DS_Store
+.DS_Store
+data/procs/*
+data/communities/*
+data/node_id
+!data/procs/apps.yml

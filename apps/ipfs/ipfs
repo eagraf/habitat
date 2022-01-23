@@ -1,13 +1,15 @@
 #!/bin/bash
 
-export IPFS_PATH=$DATA_DIR
-
-if [ ! -f "$IPFS_PATH" ]; then
+if [ ! -d "$IPFS_PATH" ]; then
+    mkdir -p $IPFS_PATH
+    echo "WARNING: this is not the standard way to initialize a private ipfs network"
+    echo "WARNING: use this for testing purposes only"
     a="initializing IPFS in "
     echo $a$IPFS_PATH
-    ipfs init
+    IPFS_PATH=$IPFS_PATH ipfs init
 else 
     echo "ipfs already initialized"
 fi
 
-ipfs daemon
+sleep 2
+IPFS_PATH=$IPFS_PATH ipfs daemon

@@ -7,8 +7,13 @@ import (
 )
 
 const (
-	CommandStart = "start"
-	CommandStop  = "stop"
+	CommandStart              = "start"
+	CommandStop               = "stop"
+	CommandListProcesses      = "ps"
+	CommandCommunityCreate    = "community_create"
+	CommandCommunityJoin      = "community_join"
+	CommandCommunityAddMember = "community_add_member"
+	CommandCommunityPropose   = "community_propose"
 
 	StatusOK                  = 0
 	StatusBadRequest          = 1
@@ -18,6 +23,8 @@ const (
 type Request struct {
 	Command string   `json:"command"`
 	Args    []string `json:"args"`
+	Env     []string `json:"env"`
+	Flags   []string `json:"flags"`
 }
 
 type Response struct {
