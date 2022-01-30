@@ -14,6 +14,7 @@ export type ConnectCommunityResponse = {
   ProtocolVersion: string
   Protocols: string[]
   PublicKey: string
+  SwarmKey: string
 }
 
 export type ListCommunitiesResponse = {

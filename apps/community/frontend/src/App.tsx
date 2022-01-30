@@ -3,6 +3,7 @@ import 'react-minimal-side-navigation/lib/ReactMinimalSideNavigation.css';
 
 import './App.css';
 import Community from './AddCommunity'
+import ConnectCommunity from './ConnectCommunity'
 import React from 'react';
 
 import { ConnectedCommunities, ListCommunitiesResponse } from './community';
@@ -41,7 +42,8 @@ function App() {
                     </ul>
         </div>
       } else {
-        return <Community commId={props.commId} communities={connectedCommunities!} setCommunities={setConnectedCommunities}/>
+        // we have created or joined this community but not connected
+        return <ConnectCommunity commId={props!.commId} communities={connectedCommunities} setCommunities={setConnectedCommunities}></ConnectCommunity>
       }
     }
   }
@@ -72,11 +74,7 @@ function App() {
         onSelect={({itemId}) => {
           // maybe push to the route
           if (itemId === '/communities') {
-            if (communities.state === 'success') {
-              console.log("don't fetch communities, closing")
-            } else {
-              fetchCommunities();
-            }
+            fetchCommunities();
           } else {
             console.log("on select ", itemId)
             setComm(itemId)

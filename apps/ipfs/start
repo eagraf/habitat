@@ -11,20 +11,14 @@ do
     esac
 done
 
-# export SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 export INPUT_PATH=$1
-# export EDITOR=/usr/bin/vim
 
 if [ ! -d $INPUT_PATH ]; then
     mkdir -p $INPUT_PATH
     echo "initializing IPFS at $INPUT_PATH"
     IPFS_PATH=$INPUT_PATH ipfs init
     IPFS_PATH=$INPUT_PATH ipfs bootstrap rm --all
-    # echo "check to make sure the Bootstrap field is null:"
     IPFS_PATH=$INPUT_PATH ipfs config profile apply randomports
-    # IPFS_PATH=$INPUT_PATH ipfs config show
-    # IPFS_PATH=$INPUT_PATH ipfs config edit
 else 
     echo "ipfs already initialized at $INPUT_PATH, showing config"
-    # IPFS_PATH=$INPUT_PATH ipfs config show
 fi

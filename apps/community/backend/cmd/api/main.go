@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -29,6 +28,12 @@ type UserCommunities struct {
 	Communities []CommunityConfig
 }
 
+var NodeConfig = &ipfs.IPFSNodeConfig{
+	HabitatPath: compass.HabitatPath(),
+	StartCmd:    filepath.Join(compass.HabitatPath(), "apps", "ipfs", "start"),
+	IPFSPath:    filepath.Join(compass.HabitatPath(), "data", "ipfs"),
+}
+
 /*
  CreateCommunity: create a node with new peers, serves as default bootstrap for community
  - Create Node
@@ -42,7 +47,7 @@ type UserCommunities struct {
 		swarm key and name of it and peer ids in it
 */
 func CreateCommunity(name string, path string) (error, string, string, []string) {
-	return ipfs.NewCommunityIPFSNode(name, path)
+	return NodeConfig.NewCommunityIPFSNode(name, path)
 }
 
 type CommunityInfo struct {
@@ -96,7 +101,7 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
   can either use the api returned by createNode or connect to a new client
 */
 func JoinCommunity(name string, path string, key string, btsppeers []string, peers []string) (error, string) {
-	return ipfs.JoinCommunityIPFSNode(name, path, key, btsppeers, peers)
+	return NodeConfig.JoinCommunityIPFSNode(name, path, key, btsppeers, peers)
 }
 
 func JoinHandler(w http.ResponseWriter, r *http.Request) {
@@ -137,7 +142,7 @@ func JoinHandler(w http.ResponseWriter, r *http.Request) {
  - just run the daemon & return the API or IPFS Client
 */
 func ConnectCommunity(name string) (ipfs.ConnectedConfig, error) {
-	return ipfs.ConnectCommunityIPFSNode(name)
+	return NodeConfig.ConnectCommunityIPFSNode(name)
 }
 
 func ConnectHandler(w http.ResponseWriter, r *http.Request) {
@@ -164,8 +169,8 @@ type CommunitiesListResponse struct {
 */
 func GetCommunitiesHandler(w http.ResponseWriter, r *http.Request) {
 	root := compass.HabitatPath()
-	ipfsDir, err := os.Open(filepath.Join(root, "/data/ipfs/"))
-	fmt.Println("Get communities from path ", root, "/data/ipfs/")
+	ipfsDir, err := os.Open(filepath.Join(root, "data", "ipfs"))
+	log.Info().Msg("Get communities from path " + ipfsDir.Name())
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -179,7 +184,6 @@ func GetCommunitiesHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 		log.Error().Err(err)
 	} else {
-		fmt.Println("returning :", communityNames)
 		bytes, _ := json.Marshal(&CommunitiesListResponse{Communities: communityNames})
 		w.Write(bytes)
 	}

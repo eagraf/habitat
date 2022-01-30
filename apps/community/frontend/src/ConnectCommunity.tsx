@@ -65,6 +65,7 @@ const ConnectCommunityContainer = (comms: Props) => {
                         </li>
                     ))}
                     </ul>
+                    <h6>secret key: {community.data.SwarmKey} </h6>
                 </div>
             )
     }

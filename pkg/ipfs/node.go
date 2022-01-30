@@ -1,6 +1,7 @@
 package ipfs
 
 import (
+	"bufio"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -11,7 +12,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/eagraf/habitat/pkg/compass"
 	config "github.com/ipfs/go-ipfs-config"
 	"github.com/rs/zerolog/log"
 )
@@ -32,17 +32,16 @@ func KeyGen() string {
 
 // internal structs for IPFSNode (may remove)
 type IPFSNodeConfig struct {
-	IPFSPath string
+	HabitatPath string
+	StartCmd    string
+	IPFSPath    string
 }
 
-func NewCommunityIPFSNode(name string, path string) (error, string, string, []string) {
-	root := compass.HabitatPath()
-	// TODO: use compass package here after merge
-	startCmdPath := filepath.Join(root, "/apps/ipfs/start")
-	ipfsPath := filepath.Join(root, "/data/ipfs/", path)
+func (c *IPFSNodeConfig) NewCommunityIPFSNode(name string, path string) (error, string, string, []string) {
+	commPath := filepath.Join(c.IPFSPath, path)
 	cmdCreate := &exec.Cmd{
-		Path:   startCmdPath,
-		Args:   []string{startCmdPath, ipfsPath},
+		Path:   c.StartCmd,
+		Args:   []string{c.StartCmd, commPath},
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
@@ -52,7 +51,7 @@ func NewCommunityIPFSNode(name string, path string) (error, string, string, []st
 		return err, "", "", s
 	}
 
-	bytes, _ := ioutil.ReadFile(filepath.Join(ipfsPath, "/config"))
+	bytes, _ := ioutil.ReadFile(filepath.Join(commPath, "/config"))
 	var data config.Config
 	err := json.Unmarshal(bytes, &data)
 
@@ -64,19 +63,16 @@ func NewCommunityIPFSNode(name string, path string) (error, string, string, []st
 
 	key := KeyGen()
 	keyBytes := []byte("/key/swarm/psk/1.0.0/\n/base16/\n" + key + "\n")
-	err = ioutil.WriteFile(filepath.Join(ipfsPath, "/swarm.key"), keyBytes, 0755)
+	err = ioutil.WriteFile(filepath.Join(commPath, "/swarm.key"), keyBytes, 0755)
 
 	return nil, key, data.Identity.PeerID, data.Addresses.Swarm
 }
 
-func JoinCommunityIPFSNode(name string, path string, key string, btsppeers []string, peers []string) (error, string) {
-	root := compass.HabitatPath()
-	// TODO: use compass package here after merge
-	startCmdPath := filepath.Join(root, "/apps/ipfs/start")
-	ipfsPath := filepath.Join(root, "/data/ipfs/", path)
+func (c *IPFSNodeConfig) JoinCommunityIPFSNode(name string, path string, key string, btsppeers []string, peers []string) (error, string) {
+	commPath := filepath.Join(c.IPFSPath, path)
 	cmdJoin := &exec.Cmd{
-		Path:   startCmdPath,
-		Args:   []string{startCmdPath, ipfsPath},
+		Path:   c.StartCmd,
+		Args:   []string{c.StartCmd, commPath},
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
@@ -85,7 +81,7 @@ func JoinCommunityIPFSNode(name string, path string, key string, btsppeers []str
 		return err, ""
 	}
 
-	bytes, _ := ioutil.ReadFile(filepath.Join(ipfsPath, "/config"))
+	bytes, _ := ioutil.ReadFile(filepath.Join(commPath, "/config"))
 	var data config.Config
 	err := json.Unmarshal(bytes, &data)
 
@@ -98,10 +94,10 @@ func JoinCommunityIPFSNode(name string, path string, key string, btsppeers []str
 	data.Bootstrap = btsppeers
 	bytes, err = json.Marshal(data)
 	log.Info().Msg("data " + string(bytes))
-	ioutil.WriteFile(filepath.Join(ipfsPath, "/config"), bytes, 0755)
+	ioutil.WriteFile(filepath.Join(commPath, "/config"), bytes, 0755)
 
 	keyBytes := []byte("/key/swarm/psk/1.0.0/\n/base16/\n" + key + "\n")
-	err = ioutil.WriteFile(filepath.Join(ipfsPath, "/swarm.key"), keyBytes, 0755)
+	err = ioutil.WriteFile(filepath.Join(commPath, "/swarm.key"), keyBytes, 0755)
 
 	return nil, data.Identity.PeerID
 }
@@ -113,21 +109,38 @@ type ConnectedConfig struct {
 	AgentVersion    string   `json:"AgentVersion"`
 	ProtocolVersion string   `json:"ProtocolVersion"`
 	Protocols       []string `json:"Protocols"`
+	SwarmKey        string   `json:"SwarmKey"`
 }
 
-func ConnectCommunityIPFSNode(name string) (ConnectedConfig, error) {
+func (c *IPFSNodeConfig) ConnectCommunityIPFSNode(name string) (ConnectedConfig, error) {
 	// TODO: either delete connect script or make this use it
-	log.Info().Msg("connect to community " + name)
-	root := compass.HabitatPath()
+	key := ""
+	keyPath := filepath.Join(c.IPFSPath, name, "swarm.key")
+	keyFile, err := os.Open(keyPath)
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("unable to open swarm key file for community: %s, path: %s", name, keyPath))
+	} else {
+		fileScanner := bufio.NewScanner(keyFile)
+		fileScanner.Split(bufio.ScanLines)
+		lineNum := 0
+		for fileScanner.Scan() {
+			if lineNum == 2 { // third line
+				key = fileScanner.Text()
+				break
+			}
+			lineNum++
+		}
+	}
 
-	pathEnv := fmt.Sprintf("IPFS_PATH=%s/data/ipfs/%s", root, name)
+	pathEnv := fmt.Sprintf("IPFS_PATH=%s", filepath.Join(c.IPFSPath, name))
 	cmdConnect := exec.Command("ipfs", "daemon")
 	cmdConnect.Stdout = os.Stdout
 	cmdConnect.Stderr = os.Stderr
 	cmdConnect.Env = []string{pathEnv}
 	go cmdConnect.Run()
 
-	time.Sleep(2 * time.Second)
+	// TODO: don't ise to,e/S;ee[]
+	time.Sleep(1 * time.Second)
 
 	cmdId := exec.Command("ipfs", "id")
 	cmdId.Env = []string{pathEnv}
@@ -144,6 +157,7 @@ func ConnectCommunityIPFSNode(name string) (ConnectedConfig, error) {
 		log.Fatal().Err(err)
 		return ConnectedConfig{}, err
 	}
+	data.SwarmKey = key
 
 	return data, nil
 }
