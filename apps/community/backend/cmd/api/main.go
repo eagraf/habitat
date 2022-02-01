@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -169,21 +169,17 @@ type CommunitiesListResponse struct {
 */
 func GetCommunitiesHandler(w http.ResponseWriter, r *http.Request) {
 	root := compass.HabitatPath()
-	ipfsDir, err := os.Open(filepath.Join(root, "data", "ipfs"))
-	log.Info().Msg("Get communities from path " + ipfsDir.Name())
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		log.Error().Err(err)
-		return
-	}
-	defer ipfsDir.Close()
-	communityNames, err := ipfsDir.Readdirnames(0)
+	ipfsPath := filepath.Join(root, "data", "ipfs")
+	communityFiles, err := ioutil.ReadDir(ipfsPath)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		log.Error().Err(err)
 	} else {
+		communityNames := []string{}
+		for _, file := range communityFiles {
+			communityNames = append(communityNames, file.Name())
+		}
 		bytes, _ := json.Marshal(&CommunitiesListResponse{Communities: communityNames})
 		w.Write(bytes)
 	}

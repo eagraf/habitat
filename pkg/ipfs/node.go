@@ -24,9 +24,6 @@ func KeyGen() string {
 		fmt.Println("While trying to read random source:", err)
 	}
 
-	// when writing to swarm.key, add these to the top:
-	// fmt.Println("/key/swarm/psk/1.0.0/")
-	// fmt.Println("/base16/")
 	return hex.EncodeToString(key)
 }
 
@@ -139,7 +136,7 @@ func (c *IPFSNodeConfig) ConnectCommunityIPFSNode(name string) (ConnectedConfig,
 	cmdConnect.Env = []string{pathEnv}
 	go cmdConnect.Run()
 
-	// TODO: don't ise to,e/S;ee[]
+	// TODO: don't use time.Sleep
 	time.Sleep(1 * time.Second)
 
 	cmdId := exec.Command("ipfs", "id")
