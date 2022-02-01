@@ -71,7 +71,6 @@ export default class YjsProvider extends Observable<ProviderEvents> {
   
       this.awareness.on('update', ({ added, updated, removed }) => {
         const changedClients = added.concat(updated).concat(removed)
-        console.log('awareness update trigerred', changedClients)
         const encoder = encoding.createEncoder()
         encoding.writeVarString(encoder, this.peerId)
         encoding.writeVarUint(encoder, MessageTypes.Awareness)
@@ -155,23 +154,18 @@ export default class YjsProvider extends Observable<ProviderEvents> {
       switch(messageType) {
         case MessageTypes.Sync: {
           const encoder = encoding.createEncoder()
-          console.log('new update')
           encoding.writeVarString(encoder, this.peerId)
           encoding.writeUint8(encoder, MessageTypes.Sync)
           const syncMessageType = syncProtocol.readSyncMessage(decoder, encoder, this.yDoc, sender)
           if(syncMessageType === syncProtocol.messageYjsSyncStep1) {
-            console.log('syncmessage type 1')
             peer.send(encoding.toUint8Array(encoder))
           }
           else {
-            console.log('syncmessage type 2')
-
             this.emit('synced', [peerId])
           }
           break
         }
         case MessageTypes.Awareness: {
-          console.log('awareness update recieved')
           awarenessProtocol.applyAwarenessUpdate(this.awareness, decoding.readVarUint8Array(decoder), sender)
           break
         }
@@ -204,7 +198,6 @@ export default class YjsProvider extends Observable<ProviderEvents> {
     peer.on('error', (error) => {
       peer.destroy()
       this.peers.delete(peerId)
-      console.log(error)
     })
 
     this.peers.set(peerId, peer)
@@ -214,7 +207,6 @@ export default class YjsProvider extends Observable<ProviderEvents> {
 
 
   async _handleAnnounce(sender: string, decoder: decoding.Decoder) {
-    console.log('recieved announcement from', sender)
     this._acknowledge(sender)
     if(this.peerId < sender) {
       this._createPeer(sender, { initiator: true })
@@ -226,7 +218,6 @@ export default class YjsProvider extends Observable<ProviderEvents> {
     if(recipient !== this.peerId) {
       return
     }
-    console.log('recieved acknowledgment from', sender)
     if(this.peerId < sender) {
       this._createPeer(sender, { initiator: true })
     }
@@ -238,11 +229,8 @@ export default class YjsProvider extends Observable<ProviderEvents> {
     if(recipient !== this.peerId) {
       return
     }
-    console.log('recieved signal from', sender)
     const data = decoding.readAny(decoder)
-    console.log(data)
     if(!this.peers.has(sender)) {
-      console.log('creating receiving peer')
       this._createPeer(sender)
     }
     const peer = this.peers.get(sender)

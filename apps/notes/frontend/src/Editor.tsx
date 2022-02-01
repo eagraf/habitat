@@ -44,7 +44,7 @@ export default function Editor() {
         user: {
           name: provider.peerId.substring(0, 8),
           color: stringToColor(provider.peerId)
-        }
+        },
       }),
       Placeholder.configure({
         placeholder: 'Type here...'
@@ -56,8 +56,16 @@ export default function Editor() {
     provider.connect()
   }, [provider])
 
-  return <div>
-    <EditorContent editor={editor} />
+  return <div className="editor-container">
+    <EditorContent 
+      onClick={ () => {
+        if(editor) {
+          editor.commands.focus()
+        }
+      }}
+      className="editor"
+      editor={editor} 
+    />
   </div>
 
 }

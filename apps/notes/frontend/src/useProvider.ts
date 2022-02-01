@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import Provider from './Provider'
+import * as Y from 'yjs';
+import { IPFSHTTPClient } from 'ipfs-http-client';
 
-export default function useProvider(docName, yDoc, ipfs) {
+export default function useProvider(docName: string, yDoc: Y.Doc, ipfs: IPFSHTTPClient) {
     const [provider, setProvider] = useState<Provider>(() => new Provider(docName, yDoc, ipfs))
     useEffect(() => {
         if(docName !== provider.docName) {
@@ -10,7 +12,7 @@ export default function useProvider(docName, yDoc, ipfs) {
             const newProvider = new Provider(docName, yDoc, ipfs)
             setProvider(newProvider)
         }
-    }, [docName])
+    }, [docName, yDoc, ipfs])
 
     return provider
 }

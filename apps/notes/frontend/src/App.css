@@ -3,6 +3,7 @@
     flex-direction: row;
     height: 100vh;
     width: 100%;
+    background: lightgrey;
 }
 
 .side-menu {
@@ -13,19 +14,26 @@
 
 .editor {
     flex: 1;
+    background-color: white;
+    padding: 48px;
+    width: 100%;
+    max-width: 800px;
+    border-radius: 4px 4px 0 0;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
 }
 
-textarea {
-    resize: none;
+.editor-container {
+    flex: 1;
+    padding: 24px;
+    padding-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: scroll;
 }
 
-.title {
-    font-weight: 800;
-}
-
-.title-placeholder {
-    color: gray;
-    position: absolute;
+.ProseMirror-focused {
+    outline: none;
 }
 
 /* Give a remote user a caret */
@@ -37,10 +45,10 @@ textarea {
     pointer-events: none;
     position: relative;
     word-break: normal;
-  }
+}
   
-  /* Render the username above the caret */
-  .collaboration-cursor__label {
+/* Render the username above the caret */
+.collaboration-cursor__label {
     border-radius: 3px 3px 3px 0;
     color: #0d0d0d;
     font-size: 12px;
@@ -53,4 +61,8 @@ textarea {
     top: -1.4em;
     user-select: none;
     white-space: nowrap;
-  }
+}
+
+.is-editor-empty {
+      content: attr(data-placeholder);
+}
