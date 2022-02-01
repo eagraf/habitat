@@ -73,9 +73,13 @@ var startCmd = &cobra.Command{
 
 		flags, nonflags := parseFlags(args[1:])
 
+		reqArgs := args
+		if commName != "" {
+			args = append(reqArgs, commName)
+		}
 		client.WriteRequest(&ctl.Request{
 			Command: "start",
-			Args:    append(args, commName),
+			Args:    reqArgs,
 			Flags:   flags,
 			Env:     nonflags,
 		})
