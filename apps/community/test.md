@@ -1,0 +1,1 @@
+To test, run ROOT=/path/to/habitat go test

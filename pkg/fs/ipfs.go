@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/eagraf/habitat/pkg/ipfs"
+	ipfs_client "github.com/eagraf/habitat/pkg/ipfs"
 )
 
 type IPFSFile struct {
@@ -79,12 +79,12 @@ func (de *IPFSDirEntry) Info() (FileInfo, error) {
 }
 
 type IPFS struct {
-	client *ipfs.Client
+	client *ipfs_client.Client
 }
 
 func NewIPFS(apiURL string) (*IPFS, error) {
 	// validate that the url is valid and talks to an API instance
-	client, err := ipfs.NewClient(apiURL)
+	client, err := ipfs_client.NewClient(apiURL)
 	if err != nil {
 		return nil, err
 	}

@@ -36,4 +36,12 @@ install-notes :
 	mkdir -p $(DEV_PROC_DIR)/web/notes
 	cp -R $(APPS_DIR)/notes/out/frontend/* $(DEV_PROC_DIR)/web/notes
 
-install: install-setup install-notes install-ipfs
+install-community : 
+	$(MAKE) -C apps/community all
+	cp $(APPS_DIR)/community/out/backend/amd64-linux/community_backend $(DEV_PROC_DIR)/bin/amd64-linux/community_backend
+	cp $(APPS_DIR)/community/out/backend/amd64-darwin/community_backend $(DEV_PROC_DIR)/bin/amd64-darwin/community_backend
+
+	mkdir -p $(DEV_PROC_DIR)/web/community
+	cp -R $(APPS_DIR)/community/out/frontend/* $(DEV_PROC_DIR)/web/community
+
+install: install-setup install-notes install-ipfs install-community

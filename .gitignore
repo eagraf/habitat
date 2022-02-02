@@ -4,3 +4,5 @@ data/procs/*
 data/communities/*
 data/node_id
 !data/procs/apps.yml
+node_modules/
+package-lock.json

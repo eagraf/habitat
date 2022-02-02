@@ -5,8 +5,14 @@ go 1.15
 require (
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
+	github.com/ipfs/go-ipfs v0.9.1
+	github.com/ipfs/go-ipfs-config v0.16.0
+	github.com/ipfs/interface-go-ipfs-core v0.5.2
+	github.com/libp2p/go-libp2p-core v0.8.5
+	github.com/lucas-clemente/quic-go v0.24.0 // indirect
+	github.com/multiformats/go-multiaddr v0.3.3
 	github.com/ogier/pflag v0.0.1 // indirect
-	github.com/rs/zerolog v1.23.0
+	github.com/rs/zerolog v1.26.1
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
