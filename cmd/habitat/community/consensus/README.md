@@ -1,0 +1,5 @@
+# Consensus
+This directory containes implementations of different consensus algorithms. Habitat communiities use consensus algorithms to agree on the basic state of a community such as membership, tracking running apps, etc. Right now, the only implemented consensus algorithm is Raft, but more can be implemented in the future to fulfill different use cases and scales of communities. 
+
+## ClusterService Interface
+The `cluster` package defintes the ClusterService interface, which consensus algorithms need to implement. The ClusterService interface provides the basic operations needed to manage a node within a cluster of peers reaching consensus. The ClusterManager class provides a layer of abstraction that allows a single interface to interact with the various instances of ClusterService that are running.

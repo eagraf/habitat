@@ -89,16 +89,108 @@ var communityJoinCmd = &cobra.Command{
 			return
 		}
 
-		sendRequest(ctl.CommandCommunityJoin, []string{address.Value.String()})
+		communityID := cmd.Flags().Lookup("community")
+		if communityID == nil {
+			fmt.Println("community flag needs to be set")
+			return
+		}
+
+		sendRequest(ctl.CommandCommunityJoin, []string{address.Value.String(), communityID.Value.String()})
+	},
+}
+
+var communityAddMemberCmd = &cobra.Command{
+	Use:   "add",
+	Short: "add a member to the community",
+	Run: func(cmd *cobra.Command, args []string) {
+		address := cmd.Flags().Lookup("address")
+		if address == nil {
+			fmt.Println("address flag needs to be set")
+			return
+		}
+
+		communityID := cmd.Flags().Lookup("community")
+		if communityID == nil {
+			fmt.Println("community flag needs to be set")
+			return
+		}
+
+		nodeID := cmd.Flags().Lookup("node")
+		if communityID == nil {
+			fmt.Println("node flag needs to be set")
+			return
+		}
+
+		sendRequest(ctl.CommandCommunityAddMember, []string{
+			communityID.Value.String(),
+			nodeID.Value.String(),
+			address.Value.String(),
+		})
+	},
+}
+
+var communityProposeTransitionCmd = &cobra.Command{
+	Use:   "propose <json_patch_b64>",
+	Short: "propose a transition to this community's state",
+	Run: func(cmd *cobra.Command, args []string) {
+		communityID := cmd.Flags().Lookup("community")
+		if communityID == nil {
+			fmt.Println("community flag needs to be set")
+			return
+		}
+
+		if len(args) < 1 {
+			fmt.Println("must supply a base64 encoded JSON patch as the first argument")
+			return
+		}
+		b64Patch := args[0]
+
+		sendRequest(ctl.CommandCommunityPropose, []string{communityID.Value.String(), b64Patch})
+	},
+}
+
+var communityStateCmd = &cobra.Command{
+	Use:   "state",
+	Short: "get the state of the community as a JSON object",
+	Run: func(cmd *cobra.Command, args []string) {
+		communityID := cmd.Flags().Lookup("community")
+		if communityID == nil {
+			fmt.Println("community flag needs to be set")
+			return
+		}
+
+		sendRequest(ctl.CommandCommunityState, []string{communityID.Value.String()})
+	},
+}
+
+var communityListCmd = &cobra.Command{
+	Use:   "ls",
+	Short: "list the communities that this node is a part of",
+	Run: func(cmd *cobra.Command, args []string) {
+		sendRequest(ctl.CommandCommunityList, []string{})
 	},
 }
 
 func init() {
 	communityCreateCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
+
 	communityJoinCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
+	communityJoinCmd.Flags().StringP("community", "c", "", "id of community to be joined")
+
+	communityAddMemberCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
+	communityAddMemberCmd.Flags().StringP("community", "c", "", "id of community to be joined")
+	communityAddMemberCmd.Flags().StringP("node", "n", "", "node id of node that is being added")
+
+	communityProposeTransitionCmd.Flags().StringP("community", "c", "", "id of community to be joined")
+
+	communityStateCmd.Flags().StringP("community", "c", "", "id of community to be joined")
 
 	communityCmd.AddCommand(communityCreateCmd)
 	communityCmd.AddCommand(communityJoinCmd)
+	communityCmd.AddCommand(communityAddMemberCmd)
+	communityCmd.AddCommand(communityProposeTransitionCmd)
+	communityCmd.AddCommand(communityStateCmd)
+	communityCmd.AddCommand(communityListCmd)
 
 	rootCmd.AddCommand(communityCmd)
 }

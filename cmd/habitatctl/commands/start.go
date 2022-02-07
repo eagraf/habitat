@@ -94,7 +94,6 @@ var startCmd = &cobra.Command{
 
 func init() {
 	startCmd.PersistentFlags().StringVarP(&commName, "comm", "c", "", "name of community for which to start process")
-	startCmd.MarkPersistentFlagRequired("comm")
 	startCmd.AddCommand(ipfsCmd)
 	rootCmd.AddCommand(startCmd)
 
