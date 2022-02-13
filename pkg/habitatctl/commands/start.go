@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/eagraf/habitat/cmd/habitatctl/client"
+	"github.com/eagraf/habitat/pkg/habitatctl/client"
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
