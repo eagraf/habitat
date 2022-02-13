@@ -60,7 +60,6 @@ sleep 1
 docker restart $BOB_CONTAINER_ID
 ./bin/habitatctl -p 2000 community propose -c $COMMUNITY_UUID $TRANSITION2
 
-sleep 1
 
 #./bin/habitatctl -p 2001 start raft
 
@@ -72,6 +71,8 @@ COUNTER3=`./bin/habitatctl -p 2002 community state -c $COMMUNITY_UUID | jq .coun
 
 docker-compose -f docker-compose-raft.yml down 2> /dev/null
 docker-compose rm 2> /dev/null
+
+sleep 1
 
 [[ $COUNTER1 -eq 2 ]] || log::fatal "alice's counter should be 2, not $COUNTER1"
 [[ $COUNTER2 -eq 2 ]] || log::fatal "bob's counter should be 2, not $COUNTER2"
