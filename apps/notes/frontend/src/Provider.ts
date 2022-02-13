@@ -28,7 +28,6 @@ enum MessageTypes {
   Awareness = 1,
 }
 
-
 type ProviderPeer = Peer.Instance & { ready?: boolean }
 
 export default class YjsProvider extends Observable<ProviderEvents> {
@@ -39,6 +38,7 @@ export default class YjsProvider extends Observable<ProviderEvents> {
   peerId: string
   peers: Map<string, ProviderPeer>
   awareness: awarenessProtocol.Awareness
+  ws: WebSocket
 
   constructor(docName: string, yDoc: Y.Doc, ipfs: ipfsHttpClient.IPFSHTTPClient) {
     super()
@@ -172,6 +172,7 @@ export default class YjsProvider extends Observable<ProviderEvents> {
       }
     })
     peer.on('close', () => {
+      console.log('closed', peerId)
       peer.destroy()
       this.peers.delete(peerId)
     })
@@ -196,8 +197,7 @@ export default class YjsProvider extends Observable<ProviderEvents> {
       this.emit('newPeer', [peerId])
     })
     peer.on('error', (error) => {
-      peer.destroy()
-      this.peers.delete(peerId)
+      peer.emit('close')
     })
 
     this.peers.set(peerId, peer)

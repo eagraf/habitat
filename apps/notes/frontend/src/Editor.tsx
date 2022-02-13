@@ -10,9 +10,11 @@ import Collaboration from '@tiptap/extension-collaboration'
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor'
 import Placeholder from '@tiptap/extension-placeholder'
 
-import useProvider from './useProvider';
+import useProvider from './useProvider'
 
 import stringToColor from 'string-to-color'
+
+import BackendProvider from './BackendProvider'
 
 export default function Editor() {
   const yDoc = useMemo(() => {
@@ -21,7 +23,7 @@ export default function Editor() {
     return yDoc
   }, [])
 
-  const docName = 'docName'
+  const docName = '/orbitdb/zdpuAwpxc5d1CZ1VgxSDW7sFzNrRBe3ZwXiRuHjJ1gM7FiZbA/docName'
 
   const ipfs = useMemo(() => {
     console.log('ipfs')
@@ -53,7 +55,12 @@ export default function Editor() {
   })
 
   useEffect(() => {
-    provider.connect()
+    const backendProvider = new BackendProvider(docName, yDoc, 'localhost:4000')
+    backendProvider.connect()
+    setTimeout(() => {
+      console.log('connect webrtc')
+      provider.connect()
+    }, 5000)
   }, [provider])
 
   return <div className="editor-container">
