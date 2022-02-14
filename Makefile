@@ -13,6 +13,9 @@ clean :
 run-dev : build
 	HABITAT_PATH=$(DEV_DATA_DIR) $(BIN_DIR)/habitat --hostname localhost
 
+run-frontend :
+	npm --prefix $(APPS_DIR)/community/frontend start
+
 install-setup :
 	rm -rf $(DEV_PROC_DIR)/bin/*
 	rm -rf $(DEV_PROC_DIR)/web/*
