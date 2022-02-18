@@ -10,11 +10,23 @@ build : clean
 clean :
 	rm -rf $(BIN_DIR)
 
-run-dev : build
+habitat :
+	echo "run habitat"
 	HABITAT_PATH=$(DEV_DATA_DIR) $(BIN_DIR)/habitat --hostname localhost
 
-run-frontend :
-	npm --prefix $(APPS_DIR)/community/frontend start
+c-frontend :
+	echo "run community frontend"
+	serve -s $(DEV_PROC_DIR)/web/community
+	# npm --prefix $(APPS_DIR)/community/frontend start
+
+c-backend :
+	echo "run community backend"
+	cd $(DEV_PROC_DIR)/bin/amd64-darwin && HABITAT_PATH=$(DEV_DATA_DIR) ./community_backend
+
+
+run-communities : c-frontend c-backend
+
+run : habitat c-backend c-frontend
 
 install-setup :
 	rm -rf $(DEV_PROC_DIR)/bin/*

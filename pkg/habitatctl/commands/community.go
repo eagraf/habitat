@@ -50,10 +50,10 @@ var communityCmd = &cobra.Command{
 				if len(args) < 3 {
 					fmt.Printf("No member id specified for community add command")
 				}
-				sendRequest(ctl.CommandCommunityAddMember, []string{args[1], args[2]})
+				SendRequest(ctl.CommandCommunityAddMember, []string{args[1], args[2]})
 				return
 			case "propose":
-				sendRequest(ctl.CommandCommunityPropose, []string{})
+				SendRequest(ctl.CommandCommunityPropose, []string{})
 				return
 			default:
 				fmt.Printf("%s is an invalid subcommand for community %s\n", args[1], args[0])
@@ -74,7 +74,7 @@ var communityCreateCmd = &cobra.Command{
 			return
 		}
 
-		sendRequest(ctl.CommandCommunityCreate, []string{address.Value.String()})
+		SendRequest(ctl.CommandCommunityCreate, []string{address.Value.String()})
 	},
 }
 
@@ -95,7 +95,7 @@ var communityJoinCmd = &cobra.Command{
 			return
 		}
 
-		sendRequest(ctl.CommandCommunityJoin, []string{address.Value.String(), communityID.Value.String()})
+		SendRequest(ctl.CommandCommunityJoin, []string{address.Value.String(), communityID.Value.String()})
 	},
 }
 
@@ -121,7 +121,7 @@ var communityAddMemberCmd = &cobra.Command{
 			return
 		}
 
-		sendRequest(ctl.CommandCommunityAddMember, []string{
+		SendRequest(ctl.CommandCommunityAddMember, []string{
 			communityID.Value.String(),
 			nodeID.Value.String(),
 			address.Value.String(),
@@ -145,7 +145,7 @@ var communityProposeTransitionCmd = &cobra.Command{
 		}
 		b64Patch := args[0]
 
-		sendRequest(ctl.CommandCommunityPropose, []string{communityID.Value.String(), b64Patch})
+		SendRequest(ctl.CommandCommunityPropose, []string{communityID.Value.String(), b64Patch})
 	},
 }
 
@@ -159,7 +159,7 @@ var communityStateCmd = &cobra.Command{
 			return
 		}
 
-		sendRequest(ctl.CommandCommunityState, []string{communityID.Value.String()})
+		SendRequest(ctl.CommandCommunityState, []string{communityID.Value.String()})
 	},
 }
 
@@ -167,7 +167,7 @@ var communityListCmd = &cobra.Command{
 	Use:   "ls",
 	Short: "list the communities that this node is a part of",
 	Run: func(cmd *cobra.Command, args []string) {
-		sendRequest(ctl.CommandCommunityList, []string{})
+		SendRequest(ctl.CommandCommunityList, []string{})
 	},
 }
 

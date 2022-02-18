@@ -16,7 +16,7 @@ const (
 	osDarwin = "darwin"
 
 	habitatPathEnv         = "HABITAT_PATH"
-	defaultHabitatPathUnix = "~/.habitat"
+	defaultHabitatPathUnix = "~/habitat"
 
 	nodeIDRelativePath = "node_id"
 )

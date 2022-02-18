@@ -11,7 +11,7 @@ var stopCmd = &cobra.Command{
 	Long:  `TODO create long description`,
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		sendRequest("stop", args)
+		SendRequest("stop", args)
 	},
 }
 

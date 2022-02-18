@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func sendRequest(command string, args []string) {
+func SendRequest(command string, args []string) {
 	client, err := client.NewClient(viper.GetString("port"))
 	if err != nil {
 		fmt.Println("Error: couldn't connect to habitat service")

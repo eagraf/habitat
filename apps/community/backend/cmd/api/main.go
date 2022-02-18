@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/eagraf/habitat/pkg/compass"
+	"github.com/eagraf/habitat/pkg/habitatctl/commands"
 	"github.com/eagraf/habitat/pkg/ipfs"
+	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
 )
@@ -29,9 +31,9 @@ type UserCommunities struct {
 }
 
 var NodeConfig = &ipfs.IPFSNodeConfig{
-	HabitatPath: compass.HabitatPath(),
-	StartCmd:    filepath.Join(compass.HabitatPath(), "apps", "ipfs", "start"),
-	IPFSPath:    filepath.Join(compass.HabitatPath(), "data", "ipfs"),
+	CommunitiesPath: compass.CommunitiesPath(),
+	StartCmd:        filepath.Join(compass.HabitatPath(), "apps", "ipfs", "start"),
+	IPFSPath:        filepath.Join(compass.HabitatPath(), "data", "ipfs"),
 }
 
 /*
@@ -47,7 +49,10 @@ var NodeConfig = &ipfs.IPFSNodeConfig{
 		swarm key and name of it and peer ids in it
 */
 func CreateCommunity(name string, path string) (error, string, string, []string) {
-	return NodeConfig.NewCommunityIPFSNode(name, path)
+	err, key, peerid, addrs := NodeConfig.NewCommunityIPFSNode(name, path)
+	ipfsConfig, err := ConnectCommunity(name)
+	commands.SendRequest(ctl.CommandCommunityCreate, ipfsConfig.Addresses)
+	return err, key, peerid, addrs
 }
 
 type CommunityInfo struct {
@@ -101,7 +106,10 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
   can either use the api returned by createNode or connect to a new client
 */
 func JoinCommunity(name string, path string, key string, btsppeers []string, peers []string) (error, string) {
-	return NodeConfig.JoinCommunityIPFSNode(name, path, key, btsppeers, peers)
+	err, peerid := NodeConfig.JoinCommunityIPFSNode(name, path, key, btsppeers, peers)
+	ipfsConfig, err := ConnectCommunity(name)
+	commands.SendRequest(ctl.CommandCommunityJoin, ipfsConfig.Addresses)
+	return err, peerid
 }
 
 func JoinHandler(w http.ResponseWriter, r *http.Request) {

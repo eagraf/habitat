@@ -29,13 +29,13 @@ func KeyGen() string {
 
 // internal structs for IPFSNode (may remove)
 type IPFSNodeConfig struct {
-	HabitatPath string
-	StartCmd    string
-	IPFSPath    string
+	CommunitiesPath string
+	StartCmd        string
+	IPFSPath        string
 }
 
 func (c *IPFSNodeConfig) NewCommunityIPFSNode(name string, path string) (error, string, string, []string) {
-	commPath := filepath.Join(c.IPFSPath, path)
+	commPath := filepath.Join(c.CommunitiesPath, "ipfs", path)
 	cmdCreate := &exec.Cmd{
 		Path:   c.StartCmd,
 		Args:   []string{c.StartCmd, commPath},
