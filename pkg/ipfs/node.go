@@ -28,14 +28,13 @@ func KeyGen() string {
 }
 
 // internal structs for IPFSNode (may remove)
-type IPFSNodeConfig struct {
+type IPFSConfig struct {
 	CommunitiesPath string
 	StartCmd        string
-	IPFSPath        string
 }
 
-func (c *IPFSNodeConfig) NewCommunityIPFSNode(name string, path string) (error, string, string, []string) {
-	commPath := filepath.Join(c.CommunitiesPath, "ipfs", path)
+func (c *IPFSConfig) NewCommunityIPFSNode(name string, path string) (error, string, string, []string) {
+	commPath := filepath.Join(c.CommunitiesPath, path)
 	cmdCreate := &exec.Cmd{
 		Path:   c.StartCmd,
 		Args:   []string{c.StartCmd, commPath},
@@ -65,8 +64,8 @@ func (c *IPFSNodeConfig) NewCommunityIPFSNode(name string, path string) (error, 
 	return nil, key, data.Identity.PeerID, data.Addresses.Swarm
 }
 
-func (c *IPFSNodeConfig) JoinCommunityIPFSNode(name string, path string, key string, btsppeers []string, peers []string) (error, string) {
-	commPath := filepath.Join(c.IPFSPath, path)
+func (c *IPFSConfig) JoinCommunityIPFSNode(name string, path string, key string, btsppeers []string, peers []string) (error, string) {
+	commPath := filepath.Join(c.CommunitiesPath, path)
 	cmdJoin := &exec.Cmd{
 		Path:   c.StartCmd,
 		Args:   []string{c.StartCmd, commPath},
@@ -109,10 +108,10 @@ type ConnectedConfig struct {
 	SwarmKey        string   `json:"SwarmKey"`
 }
 
-func (c *IPFSNodeConfig) ConnectCommunityIPFSNode(name string) (ConnectedConfig, error) {
+func (c *IPFSConfig) ConnectCommunityIPFSNode(name string) (ConnectedConfig, error) {
 	// TODO: either delete connect script or make this use it
 	key := ""
-	keyPath := filepath.Join(c.IPFSPath, name, "swarm.key")
+	keyPath := filepath.Join(c.CommunitiesPath, name, "swarm.key")
 	keyFile, err := os.Open(keyPath)
 	if err != nil {
 		log.Error().Msg(fmt.Sprintf("unable to open swarm key file for community: %s, path: %s", name, keyPath))
@@ -129,7 +128,7 @@ func (c *IPFSNodeConfig) ConnectCommunityIPFSNode(name string) (ConnectedConfig,
 		}
 	}
 
-	pathEnv := fmt.Sprintf("IPFS_PATH=%s", filepath.Join(c.IPFSPath, name))
+	pathEnv := fmt.Sprintf("IPFS_PATH=%s", filepath.Join(c.CommunitiesPath, name))
 	cmdConnect := exec.Command("ipfs", "daemon")
 	cmdConnect.Stdout = os.Stdout
 	cmdConnect.Stderr = os.Stderr
@@ -167,8 +166,8 @@ func (c *IPFSNodeConfig) ConnectCommunityIPFSNode(name string) (ConnectedConfig,
 
 /*
 // general function to create a new ipfs node
-func NewIPFSNode_Lib(path string) (*IPFSNodeConfig, error) {
-	node := &IPFSNodeConfig{
+func NewIPFSNode_Lib(path string) (*IPFSConfig, error) {
+	node := &IPFSConfig{
 		path,
 	}
 	return node, nil

@@ -30,10 +30,9 @@ type UserCommunities struct {
 	Communities []CommunityConfig
 }
 
-var NodeConfig = &ipfs.IPFSNodeConfig{
+var NodeConfig = &ipfs.IPFSConfig{
 	CommunitiesPath: compass.CommunitiesPath(),
 	StartCmd:        filepath.Join(compass.HabitatPath(), "apps", "ipfs", "start"),
-	IPFSPath:        filepath.Join(compass.HabitatPath(), "data", "ipfs"),
 }
 
 /*
@@ -50,6 +49,7 @@ var NodeConfig = &ipfs.IPFSNodeConfig{
 */
 func CreateCommunity(name string, path string) (error, string, string, []string) {
 	err, key, peerid, addrs := NodeConfig.NewCommunityIPFSNode(name, path)
+	time.Sleep(5 * time.Second) // need to remove this at some point --> basically wait til ipfs comm is created before connecting
 	ipfsConfig, err := ConnectCommunity(name)
 	commands.SendRequest(ctl.CommandCommunityCreate, ipfsConfig.Addresses)
 	return err, key, peerid, addrs
@@ -107,6 +107,7 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 */
 func JoinCommunity(name string, path string, key string, btsppeers []string, peers []string) (error, string) {
 	err, peerid := NodeConfig.JoinCommunityIPFSNode(name, path, key, btsppeers, peers)
+	time.Sleep(5 * time.Second) // need to remove this at some point --> basically wait til ipfs comm is created before connecting
 	ipfsConfig, err := ConnectCommunity(name)
 	commands.SendRequest(ctl.CommandCommunityJoin, ipfsConfig.Addresses)
 	return err, peerid
@@ -176,9 +177,8 @@ type CommunitiesListResponse struct {
  - return all communities in user's data/ipfs folder
 */
 func GetCommunitiesHandler(w http.ResponseWriter, r *http.Request) {
-	root := compass.HabitatPath()
-	ipfsPath := filepath.Join(root, "data", "ipfs")
-	communityFiles, err := ioutil.ReadDir(ipfsPath)
+	comms := compass.CommunitiesPath()
+	communityFiles, err := ioutil.ReadDir(comms)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
