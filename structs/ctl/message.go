@@ -52,5 +52,5 @@ func (r *Response) String() string {
 	if r.Status != 0 {
 		return fmt.Sprintf("Error: %s", r.Message)
 	}
-	return r.Message
+	return string(r.Message)
 }

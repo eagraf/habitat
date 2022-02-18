@@ -1,8 +1,16 @@
 include ./common.mk
 
+install-community : 
+	$(MAKE) -C apps/community all
+	cp $(APPS_DIR)/community/out/backend/amd64-linux/community_backend $(DEV_PROC_DIR)/bin/amd64-linux/community_backend
+	cp $(APPS_DIR)/community/out/backend/amd64-darwin/community_backend $(DEV_PROC_DIR)/bin/amd64-darwin/community_backend
+
+	mkdir -p $(DEV_PROC_DIR)/web/community
+	cp -R $(APPS_DIR)/community/out/frontend/* $(DEV_PROC_DIR)/web/community
+
 all : build
 
-build : clean
+build : clean install-community
 	mkdir -p $(BIN_DIR) $(BIN_DIR)/amd64-linux
 	go build -o $(BIN_DIR) github.com/eagraf/habitat/cmd/habitat github.com/eagraf/habitat/pkg/habitatctl
 	GOOS=linux GOARCH=amd64 go build -o $(BIN_DIR)/amd64-linux github.com/eagraf/habitat/cmd/habitat github.com/eagraf/habitat/pkg/habitatctl
@@ -48,13 +56,5 @@ install-notes :
 
 	mkdir -p $(DEV_PROC_DIR)/web/notes
 	cp -R $(APPS_DIR)/notes/out/frontend/* $(DEV_PROC_DIR)/web/notes
-
-install-community : 
-	$(MAKE) -C apps/community all
-	cp $(APPS_DIR)/community/out/backend/amd64-linux/community_backend $(DEV_PROC_DIR)/bin/amd64-linux/community_backend
-	cp $(APPS_DIR)/community/out/backend/amd64-darwin/community_backend $(DEV_PROC_DIR)/bin/amd64-darwin/community_backend
-
-	mkdir -p $(DEV_PROC_DIR)/web/community
-	cp -R $(APPS_DIR)/community/out/frontend/* $(DEV_PROC_DIR)/web/community
 
 install: install-setup install-notes install-ipfs install-community

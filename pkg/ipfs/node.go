@@ -34,10 +34,9 @@ type IPFSConfig struct {
 }
 
 func (c *IPFSConfig) NewCommunityIPFSNode(name string, path string) (error, string, string, []string) {
-	commPath := filepath.Join(c.CommunitiesPath, path)
 	cmdCreate := &exec.Cmd{
 		Path:   c.StartCmd,
-		Args:   []string{c.StartCmd, commPath},
+		Args:   []string{c.StartCmd, filepath.Join(path, "ipfs")},
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
@@ -47,7 +46,7 @@ func (c *IPFSConfig) NewCommunityIPFSNode(name string, path string) (error, stri
 		return err, "", "", s
 	}
 
-	bytes, _ := ioutil.ReadFile(filepath.Join(commPath, "/config"))
+	bytes, _ := ioutil.ReadFile(filepath.Join(path, "ipfs", "config"))
 	var data config.Config
 	err := json.Unmarshal(bytes, &data)
 
@@ -59,7 +58,7 @@ func (c *IPFSConfig) NewCommunityIPFSNode(name string, path string) (error, stri
 
 	key := KeyGen()
 	keyBytes := []byte("/key/swarm/psk/1.0.0/\n/base16/\n" + key + "\n")
-	err = ioutil.WriteFile(filepath.Join(commPath, "/swarm.key"), keyBytes, 0755)
+	err = ioutil.WriteFile(filepath.Join(path, "/swarm.key"), keyBytes, 0755)
 
 	return nil, key, data.Identity.PeerID, data.Addresses.Swarm
 }

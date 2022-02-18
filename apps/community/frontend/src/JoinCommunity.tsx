@@ -55,18 +55,18 @@ const JoinCommunityContainer = () => {
                     <h5>name: {community.data.name}</h5>
                     <h5>swarm key: {community.data.swarm_key}</h5>
                     <h5>bootstrap peers:</h5>
-                    <ul className="btstp_peers">
-                    {community.data.btstp_peers.map((peer) => (
+                    <ul className="peers">
+                    {community.data.peers.map((peer) => (
                         <li key={peer}>
                             <h6>{peer}</h6>
                         </li>
                     ))}
                     </ul>
                     <h5>peers:</h5>
-                    <ul className="peers">
-                    {community.data.peers.map((peer) => (
-                        <li key={peer}>
-                            <h6>{peer}</h6>
+                    <ul className="addrs">
+                    {community.data.addrs.map((addr) => (
+                        <li key={addr}>
+                            <h6>{addr}</h6>
                         </li>
                     ))}
                     </ul>

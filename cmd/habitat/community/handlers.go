@@ -1,6 +1,7 @@
 package community
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -9,18 +10,34 @@ import (
 
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/structs/ctl"
+	"github.com/rs/zerolog/log"
 )
 
 type CTLHandler func(req *ctl.Request) (*ctl.Response, error)
 
+// TODO: make request args a map
+// for now: always send [name, address]
 func (m *Manager) CommunityCreateHandler(req *ctl.Request) (*ctl.Response, error) {
-	id, err := m.CreateCommunity()
+	community, err := m.CreateCommunity(req.Args[0])
 	if err != nil {
-		return nil, err
+		log.Err(err)
+		return &ctl.Response{
+			Status:  500,
+			Message: err.Error(),
+		}, err
+	}
+
+	bytes, err := json.Marshal(community)
+	if err != nil {
+		log.Err(err)
+		return &ctl.Response{
+			Status:  500,
+			Message: err.Error(),
+		}, err
 	}
 	return &ctl.Response{
 		Status:  ctl.StatusOK,
-		Message: fmt.Sprintf("created community with uuid: %s", id),
+		Message: string(bytes),
 	}, nil
 }
 

@@ -1,8 +1,10 @@
 export type CreateCommunityResponse = {
     name: string
+    id: string
+    peer_id: string
     swarm_key: string
-    btstp_peers: string[]
     peers: string[]
+    addrs: string[]
   }
 
 export type JoinCommunityResponse = CreateCommunityResponse

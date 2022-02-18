@@ -17,6 +17,7 @@ type Manager struct {
 	Path           string
 	config         *ipfs.IPFSConfig
 	clusterManager *cluster.ClusterManager
+	communities    []*Community
 }
 
 func NewManager(path string, proxyRules *proxy.RuleSet) (*Manager, error) {
@@ -30,8 +31,9 @@ func NewManager(path string, proxyRules *proxy.RuleSet) (*Manager, error) {
 	return &Manager{
 		Path: path,
 		config: &ipfs.IPFSConfig{
-			CommunitiesPath: compass.CommunitiesPath(),
-			StartCmd:        filepath.Join(compass.ProcsPath(), "bin", "amd64-darwin", "start-ipfs"),
+			CommunitiesPath: path,
+			// TODO: @arushibandi remove this usage of compass
+			StartCmd: filepath.Join(compass.ProcsPath(), "bin", "amd64-darwin", "start-ipfs"),
 		},
 		clusterManager: clusterManager,
 	}, nil
@@ -63,22 +65,33 @@ func (m *Manager) checkCommunityExists(communityID string) bool {
 
 }
 
-func (m *Manager) CreateCommunity() (string, error) {
+func (m *Manager) CreateCommunity(name string) (*Community, error) {
 	// Generate UUID for now
 	id := uuid.New()
 	communityID := id.String()
 
 	err := m.setupCommunity(communityID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	err = m.clusterManager.CreateCluster(communityID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return communityID, nil
+	err, swarmkey, peerid, addrs := m.config.NewCommunityIPFSNode(name, filepath.Join(m.Path, communityID))
+	if err != nil {
+		return nil, err
+	}
+	return &Community{
+		Name:      name,
+		Id:        communityID,
+		PeerId:    peerid,
+		Peers:     []string{},
+		SwarmKey:  swarmkey,
+		Addresses: addrs,
+	}, nil
 }
 
 func (m *Manager) JoinCommunity(acceptingNodeAddr string, communityID string) error {

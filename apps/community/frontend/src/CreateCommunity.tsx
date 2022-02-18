@@ -15,15 +15,19 @@ const CreateCommunityContainer = () => {
         })
         axios.get<CreateCommunityResponse>(`http://localhost:8008/create?name=${name}`)
             .then(response => {
+                console.log("respppp ", response)
                 setCommunity({
                     state: 'success',
                     data: response.data
                 })
+                console.log("got response", response.data)
             }).catch((error: Error) => {
+                console.log("errrorrr ", error)
                 setCommunity({
                     state: 'error',
                     message: error.message,
                 })
+                console.error("got error", error.message)
             });
     };
 
@@ -55,17 +59,17 @@ const CreateCommunityContainer = () => {
                     <h5>swarm key: {community.data.swarm_key}</h5>
                     <h5>bootstrap peers:</h5>
                     <ul className="btstp_peers">
-                    {community.data.btstp_peers.map((peer) => (
+                    {community.data.peers.map((peer) => (
                         <li key={peer}>
                             <h6>{peer}</h6>
                         </li>
                     ))}
                     </ul>
-                    <h5>peers:</h5>
-                    <ul className="peers">
-                    {community.data.peers.map((peer) => (
-                        <li key={peer}>
-                            <h6>{peer}</h6>
+                    <h5>addrs:</h5>
+                    <ul className="addrs">
+                    {community.data.addrs.map((addr) => (
+                        <li key={addr}>
+                            <h6>{addr}</h6>
                         </li>
                     ))}
                     </ul>

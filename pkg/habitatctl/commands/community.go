@@ -69,12 +69,13 @@ var communityCreateCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		address := cmd.Flags().Lookup("address")
-		if address == nil {
-			fmt.Println("address flag needs to be set")
+		name := cmd.Flags().Lookup("name")
+		if address == nil || name == nil {
+			fmt.Println("address and name flags need to be set")
 			return
 		}
 
-		SendRequest(ctl.CommandCommunityCreate, []string{address.Value.String()})
+		SendRequest(ctl.CommandCommunityCreate, []string{name.Value.String(), address.Value.String()})
 	},
 }
 
@@ -173,6 +174,7 @@ var communityListCmd = &cobra.Command{
 
 func init() {
 	communityCreateCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
+	communityCreateCmd.Flags().StringP("name", "n", "", "name of the community being created")
 
 	communityJoinCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
 	communityJoinCmd.Flags().StringP("community", "c", "", "id of community to be joined")

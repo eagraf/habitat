@@ -8,11 +8,11 @@ import (
 	"github.com/spf13/viper"
 )
 
-func SendRequest(command string, args []string) {
+func SendRequest(command string, args []string) (*ctl.Response, error) {
 	client, err := client.NewClient(viper.GetString("port"))
 	if err != nil {
 		fmt.Println("Error: couldn't connect to habitat service")
-		return
+		return nil, err
 	}
 
 	err = client.WriteRequest(&ctl.Request{
@@ -27,5 +27,5 @@ func SendRequest(command string, args []string) {
 	if err != nil {
 		fmt.Printf("Error: couldn't read response from habitat service: %s\n", err)
 	}
-	fmt.Println(res)
+	return res, err
 }

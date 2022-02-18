@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
@@ -47,12 +48,18 @@ var NodeConfig = &ipfs.IPFSConfig{
  TODO: 	create CommunityConfig struct which contains globals for the community like
 		swarm key and name of it and peer ids in it
 */
-func CreateCommunity(name string, path string) (error, string, string, []string) {
-	err, key, peerid, addrs := NodeConfig.NewCommunityIPFSNode(name, path)
-	time.Sleep(5 * time.Second) // need to remove this at some point --> basically wait til ipfs comm is created before connecting
-	ipfsConfig, err := ConnectCommunity(name)
-	commands.SendRequest(ctl.CommandCommunityCreate, ipfsConfig.Addresses)
-	return err, key, peerid, addrs
+func CreateCommunity(name string, path string) ([]byte, error) {
+	res, err := commands.SendRequest(ctl.CommandCommunityCreate, []string{name, ""}) // need to get address from somewhere
+	log.Info().Msg(fmt.Sprintf("got res %s", string(res.Message)))
+	/*
+		time.Sleep(5 * time.Second) // need to remove this at some point --> basically wait til ipfs comm is created before connecting
+		_, err = ConnectCommunity(name)
+		if err != nil {
+			log.Err(err).Msg(fmt.Sprintf("unable to connect to community %s", name))
+		}
+	*/
+
+	return []byte(res.Message), err
 }
 
 type CommunityInfo struct {
@@ -73,24 +80,14 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err, key, peerid, addrs := CreateCommunity(name, name)
-
+	bytes, err := CreateCommunity(name, name)
+	log.Info().Msg(fmt.Sprintf("Comm is %s", string(bytes)))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		log.Error().Err(err)
 	}
 
-	CommConfig := &CommunityConfig{
-		Name:           name,
-		SwarmKey:       key,
-		BootstrapPeers: addrs,
-		Peers:          []string{peerid},
-	}
-
-	commstr, _ := json.Marshal(CommConfig)
-	log.Info().Msg("Community Config is " + string(commstr))
-	bytes, err := json.Marshal(*CommConfig)
 	w.Write(bytes)
 }
 
