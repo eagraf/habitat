@@ -4,15 +4,18 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/eagraf/habitat/cmd/habitat/community/consensus/cluster"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
+	"github.com/eagraf/habitat/pkg/compass"
+	"github.com/eagraf/habitat/pkg/ipfs"
 	"github.com/google/uuid"
 )
 
 type Manager struct {
-	Path string
-
+	Path           string
+	config         *ipfs.IPFSConfig
 	clusterManager *cluster.ClusterManager
 }
 
@@ -26,7 +29,10 @@ func NewManager(path string, proxyRules *proxy.RuleSet) (*Manager, error) {
 
 	return &Manager{
 		Path: path,
-
+		config: &ipfs.IPFSConfig{
+			CommunitiesPath: compass.CommunitiesPath(),
+			StartCmd:        filepath.Join(compass.ProcsPath(), "bin", "amd64-darwin", "start-ipfs"),
+		},
 		clusterManager: clusterManager,
 	}, nil
 }

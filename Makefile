@@ -37,11 +37,9 @@ install-setup :
 	mkdir -p $(DEV_COMMUNITY_DIR)
 
 install-ipfs :
-	mkdir -p $(DEV_PROC_DIR)/bin/amd64-linux $(DEV_PROC_DIR)/bin/amd64-darwin
-	mkdir -p $(DEV_PROC_DIR)/web
-	mkdir -p $(DEV_PROC_DIR)/data
-	cp $(APPS_DIR)/ipfs/ipfs $(DEV_PROC_DIR)/bin/amd64-linux
-	cp $(APPS_DIR)/ipfs/ipfs $(DEV_PROC_DIR)/bin/amd64-darwin
+	cp $(APPS_DIR)/ipfs/start-ipfs $(DEV_PROC_DIR)/bin/amd64-linux
+	cp $(APPS_DIR)/ipfs/start-ipfs $(DEV_PROC_DIR)/bin/amd64-darwin
+	
 
 install-notes : 
 	$(MAKE) -C apps/notes all
