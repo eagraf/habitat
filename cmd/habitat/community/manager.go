@@ -10,6 +10,7 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/ipfs"
+	"github.com/eagraf/habitat/structs/community"
 	"github.com/google/uuid"
 )
 
@@ -17,7 +18,7 @@ type Manager struct {
 	Path           string
 	config         *ipfs.IPFSConfig
 	clusterManager *cluster.ClusterManager
-	communities    []*Community
+	communities    []*community.Community
 }
 
 func NewManager(path string, proxyRules *proxy.RuleSet) (*Manager, error) {
@@ -65,7 +66,7 @@ func (m *Manager) checkCommunityExists(communityID string) bool {
 
 }
 
-func (m *Manager) CreateCommunity(name string) (*Community, error) {
+func (m *Manager) CreateCommunity(name string) (*community.Community, error) {
 	// Generate UUID for now
 	id := uuid.New()
 	communityID := id.String()
@@ -84,7 +85,7 @@ func (m *Manager) CreateCommunity(name string) (*Community, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Community{
+	return &community.Community{
 		Name:      name,
 		Id:        communityID,
 		PeerId:    peerid,

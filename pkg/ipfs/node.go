@@ -37,7 +37,6 @@ func (c *IPFSConfig) NewCommunityIPFSNode(name string, path string) (error, stri
 	cmdCreate := &exec.Cmd{
 		Path:   c.StartCmd,
 		Args:   []string{c.StartCmd, filepath.Join(path, "ipfs")},
-		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
 
@@ -58,7 +57,7 @@ func (c *IPFSConfig) NewCommunityIPFSNode(name string, path string) (error, stri
 
 	key := KeyGen()
 	keyBytes := []byte("/key/swarm/psk/1.0.0/\n/base16/\n" + key + "\n")
-	err = ioutil.WriteFile(filepath.Join(path, "/swarm.key"), keyBytes, 0755)
+	err = ioutil.WriteFile(filepath.Join(path, "ipfs", "swarm.key"), keyBytes, 0755)
 
 	return nil, key, data.Identity.PeerID, data.Addresses.Swarm
 }
@@ -107,13 +106,14 @@ type ConnectedConfig struct {
 	SwarmKey        string   `json:"SwarmKey"`
 }
 
-func (c *IPFSConfig) ConnectCommunityIPFSNode(name string) (ConnectedConfig, error) {
+func (c *IPFSConfig) ConnectCommunityIPFSNode(id string) (*ConnectedConfig, error) {
 	// TODO: either delete connect script or make this use it
 	key := ""
-	keyPath := filepath.Join(c.CommunitiesPath, name, "swarm.key")
+	keyPath := filepath.Join(c.CommunitiesPath, id, "ipfs", "swarm.key")
 	keyFile, err := os.Open(keyPath)
 	if err != nil {
-		log.Error().Msg(fmt.Sprintf("unable to open swarm key file for community: %s, path: %s", name, keyPath))
+		log.Error().Msg(fmt.Sprintf("unable to open swarm key file for community id: %s, path: %s", id, keyPath))
+		return nil, err
 	} else {
 		fileScanner := bufio.NewScanner(keyFile)
 		fileScanner.Split(bufio.ScanLines)
@@ -127,7 +127,7 @@ func (c *IPFSConfig) ConnectCommunityIPFSNode(name string) (ConnectedConfig, err
 		}
 	}
 
-	pathEnv := fmt.Sprintf("IPFS_PATH=%s", filepath.Join(c.CommunitiesPath, name))
+	pathEnv := fmt.Sprintf("IPFS_PATH=%s", filepath.Join(c.CommunitiesPath, id, "ipfs"))
 	cmdConnect := exec.Command("ipfs", "daemon")
 	cmdConnect.Stdout = os.Stdout
 	cmdConnect.Stderr = os.Stderr
@@ -143,18 +143,18 @@ func (c *IPFSConfig) ConnectCommunityIPFSNode(name string) (ConnectedConfig, err
 
 	if err != nil {
 		log.Err(err)
-		return ConnectedConfig{}, err
+		return nil, err
 	}
 
 	var data ConnectedConfig
 	err = json.Unmarshal(out, &data)
 	if err != nil {
 		log.Fatal().Err(err)
-		return ConnectedConfig{}, err
+		return nil, err
 	}
 	data.SwarmKey = key
 
-	return data, nil
+	return &data, nil
 }
 
 /*

@@ -1,19 +1,19 @@
 import React from 'react';
 import { AsyncState } from './types'
 import axios from 'axios';
-import { CreateCommunityResponse } from './community';
+import { ConnectCommunityResponse } from './community';
 import './Community.css'
 
 const CreateCommunityContainer = () => {
 
-    const [community, setCommunity] = React.useState<AsyncState<CreateCommunityResponse>>({ state: 'init' });
+    const [community, setCommunity] = React.useState<AsyncState<ConnectCommunityResponse>>({ state: 'init' });
     const [name, setName] = React.useState<string>('');
 
     const createCommunity = () => {
         setCommunity({
             state: "loading",
         })
-        axios.get<CreateCommunityResponse>(`http://localhost:8008/create?name=${name}`)
+        axios.get<ConnectCommunityResponse>(`http://localhost:8008/create?name=${name}`)
             .then(response => {
                 console.log("respppp ", response)
                 setCommunity({
@@ -55,24 +55,17 @@ const CreateCommunityContainer = () => {
         case "success":
             return (
                 <div className='CommunityInput'>
-                    <h5>name: {community.data.name}</h5>
-                    <h5>swarm key: {community.data.swarm_key}</h5>
+                    <h5>name: {community.data.ID}</h5>
+                    <h5>swarm key: {community.data.SwarmKey}</h5>
                     <h5>bootstrap peers:</h5>
                     <ul className="btstp_peers">
-                    {community.data.peers.map((peer) => (
-                        <li key={peer}>
-                            <h6>{peer}</h6>
-                        </li>
-                    ))}
-                    </ul>
-                    <h5>addrs:</h5>
-                    <ul className="addrs">
-                    {community.data.addrs.map((addr) => (
+                    {community.data.Addresses.map((addr) => (
                         <li key={addr}>
                             <h6>{addr}</h6>
                         </li>
                     ))}
                     </ul>
+                    <h5>addrs:</h5>
                 </div>
             )
     }

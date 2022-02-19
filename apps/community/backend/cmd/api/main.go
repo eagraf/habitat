@@ -11,6 +11,7 @@ import (
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/habitatctl/commands"
 	"github.com/eagraf/habitat/pkg/ipfs"
+	"github.com/eagraf/habitat/structs/community"
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
@@ -51,15 +52,20 @@ var NodeConfig = &ipfs.IPFSConfig{
 func CreateCommunity(name string, path string) ([]byte, error) {
 	res, err := commands.SendRequest(ctl.CommandCommunityCreate, []string{name, ""}) // need to get address from somewhere
 	log.Info().Msg(fmt.Sprintf("got res %s", string(res.Message)))
-	/*
-		time.Sleep(5 * time.Second) // need to remove this at some point --> basically wait til ipfs comm is created before connecting
-		_, err = ConnectCommunity(name)
-		if err != nil {
-			log.Err(err).Msg(fmt.Sprintf("unable to connect to community %s", name))
-		}
-	*/
 
-	return []byte(res.Message), err
+	var comm community.Community
+	err = json.Unmarshal([]byte(res.Message), &comm)
+	if err != nil {
+		log.Err(err).Msg(fmt.Sprintf("unable to get community id %s", name))
+	}
+
+	time.Sleep(5 * time.Second) // TODO: @arushibandi need to remove this at some point --> basically wait til ipfs comm is created before connecting
+	conf, err := ConnectCommunity(comm.Id)
+	if err != nil {
+		return nil, err
+	}
+	bytes, err := json.Marshal(conf)
+	return bytes, err
 }
 
 type CommunityInfo struct {
@@ -147,8 +153,8 @@ func JoinHandler(w http.ResponseWriter, r *http.Request) {
  - meant to be used by nodes that are already in a community
  - just run the daemon & return the API or IPFS Client
 */
-func ConnectCommunity(name string) (ipfs.ConnectedConfig, error) {
-	return NodeConfig.ConnectCommunityIPFSNode(name)
+func ConnectCommunity(id string) (*ipfs.ConnectedConfig, error) {
+	return NodeConfig.ConnectCommunityIPFSNode(id)
 }
 
 func ConnectHandler(w http.ResponseWriter, r *http.Request) {
