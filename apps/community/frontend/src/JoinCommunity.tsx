@@ -9,12 +9,13 @@ const JoinCommunityContainer = () => {
     const [key, setKey] = React.useState<string>('');
     const [addr, setAddr] = React.useState<string>('');
     const [name, setName] = React.useState<string>('');
+    const [comm, setComm] = React.useState<string>('');
 
     const joinCommunity = () => {
         setCommunity({
             state: "loading",
         })
-        axios.get<JoinCommunityResponse>(`http://localhost:8008/join?key=${key}&addr=${addr}&name=${name}`)
+        axios.get<JoinCommunityResponse>(`http://localhost:8008/join?key=${key}&addr=${addr}&name=${name}&comm=${comm}`)
             .then(response => {
                 setCommunity({
                     state: 'success',
@@ -36,6 +37,7 @@ const JoinCommunityContainer = () => {
                     <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="community name" name="name" />
                     <input type="text" value={key} onChange={(e) => setKey(e.target.value)} placeholder="secret key" name="key" />
                     <input type="text" value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="bootstrap address" name="addr" />
+                    <input type="text" value={comm} onChange={(e) => setComm(e.target.value)} placeholder="community id" name="comm" />
                     <button type="button" onClick={joinCommunity}>Join</button>
                 </form>
             </div>

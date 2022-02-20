@@ -62,7 +62,7 @@ func (c *IPFSConfig) NewCommunityIPFSNode(name string, path string) (error, stri
 	return nil, key, data.Identity.PeerID, data.Addresses.Swarm
 }
 
-func (c *IPFSConfig) JoinCommunityIPFSNode(name string, path string, key string, btsppeers []string, peers []string) (error, string) {
+func (c *IPFSConfig) JoinCommunityIPFSNode(name string, path string, key string, btsppeers []string) (string, error) {
 	commPath := filepath.Join(c.CommunitiesPath, path)
 	cmdJoin := &exec.Cmd{
 		Path:   c.StartCmd,
@@ -72,15 +72,15 @@ func (c *IPFSConfig) JoinCommunityIPFSNode(name string, path string, key string,
 	}
 
 	if err := cmdJoin.Run(); err != nil {
-		return err, ""
+		return "", err
 	}
 
-	bytes, _ := ioutil.ReadFile(filepath.Join(commPath, "/config"))
+	bytes, _ := ioutil.ReadFile(filepath.Join(commPath, "ipfs", "config"))
 	var data config.Config
 	err := json.Unmarshal(bytes, &data)
 
 	if err != nil {
-		return err, ""
+		return "", err
 	}
 
 	// json struct of config : here we can modify it and write back
@@ -93,7 +93,7 @@ func (c *IPFSConfig) JoinCommunityIPFSNode(name string, path string, key string,
 	keyBytes := []byte("/key/swarm/psk/1.0.0/\n/base16/\n" + key + "\n")
 	err = ioutil.WriteFile(filepath.Join(commPath, "/swarm.key"), keyBytes, 0755)
 
-	return nil, data.Identity.PeerID
+	return data.Identity.PeerID, err
 }
 
 type ConnectedConfig struct {

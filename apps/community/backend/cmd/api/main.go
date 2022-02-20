@@ -51,7 +51,6 @@ var NodeConfig = &ipfs.IPFSConfig{
 */
 func CreateCommunity(name string, path string) ([]byte, error) {
 	res, err := commands.SendRequest(ctl.CommandCommunityCreate, []string{name, ""}) // need to get address from somewhere
-	log.Info().Msg(fmt.Sprintf("got res %s", string(res.Message)))
 
 	var comm community.Community
 	err = json.Unmarshal([]byte(res.Message), &comm)
@@ -59,7 +58,7 @@ func CreateCommunity(name string, path string) ([]byte, error) {
 		log.Err(err).Msg(fmt.Sprintf("unable to get community id %s", name))
 	}
 
-	time.Sleep(5 * time.Second) // TODO: @arushibandi need to remove this at some point --> basically wait til ipfs comm is created before connecting
+	time.Sleep(1 * time.Second) // TODO: @arushibandi need to remove this at some point --> basically wait til ipfs comm is created before connecting
 	conf, err := ConnectCommunity(comm.Id)
 	if err != nil {
 		return nil, err
@@ -108,12 +107,22 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
  - Return peer id: need to kick off some way for all other nodes to add this node
   can either use the api returned by createNode or connect to a new client
 */
-func JoinCommunity(name string, path string, key string, btsppeers []string, peers []string) (error, string) {
-	err, peerid := NodeConfig.JoinCommunityIPFSNode(name, path, key, btsppeers, peers)
-	time.Sleep(5 * time.Second) // need to remove this at some point --> basically wait til ipfs comm is created before connecting
-	ipfsConfig, err := ConnectCommunity(name)
-	commands.SendRequest(ctl.CommandCommunityJoin, ipfsConfig.Addresses)
-	return err, peerid
+func JoinCommunity(name string, path string, key string, addr string, commId string) ([]byte, error) {
+	res, err := commands.SendRequest(ctl.CommandCommunityJoin, []string{name, key, addr, "", commId}) // need to get address from somewhere
+
+	var comm community.Community
+	err = json.Unmarshal([]byte(res.Message), &comm)
+	if err != nil {
+		log.Err(err).Msg(fmt.Sprintf("unable to get community id %s", commId))
+	}
+
+	time.Sleep(1 * time.Second) // TODO: @arushibandi need to remove this at some point --> basically wait til ipfs comm is created before connecting
+	conf, err := ConnectCommunity(comm.Id)
+	if err != nil {
+		return nil, err
+	}
+	bytes, err := json.Marshal(conf)
+	return bytes, err
 }
 
 func JoinHandler(w http.ResponseWriter, r *http.Request) {
@@ -121,30 +130,23 @@ func JoinHandler(w http.ResponseWriter, r *http.Request) {
 	name := args.Get("name")
 	key := args.Get("key")
 	addr := args.Get("addr")
-	if name == "" || key == "" || addr == "" {
+	comm := args.Get("comm")
+	if name == "" || key == "" || addr == "" || comm == "" {
 		log.Error().Msg("Error in community join handler: name or key or addr arg is not supplied")
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("name or key or addr arg is not supplied"))
 		return
 	}
 
-	btsppeers := []string{addr}
-	err, peerid := JoinCommunity(name, name, key, btsppeers, make([]string, 0))
+	bytes, err := JoinCommunity(name, name, key, addr, comm)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		log.Error().Err(err)
+		return
 	}
 
-	CommConfig := &CommunityConfig{
-		Name:           name,
-		SwarmKey:       key,
-		BootstrapPeers: btsppeers,
-		Peers:          []string{peerid},
-	}
-
-	bytes, err := json.Marshal(CommConfig)
 	w.Write(bytes)
 }
 

@@ -41,20 +41,34 @@ func (m *Manager) CommunityCreateHandler(req *ctl.Request) (*ctl.Response, error
 	}, nil
 }
 
+// TODO: make request args a map
+// for now: always send [name, swarmkey, bootstrap peer (one only), address, communityid]
 func (m *Manager) CommunityJoinHandler(req *ctl.Request) (*ctl.Response, error) {
 	// validate args
 	if len(req.Args) != 2 {
 		return nil, errors.New("need 2 arguments to join community")
 	}
 
-	err := m.JoinCommunity(req.Args[0], req.Args[1])
+	community, err := m.JoinCommunity(req.Args[0], req.Args[1], []string{req.Args[2]}, req.Args[3], req.Args[4])
 	if err != nil {
-		return nil, err
+		log.Err(err)
+		return &ctl.Response{
+			Status:  500,
+			Message: err.Error(),
+		}, err
 	}
 
+	bytes, err := json.Marshal(community)
+	if err != nil {
+		log.Err(err)
+		return &ctl.Response{
+			Status:  500,
+			Message: err.Error(),
+		}, err
+	}
 	return &ctl.Response{
 		Status:  ctl.StatusOK,
-		Message: fmt.Sprintf("joined community %s", req.Args[0]),
+		Message: string(bytes),
 	}, nil
 }
 

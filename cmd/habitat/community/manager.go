@@ -95,18 +95,29 @@ func (m *Manager) CreateCommunity(name string) (*community.Community, error) {
 	}, nil
 }
 
-func (m *Manager) JoinCommunity(acceptingNodeAddr string, communityID string) error {
+func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, acceptingNodeAddr string, communityID string) (*community.Community, error) {
 	err := m.setupCommunity(communityID)
 	if err != nil {
-		return fmt.Errorf("error setting up community: %s", err)
+		return nil, fmt.Errorf("error setting up community: %s", err)
 	}
 
 	err = m.clusterManager.JoinCluster(communityID, acceptingNodeAddr)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	peerid, err := m.config.JoinCommunityIPFSNode(name, communityID, swarmkey, btstps)
+	if err != nil {
+		return nil, err
+	}
+	return &community.Community{
+		Name:      name,
+		Id:        communityID,
+		PeerId:    peerid,
+		Peers:     btstps,
+		SwarmKey:  swarmkey,
+		Addresses: []string{},
+	}, nil
 }
 
 func (m *Manager) ProposeTransition(communityID string, transition []byte) error {
