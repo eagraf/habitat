@@ -55,17 +55,18 @@ const CreateCommunityContainer = () => {
         case "success":
             return (
                 <div className='CommunityInput'>
-                    <h5>name: {community.data.ID}</h5>
+                    <h5>name: {community.data.Name}</h5>
+                    <h5>id: {community.data.CommId}</h5>
+                    <h5>PeerId: {community.data.PeerId}</h5>
                     <h5>swarm key: {community.data.SwarmKey}</h5>
-                    <h5>bootstrap peers:</h5>
-                    <ul className="btstp_peers">
+                    <h5>addrs:</h5>
+                    <ul className="addrs">
                     {community.data.Addresses.map((addr) => (
                         <li key={addr}>
                             <h6>{addr}</h6>
                         </li>
                     ))}
                     </ul>
-                    <h5>addrs:</h5>
                 </div>
             )
     }

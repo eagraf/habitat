@@ -59,7 +59,7 @@ func CreateCommunity(name string, path string) ([]byte, error) {
 	}
 
 	time.Sleep(1 * time.Second) // TODO: @arushibandi need to remove this at some point --> basically wait til ipfs comm is created before connecting
-	conf, err := ConnectCommunity(comm.Id)
+	conf, err := ConnectCommunity(name, comm.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -112,12 +112,13 @@ func JoinCommunity(name string, path string, key string, addr string, commId str
 
 	var comm community.Community
 	err = json.Unmarshal([]byte(res.Message), &comm)
+	fmt.Println("--- message ---", res.Message)
 	if err != nil {
 		log.Err(err).Msg(fmt.Sprintf("unable to get community id %s", commId))
 	}
 
 	time.Sleep(1 * time.Second) // TODO: @arushibandi need to remove this at some point --> basically wait til ipfs comm is created before connecting
-	conf, err := ConnectCommunity(comm.Id)
+	conf, err := ConnectCommunity(name, comm.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -150,19 +151,69 @@ func JoinHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(bytes)
 }
 
+type AddMemberResponse struct {
+	MemberId string
+	NodeId   string
+}
+
+// Add Member to a community
+// expects node and comm params
+func AddMemberHandler(w http.ResponseWriter, r *http.Request) {
+	log.Info().Msg(fmt.Sprintf("got request to add node at member %s", compass.NodeID()))
+	args := r.URL.Query()
+	node := args.Get("node")
+	comm := args.Get("comm")
+	if node == "" || comm == "" {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Need node id and comm params"))
+		return
+	}
+
+	res, err := commands.SendRequest(ctl.CommandCommunityAddMember, []string{comm, compass.NodeID(), node}) // need to get address from somewhere
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		log.Error().Err(err)
+		return
+	}
+	if res.Status == ctl.StatusOK {
+		log.Info().Msg(fmt.Sprintf("successfully added member with message %s", res.Message))
+		bytes, err := json.Marshal(
+			&AddMemberResponse{
+				MemberId: node,
+				NodeId:   compass.NodeID(),
+			},
+		)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			log.Error().Err(err)
+			return
+		}
+		w.Write(bytes)
+	}
+
+}
+
 /*
  ConnectCommunity:
  - meant to be used by nodes that are already in a community
  - just run the daemon & return the API or IPFS Client
 */
-func ConnectCommunity(id string) (*ipfs.ConnectedConfig, error) {
-	return NodeConfig.ConnectCommunityIPFSNode(id)
+func ConnectCommunity(name string, id string) (*ipfs.ConnectedConfig, error) {
+	return NodeConfig.ConnectCommunityIPFSNode(name, id)
 }
 
 func ConnectHandler(w http.ResponseWriter, r *http.Request) {
 	args := r.URL.Query()
 	name := args.Get("name")
-	conf, err := ConnectCommunity(name)
+	id := args.Get("id")
+	if name == "" || id == "" {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Need name and id params"))
+		return
+	}
+	conf, err := ConnectCommunity(name, id)
 	if err == nil {
 		bytes, _ := json.Marshal(conf)
 		w.Write(bytes)
@@ -199,7 +250,7 @@ func GetCommunitiesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	log.Info().Msg("starting communities api root is" + compass.HabitatPath() + " communnities is " + compass.CommunitiesPath())
+	log.Info().Msg("starting communities api root is" + compass.HabitatPath() + " communnities is " + compass.CommunitiesPath() + "\n ===== Node id is " + compass.NodeID())
 
 	r := mux.NewRouter()
 	// r.HandleFunc("/home", HomeHandler)
@@ -209,6 +260,7 @@ func main() {
 	// I'm imagining a side panel and when you click on a community name it connects
 	r.HandleFunc("/connect", ConnectHandler)
 	r.HandleFunc("/communities", GetCommunitiesHandler)
+	r.HandleFunc("/add", AddMemberHandler)
 	http.Handle("/", r)
 
 	srv := &http.Server{

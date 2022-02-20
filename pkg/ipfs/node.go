@@ -60,7 +60,7 @@ func (c *IPFSConfig) NewCommunityIPFSNode(name string, path string) (error, stri
 	addr := data.Addresses.API
 	addrstring := addr[0]
 	parts := strings.Split(addrstring, "/")
-	parts[len(parts)-1] = fmt.Sprint(mrand.Intn(99999-9999) + 9999)
+	parts[len(parts)-1] = fmt.Sprint(mrand.Intn(65536-9999) + 9999)
 	data.Addresses.API = []string{strings.Join(parts, "/")}
 	bytes, err = json.Marshal(data)
 	log.Info().Msg("data " + string(bytes))
@@ -102,7 +102,7 @@ func (c *IPFSConfig) JoinCommunityIPFSNode(name string, path string, key string,
 	addr := data.Addresses.API
 	addrstring := addr[0]
 	parts := strings.Split(addrstring, "/")
-	parts[len(parts)-1] = fmt.Sprint(mrand.Intn(99999-9999) + 9999)
+	parts[len(parts)-1] = fmt.Sprint(mrand.Intn(65536-9999) + 9999)
 	data.Addresses.API = []string{strings.Join(parts, "/")}
 	bytes, err = json.Marshal(data)
 	log.Info().Msg("data " + string(bytes))
@@ -114,7 +114,7 @@ func (c *IPFSConfig) JoinCommunityIPFSNode(name string, path string, key string,
 	return data.Identity.PeerID, err
 }
 
-type ConnectedConfig struct {
+type IPFSConnectedConfig struct {
 	Id              string   `json:"ID"`
 	PublicKey       string   `json:"PublicKey"`
 	Addresses       []string `json:"Addresses"`
@@ -124,7 +124,19 @@ type ConnectedConfig struct {
 	SwarmKey        string   `json:"SwarmKey"`
 }
 
-func (c *IPFSConfig) ConnectCommunityIPFSNode(id string) (*ConnectedConfig, error) {
+type ConnectedConfig struct {
+	PeerId          string   `json:"PeerId"`
+	CommId          string   `json:"CommId"`
+	Name            string   `json:"Name"`
+	PublicKey       string   `json:"PublicKey"`
+	Addresses       []string `json:"Addresses"`
+	AgentVersion    string   `json:"AgentVersion"`
+	ProtocolVersion string   `json:"ProtocolVersion"`
+	Protocols       []string `json:"Protocols"`
+	SwarmKey        string   `json:"SwarmKey"`
+}
+
+func (c *IPFSConfig) ConnectCommunityIPFSNode(name string, id string) (*ConnectedConfig, error) {
 	// TODO: either delete connect script or make this use it
 	key := ""
 	keyPath := filepath.Join(c.CommunitiesPath, id, "ipfs", "swarm.key")
@@ -164,7 +176,7 @@ func (c *IPFSConfig) ConnectCommunityIPFSNode(id string) (*ConnectedConfig, erro
 		return nil, err
 	}
 
-	var data ConnectedConfig
+	var data IPFSConnectedConfig
 	err = json.Unmarshal(out, &data)
 	if err != nil {
 		log.Fatal().Err(err)
@@ -172,7 +184,17 @@ func (c *IPFSConfig) ConnectCommunityIPFSNode(id string) (*ConnectedConfig, erro
 	}
 	data.SwarmKey = key
 
-	return &data, nil
+	return &ConnectedConfig{
+		PeerId:          data.Id,
+		CommId:          id,
+		Name:            name,
+		PublicKey:       data.PublicKey,
+		Addresses:       data.Addresses,
+		AgentVersion:    data.AgentVersion,
+		ProtocolVersion: data.ProtocolVersion,
+		Protocols:       data.Protocols,
+		SwarmKey:        data.SwarmKey,
+	}, nil
 }
 
 /*

@@ -1,11 +1,11 @@
 import React from 'react';
 import { AsyncState } from './types'
 import axios from 'axios';
-import { JoinCommunityResponse } from './community';
+import { ConnectCommunityResponse, JoinCommunityResponse } from './community';
 
 const JoinCommunityContainer = () => {
 
-    const [community, setCommunity] = React.useState<AsyncState<JoinCommunityResponse>>({ state: 'init' });
+    const [community, setCommunity] = React.useState<AsyncState<ConnectCommunityResponse>>({ state: 'init' });
     const [key, setKey] = React.useState<string>('');
     const [addr, setAddr] = React.useState<string>('');
     const [name, setName] = React.useState<string>('');
@@ -15,7 +15,7 @@ const JoinCommunityContainer = () => {
         setCommunity({
             state: "loading",
         })
-        axios.get<JoinCommunityResponse>(`http://localhost:8008/join?key=${key}&addr=${addr}&name=${name}&comm=${comm}`)
+        axios.get<ConnectCommunityResponse>(`http://localhost:8008/join?key=${key}&addr=${addr}&name=${name}&comm=${comm}`)
             .then(response => {
                 setCommunity({
                     state: 'success',
@@ -53,26 +53,20 @@ const JoinCommunityContainer = () => {
             return joinForm(`Error: ${community.message}`)
         case "success":
             return (
-                <div>
-                    <h5>name: {community.data.name}</h5>
-                    <h5>swarm key: {community.data.swarm_key}</h5>
-                    <h5>bootstrap peers:</h5>
-                    <ul className="peers">
-                    {community.data.peers.map((peer) => (
-                        <li key={peer}>
-                            <h6>{peer}</h6>
-                        </li>
-                    ))}
-                    </ul>
-                    <h5>peers:</h5>
-                    <ul className="addrs">
-                    {community.data.addrs.map((addr) => (
-                        <li key={addr}>
-                            <h6>{addr}</h6>
-                        </li>
-                    ))}
-                    </ul>
-                </div>
+                <div className='CommunityInput'>
+                <h5>name: {community.data.Name}</h5>
+                <h5>id: {community.data.CommId}</h5>
+                <h5>PeerId: {community.data.PeerId}</h5>
+                <h5>swarm key: {community.data.SwarmKey}</h5>
+                <h5>addrs:</h5>
+                <ul className="addrs">
+                {community.data.Addresses.map((addr) => (
+                    <li key={addr}>
+                        <h6>{addr}</h6>
+                    </li>
+                ))}
+                </ul>
+            </div>
             )
     }
 }

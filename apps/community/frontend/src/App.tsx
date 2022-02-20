@@ -9,6 +9,7 @@ import React from 'react';
 import { ConnectedCommunities, ListCommunitiesResponse } from './community';
 import { AsyncState } from './types';
 import axios from 'axios';
+import AddMember from './AddMember';
 
 
 function nameToNav(name: string): NavItemProps {
@@ -24,7 +25,7 @@ function App() {
     
   function GetCommunity(props: {commId: string}) {
 
-    const blank = ["", "/add", "/communities"]
+    const blank = ["", "add", "communities"]
     if (blank.includes(props.commId)) {
       return <Community commId={props.commId} communities={connectedCommunities!} setCommunities={setConnectedCommunities}/>
     } else {
@@ -43,7 +44,10 @@ function App() {
         </div>
       } else {
         // we have created or joined this community but not connected
-        return <ConnectCommunity commId={props!.commId} communities={connectedCommunities} setCommunities={setConnectedCommunities}></ConnectCommunity>
+        return <div>
+          <ConnectCommunity commId={props!.commId} communities={connectedCommunities} setCommunities={setConnectedCommunities}></ConnectCommunity>
+          <AddMember commId={props!.commId} ></AddMember>
+          </div>
       }
     }
   }
@@ -95,7 +99,7 @@ function App() {
             subNav: subNav,
           },
         ]} />
-    <GetCommunity commId={comm}/>
+    <GetCommunity commId={comm.substring(1)}/>
     </> 
   );
 }
