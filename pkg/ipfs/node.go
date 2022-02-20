@@ -7,9 +7,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	mrand "math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	config "github.com/ipfs/go-ipfs-config"
@@ -54,6 +56,17 @@ func (c *IPFSConfig) NewCommunityIPFSNode(name string, path string) (error, stri
 	}
 
 	// json struct of config : here we can modify it and write back
+	// ignore the peers for now (connect after bootstrapping?)
+	addr := data.Addresses.API
+	addrstring := addr[0]
+	parts := strings.Split(addrstring, "/")
+	parts[len(parts)-1] = fmt.Sprint(mrand.Intn(99999-9999) + 9999)
+	data.Addresses.API = []string{strings.Join(parts, "/")}
+	bytes, err = json.Marshal(data)
+	log.Info().Msg("data " + string(bytes))
+	ioutil.WriteFile(filepath.Join(path, "ipfs", "/config"), bytes, 0755)
+
+	// json struct of config : here we can modify it and write back
 
 	key := KeyGen()
 	keyBytes := []byte("/key/swarm/psk/1.0.0/\n/base16/\n" + key + "\n")
@@ -86,9 +99,14 @@ func (c *IPFSConfig) JoinCommunityIPFSNode(name string, path string, key string,
 	// json struct of config : here we can modify it and write back
 	// ignore the peers for now (connect after bootstrapping?)
 	data.Bootstrap = btsppeers
+	addr := data.Addresses.API
+	addrstring := addr[0]
+	parts := strings.Split(addrstring, "/")
+	parts[len(parts)-1] = fmt.Sprint(mrand.Intn(99999-9999) + 9999)
+	data.Addresses.API = []string{strings.Join(parts, "/")}
 	bytes, err = json.Marshal(data)
 	log.Info().Msg("data " + string(bytes))
-	ioutil.WriteFile(filepath.Join(commPath, "/config"), bytes, 0755)
+	ioutil.WriteFile(filepath.Join(commPath, "ipfs", "config"), bytes, 0755)
 
 	keyBytes := []byte("/key/swarm/psk/1.0.0/\n/base16/\n" + key + "\n")
 	err = ioutil.WriteFile(filepath.Join(commPath, "/swarm.key"), keyBytes, 0755)
