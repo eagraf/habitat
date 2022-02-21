@@ -107,8 +107,8 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
  - Return peer id: need to kick off some way for all other nodes to add this node
   can either use the api returned by createNode or connect to a new client
 */
-func JoinCommunity(name string, path string, key string, addr string, commId string) ([]byte, error) {
-	res, err := commands.SendRequest(ctl.CommandCommunityJoin, []string{name, key, addr, "", commId}) // need to get address from somewhere
+func JoinCommunity(name string, path string, key string, btstpaddr string, raftaddr string, commId string) ([]byte, error) {
+	res, err := commands.SendRequest(ctl.CommandCommunityJoin, []string{name, key, btstpaddr, raftaddr, commId}) // need to get address from somewhere
 
 	var comm community.Community
 	err = json.Unmarshal([]byte(res.Message), &comm)
@@ -130,16 +130,17 @@ func JoinHandler(w http.ResponseWriter, r *http.Request) {
 	args := r.URL.Query()
 	name := args.Get("name")
 	key := args.Get("key")
-	addr := args.Get("addr")
+	btstpaddr := args.Get("btstpaddr")
+	raftaddr := args.Get("raftaddr")
 	comm := args.Get("comm")
-	if name == "" || key == "" || addr == "" || comm == "" {
+	if name == "" || key == "" || btstpaddr == "" || raftaddr == "" || comm == "" {
 		log.Error().Msg("Error in community join handler: name or key or addr arg is not supplied")
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("name or key or addr arg is not supplied"))
 		return
 	}
 
-	bytes, err := JoinCommunity(name, name, key, addr, comm)
+	bytes, err := JoinCommunity(name, name, key, btstpaddr, raftaddr, comm)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

@@ -7,7 +7,8 @@ const JoinCommunityContainer = () => {
 
     const [community, setCommunity] = React.useState<AsyncState<ConnectCommunityResponse>>({ state: 'init' });
     const [key, setKey] = React.useState<string>('');
-    const [addr, setAddr] = React.useState<string>('');
+    const [btstpaddr, setBtstpAddr] = React.useState<string>('');
+    const [raftaddr, setRaftAddr] = React.useState<string>('');
     const [name, setName] = React.useState<string>('');
     const [comm, setComm] = React.useState<string>('');
 
@@ -15,7 +16,7 @@ const JoinCommunityContainer = () => {
         setCommunity({
             state: "loading",
         })
-        axios.get<ConnectCommunityResponse>(`http://localhost:8008/join?key=${key}&addr=${addr}&name=${name}&comm=${comm}`)
+        axios.get<ConnectCommunityResponse>(`http://localhost:8008/join?key=${key}&btstpaddr=${btstpaddr}&raftaddr=${raftaddr}&name=${name}&comm=${comm}`)
             .then(response => {
                 setCommunity({
                     state: 'success',
@@ -36,7 +37,8 @@ const JoinCommunityContainer = () => {
                 <form>
                     <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="community name" name="name" />
                     <input type="text" value={key} onChange={(e) => setKey(e.target.value)} placeholder="secret key" name="key" />
-                    <input type="text" value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="bootstrap address" name="addr" />
+                    <input type="text" value={btstpaddr} onChange={(e) => setBtstpAddr(e.target.value)} placeholder="bootstrap address" name="btstpaddr" />
+                    <input type="text" value={raftaddr} onChange={(e) => setRaftAddr(e.target.value)} placeholder="raft address" name="raftaddr" />
                     <input type="text" value={comm} onChange={(e) => setComm(e.target.value)} placeholder="community id" name="comm" />
                     <button type="button" onClick={joinCommunity}>Join</button>
                 </form>
