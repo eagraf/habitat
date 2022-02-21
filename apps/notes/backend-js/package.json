@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsc && node dist/app.js"
+    "start": "tsc && node dist/app.js 4000 5001",
+    "start2": "tsc && node dist/app.js 4005 5002"
+    
   },
   "author": "",
   "license": "ISC",

@@ -16,14 +16,20 @@ export default class BackendProvider {
 
     async connect() {
 
-        const response = await fetch('http://' + this.backendUrl + '/doc?name=' + this.docName)
+        /*const response = await fetch('http://' + this.backendUrl + '/doc?name=' + this.docName)
         const update = new Uint8Array(await response.arrayBuffer())
         console.log(update)
         if(update.length > 0) {
             Y.applyUpdate(this.yDoc, update)
-        }
+        }*/
 
         this.ws = new WebSocket('ws://' + this.backendUrl + '?name=' + this.docName)
+        this.ws.binaryType = 'arraybuffer'
+
+        this.ws.addEventListener('message', event => {
+            const change = new Uint8Array(event.data as ArrayBuffer)
+            Y.applyUpdate(this.yDoc, change)
+        })
 
         await new Promise((resolve, reject) => {
             console.log('hello world')
@@ -36,6 +42,7 @@ export default class BackendProvider {
                 reject(error)
             })
         })
+
         this.yDoc.on('update', (update: Uint8Array, origin) => {
             if(origin?.key) {
                 this.ws.send(update.buffer)
