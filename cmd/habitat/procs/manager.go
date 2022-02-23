@@ -78,6 +78,29 @@ func (m *Manager) StartProcess(req *ctl.Request) (error, string) {
 	return nil, subName
 }
 
+// start arbitrary process
+func (m *Manager) StartArbitraryProcess(name string, cmdPath string, dataPath string, env []string, flags []string, args []string) (error, string) {
+	proc := &Proc{
+		Name:     name,
+		CmdPath:  cmdPath,
+		DataPath: dataPath,
+		Env:      env,
+		Flags:    flags,
+		Args:     args,
+
+		errChan: m.errChan,
+	}
+
+	err := proc.Start()
+	if err != nil {
+		return err, ""
+	}
+
+	// TODO: @arushibandi ensure that all names are unique
+	m.Procs[name] = proc
+	return nil, name
+}
+
 func (m *Manager) StopProcess(subName string) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
