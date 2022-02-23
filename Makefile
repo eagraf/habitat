@@ -21,6 +21,9 @@ clean :
 habitat :
 	HABITAT_PATH=$(DEV_DATA_DIR) $(BIN_DIR)/habitat --hostname localhost
 
+habitat-docker :
+	HABITAT_PATH=$(DEV_DATA_DIR) $(BIN_DIR)/amd64-linux/habitat --hostname localhost
+
 c-frontend :
 	serve -s $(DEV_PROC_DIR)/web/community
 	# npm --prefix $(APPS_DIR)/community/frontend start
@@ -28,10 +31,14 @@ c-frontend :
 c-backend :
 	cd $(DEV_PROC_DIR)/bin/amd64-darwin && HABITAT_PATH=$(DEV_DATA_DIR) ./community_backend
 
+c-backend-docker :
+	cd $(DEV_PROC_DIR)/bin/amd64-linux && HABITAT_PATH=$(DEV_DATA_DIR) ./community_backend
 
 run-communities : c-frontend c-backend
 
 run : habitat c-backend c-frontend
+
+run-docker: habitat-docker c-backend-docker c-frontend
 
 install-setup :
 	rm -rf $(DEV_PROC_DIR)/bin/*

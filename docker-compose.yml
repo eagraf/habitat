@@ -1,42 +1,19 @@
 version: '3.8'
 services:
-    alice:
+    habitat-1:
         working_dir: /habitat
         volumes:
-            - ./data/procs:/habitat/procs
+            - ./data/procs/web:/habitat/web
+            - ./data/procs/bin:/habitat/procs/bin
             - ./bin:/habitat/bin
-        command: /habitat/bin/amd64-linux/habitat --hostname localhost
+        command:
+          - /habitat/bin/amd64-linux/habitat --hostname localhost
+          - /habitat/procs/bin/amd64-linux/community-backend
+          - serve -s /habitat/web/community
         environment:
             - HABITAT_PATH=/habitat
         image: ubuntu:latest
         build: .
         ports:
             - 2000:2040
-            - 3000:2041
-    bob:
-        working_dir: /habitat
-        volumes:
-            - ./data/procs:/habitat/procs
-            - ./bin:/habitat/bin
-        command: /habitat/bin/amd64-linux/habitat --hostname localhost
-        environment:
-            - HABITAT_PATH=/habitat
-        image: ubuntu:latest
-        build: .
-        ports:
-            - 2001:2040
-            - 3001:2041
-    charlie:
-        working_dir: /habitat
-        volumes:
-            - ./data/procs:/habitat/procs
-            - ./bin:/habitat/bin
-        command: /habitat/bin/amd64-linux/habitat --hostname localhost
-        environment:
-            - HABITAT_PATH=/habitat
-        image: ubuntu:latest
-        build: .
-        ports:
-            - 2002:2040
-            - 3002:2041
-       
+            - 3000:3001

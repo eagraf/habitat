@@ -51,7 +51,7 @@ var NodeConfig = &ipfs.IPFSConfig{
 */
 func CreateCommunity(name string, path string) ([]byte, error) {
 	res, err := commands.SendRequest(ctl.CommandCommunityCreate, []string{name, ""}) // need to get address from somewhere
-
+	fmt.Println("got res from habitat ", res)
 	var comm community.Community
 	err = json.Unmarshal([]byte(res.Message), &comm)
 	if err != nil {
@@ -61,6 +61,7 @@ func CreateCommunity(name string, path string) ([]byte, error) {
 	time.Sleep(1 * time.Second) // TODO: @arushibandi need to remove this at some point --> basically wait til ipfs comm is created before connecting
 	conf, err := ConnectCommunity(name, comm.Id)
 	if err != nil {
+		log.Err(err).Msg(fmt.Sprintf("unable to connect to community %s", name))
 		return nil, err
 	}
 	bytes, err := json.Marshal(conf)

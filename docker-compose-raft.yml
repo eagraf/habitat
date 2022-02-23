@@ -1,0 +1,42 @@
+version: '3.8'
+services:
+    alice:
+        working_dir: /habitat
+        volumes:
+            - ./data/procs:/habitat/procs
+            - ./bin:/habitat/bin
+        command: /habitat/bin/amd64-linux/habitat --hostname localhost
+        environment:
+            - HABITAT_PATH=/habitat
+        image: ubuntu:latest
+        build: .
+        ports:
+            - 2000:2040
+            - 3000:2041
+    bob:
+        working_dir: /habitat
+        volumes:
+            - ./data/procs:/habitat/procs
+            - ./bin:/habitat/bin
+        command: /habitat/bin/amd64-linux/habitat --hostname localhost
+        environment:
+            - HABITAT_PATH=/habitat
+        image: ubuntu:latest
+        build: .
+        ports:
+            - 2001:2040
+            - 3001:2041
+    charlie:
+        working_dir: /habitat
+        volumes:
+            - ./data/procs:/habitat/procs
+            - ./bin:/habitat/bin
+        command: /habitat/bin/amd64-linux/habitat --hostname localhost
+        environment:
+            - HABITAT_PATH=/habitat
+        image: ubuntu:latest
+        build: .
+        ports:
+            - 2002:2040
+            - 3002:2041
+       
