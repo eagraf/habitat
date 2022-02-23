@@ -164,18 +164,20 @@ func AddMemberHandler(w http.ResponseWriter, r *http.Request) {
 	log.Info().Msg(fmt.Sprintf("got request to add node at member %s", compass.NodeID()))
 	args := r.URL.Query()
 	node := args.Get("node")
+	addr := args.Get("address")
 	comm := args.Get("comm")
-	if node == "" || comm == "" {
+	fmt.Println(args)
+	if node == "" || comm == "" || addr == "" {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Need node id and comm params"))
 		return
 	}
 
-	res, err := commands.SendRequest(ctl.CommandCommunityAddMember, []string{comm, compass.NodeID(), node}) // need to get address from somewhere
+	res, err := commands.SendRequest(ctl.CommandCommunityAddMember, []string{comm, node, addr}) // need to get address from somewhere
 	if err != nil {
+		log.Error().Err(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
-		log.Error().Err(err)
 		return
 	}
 	if res.Status == ctl.StatusOK {
@@ -193,6 +195,10 @@ func AddMemberHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Write(bytes)
+	} else {
+		log.Error().Msg(res.Message)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(res.Message))
 	}
 
 }

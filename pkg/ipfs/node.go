@@ -109,7 +109,7 @@ func (c *IPFSConfig) JoinCommunityIPFSNode(name string, path string, key string,
 	ioutil.WriteFile(filepath.Join(commPath, "ipfs", "config"), bytes, 0755)
 
 	keyBytes := []byte("/key/swarm/psk/1.0.0/\n/base16/\n" + key + "\n")
-	err = ioutil.WriteFile(filepath.Join(commPath, "/swarm.key"), keyBytes, 0755)
+	err = ioutil.WriteFile(filepath.Join(commPath, "ipfs", "/swarm.key"), keyBytes, 0755)
 
 	return data.Identity.PeerID, err
 }

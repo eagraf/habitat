@@ -45,8 +45,8 @@ func (m *Manager) CommunityCreateHandler(req *ctl.Request) (*ctl.Response, error
 // for now: always send [name, swarmkey, bootstrap peer (one only), address, communityid]
 func (m *Manager) CommunityJoinHandler(req *ctl.Request) (*ctl.Response, error) {
 	// validate args
-	if len(req.Args) != 2 {
-		return nil, errors.New("need 2 arguments to join community")
+	if len(req.Args) < 2 {
+		return nil, errors.New("need atleast 2 arguments to join community")
 	}
 
 	community, err := m.JoinCommunity(req.Args[0], req.Args[1], []string{req.Args[2]}, req.Args[3], req.Args[4])
@@ -93,7 +93,10 @@ func (m *Manager) CommunityStateHandler(req *ctl.Request) (*ctl.Response, error)
 
 func (m *Manager) CommunityAddMemberHandler(req *ctl.Request) (*ctl.Response, error) {
 	if len(req.Args) != 3 {
-		return nil, errors.New("need 3 arguments to get add community member")
+		return &ctl.Response{
+			Status:  ctl.StatusInternalServerError,
+			Message: errors.New("need 3 arguments to get add community member").Error(),
+		}, nil
 	}
 
 	communityID := req.Args[0]
@@ -102,7 +105,11 @@ func (m *Manager) CommunityAddMemberHandler(req *ctl.Request) (*ctl.Response, er
 
 	err := m.clusterManager.AddNode(communityID, nodeID, address)
 	if err != nil {
-		return nil, err
+		log.Err(err)
+		return &ctl.Response{
+			Status:  ctl.StatusInternalServerError,
+			Message: err.Error(),
+		}, nil
 	}
 
 	return &ctl.Response{

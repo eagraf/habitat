@@ -11,13 +11,14 @@ type Props = {
 const AddMemberContainer = (props: Props) => {
 
     const [memberData, setMemberData] = React.useState<AsyncState<AddMemberResponse>>({ state: 'init' });
-    const [member, setMember] = React.useState<string>('');
+    const [node, setNode] = React.useState<string>('');
+    const [address, setAddress] = React.useState<string>('');
 
     const addMember = () => {
         setMemberData({
             state: "loading",
         })
-        axios.get<AddMemberResponse>(`http://localhost:8008/add?comm=${props.commId}&node=${member}`)
+        axios.get<AddMemberResponse>(`http://localhost:8008/add?comm=${props.commId}&node=${node}&address=${address}`)
             .then(response => {
                 console.log("respppp ", response)
                 setMemberData({
@@ -40,7 +41,8 @@ const AddMemberContainer = (props: Props) => {
             <div>
                 <h5> {err} </h5>
                 <form>
-                    <input type="text" name="member" value={member} onChange={(e) => setMember(e.target.value)} placeholder="node id" />
+                    <input type="text" name="node" value={node} onChange={(e) => setNode(e.target.value)} placeholder="node id" />
+                    <input type="text" name="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="node address" />
                     <button type="button" onClick={addMember}>Add Member</button>
                 </form>
             </div>
