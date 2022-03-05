@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/eagraf/habitat/pkg/compass"
@@ -49,8 +50,8 @@ var NodeConfig = &ipfs.IPFSConfig{
  TODO: 	create CommunityConfig struct which contains globals for the community like
 		swarm key and name of it and peer ids in it
 */
-func CreateCommunity(name string, id string, path string) ([]byte, error) {
-	res, err := commands.SendRequest(ctl.CommandCommunityCreate, []string{name, id}) // need to get address from somewhere
+func CreateCommunity(name string, id string, path string, createIpfs bool) ([]byte, error) {
+	res, err := commands.SendRequest(ctl.CommandCommunityCreate, []string{name, id, strconv.FormatBool(createIpfs)}) // need to get address from somewhere
 	fmt.Println("got res from habitat ", res)
 	var comm community.Community
 	err = json.Unmarshal([]byte(res.Message), &comm)
@@ -58,14 +59,19 @@ func CreateCommunity(name string, id string, path string) ([]byte, error) {
 		log.Err(err).Msg(fmt.Sprintf("unable to get community id %s", name))
 	}
 
-	time.Sleep(1 * time.Second) // TODO: @arushibandi need to remove this at some point --> basically wait til ipfs comm is created before connecting
-	conf, err := ConnectCommunity(name, comm.Id)
-	if err != nil {
-		log.Err(err).Msg(fmt.Sprintf("unable to connect to community %s", name))
-		return nil, err
+	if createIpfs {
+		time.Sleep(1 * time.Second) // TODO: @arushibandi need to remove this at some point --> basically wait til ipfs comm is created before connecting
+		conf, err := ConnectCommunity(name, comm.Id)
+		if err != nil {
+			log.Err(err).Msg(fmt.Sprintf("unable to connect to community %s", name))
+			return nil, err
+		}
+		bytes, err := json.Marshal(conf)
+		return bytes, err
+	} else {
+		return []byte("did not create ipfs node, only raft"), nil
 	}
-	bytes, err := json.Marshal(conf)
-	return bytes, err
+
 }
 
 type CommunityInfo struct {
@@ -86,7 +92,7 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bytes, err := CreateCommunity(name, args.Get("id"), name)
+	bytes, err := CreateCommunity(name, args.Get("id"), name, args.Get("ipfs") == "true")
 	log.Info().Msg(fmt.Sprintf("Comm is %s", string(bytes)))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
