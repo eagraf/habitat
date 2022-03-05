@@ -49,8 +49,8 @@ var NodeConfig = &ipfs.IPFSConfig{
  TODO: 	create CommunityConfig struct which contains globals for the community like
 		swarm key and name of it and peer ids in it
 */
-func CreateCommunity(name string, path string) ([]byte, error) {
-	res, err := commands.SendRequest(ctl.CommandCommunityCreate, []string{name, ""}) // need to get address from somewhere
+func CreateCommunity(name string, id string, path string) ([]byte, error) {
+	res, err := commands.SendRequest(ctl.CommandCommunityCreate, []string{name, id}) // need to get address from somewhere
 	fmt.Println("got res from habitat ", res)
 	var comm community.Community
 	err = json.Unmarshal([]byte(res.Message), &comm)
@@ -86,7 +86,7 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bytes, err := CreateCommunity(name, name)
+	bytes, err := CreateCommunity(name, args.Get("id"), name)
 	log.Info().Msg(fmt.Sprintf("Comm is %s", string(bytes)))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -119,7 +119,7 @@ func JoinCommunity(name string, path string, key string, btstpaddr string, rafta
 	}
 
 	time.Sleep(1 * time.Second) // TODO: @arushibandi need to remove this at some point --> basically wait til ipfs comm is created before connecting
-	conf, err := ConnectCommunity(name, comm.Id)
+	conf, err := ConnectCommunity(name, commId)
 	if err != nil {
 		return nil, err
 	}
@@ -209,6 +209,7 @@ func AddMemberHandler(w http.ResponseWriter, r *http.Request) {
  - just run the daemon & return the API or IPFS Client
 */
 func ConnectCommunity(name string, id string) (*ipfs.ConnectedConfig, error) {
+	fmt.Println("Connect community called with ", name, id)
 	return NodeConfig.ConnectCommunityIPFSNode(name, id)
 }
 

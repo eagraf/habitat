@@ -18,7 +18,7 @@ type CTLHandler func(req *ctl.Request) (*ctl.Response, error)
 // TODO: make request args a map
 // for now: always send [name, address]
 func (m *Manager) CommunityCreateHandler(req *ctl.Request) (*ctl.Response, error) {
-	community, err := m.CreateCommunity(req.Args[0])
+	community, err := m.CreateCommunity(req.Args[0], req.Args[1])
 	if err != nil {
 		log.Err(err)
 		return &ctl.Response{

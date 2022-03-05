@@ -40,22 +40,22 @@ func NewManager(path string, proxyRules *proxy.RuleSet) (*Manager, error) {
 	}, nil
 }
 
-func (m *Manager) setupCommunity(communityID string) error {
+func (m *Manager) setupCommunity(communityID string) (bool, error) {
 	path := path.Join(m.Path, communityID)
 
 	// check if community dir already exists
 	_, err := os.Stat(path)
 	if err == nil {
-		return fmt.Errorf("data dir for community %s already exists", path)
+		return true, fmt.Errorf("data dir for community %s already exists", path)
 	}
 
 	// create community dir
 	err = os.MkdirAll(path, 0766)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	return nil
+	return false, nil
 }
 
 func (m *Manager) checkCommunityExists(communityID string) bool {
@@ -66,10 +66,12 @@ func (m *Manager) checkCommunityExists(communityID string) bool {
 
 }
 
-func (m *Manager) CreateCommunity(name string) (*community.Community, error) {
+func (m *Manager) CreateCommunity(name string, id string) (*community.Community, error) {
 	// Generate UUID for now
-	id := uuid.New()
-	communityID := id.String()
+	communityID := id
+	if communityID == "" {
+		communityID = uuid.New().String()
+	}
 
 	err := m.setupCommunity(communityID)
 	if err != nil {
@@ -96,8 +98,8 @@ func (m *Manager) CreateCommunity(name string) (*community.Community, error) {
 }
 
 func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, acceptingNodeAddr string, communityID string) (*community.Community, error) {
-	err := m.setupCommunity(communityID)
-	if err != nil {
+	commExists, err := m.setupCommunity(communityID)
+	if err != nil && commExists != true {
 		return nil, fmt.Errorf("error setting up community: %s", err)
 	}
 

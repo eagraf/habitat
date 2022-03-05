@@ -8,12 +8,13 @@ const CreateCommunityContainer = () => {
 
     const [community, setCommunity] = React.useState<AsyncState<ConnectCommunityResponse>>({ state: 'init' });
     const [name, setName] = React.useState<string>('');
+    const [id, setId] = React.useState<string>('');
 
     const createCommunity = () => {
         setCommunity({
             state: "loading",
         })
-        axios.get<ConnectCommunityResponse>(`http://localhost:8008/create?name=${name}`)
+        axios.get<ConnectCommunityResponse>(`http://localhost:8008/create?name=${name}&id=${id}`)
             .then(response => {
                 console.log("respppp ", response)
                 setCommunity({
@@ -37,6 +38,7 @@ const CreateCommunityContainer = () => {
                 <h5> {err} </h5>
                 <form>
                     <input type="text" name="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="community name" />
+                    <input type="text" name="id" value={id} onChange={(e) => setId(e.target.value)} placeholder="(optional) community id" />
                     <button type="button" onClick={createCommunity}>Create</button>
                 </form>
             </div>
