@@ -264,6 +264,22 @@ func GetCommunitiesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type NodeIdInfo struct {
+	Id string `json:"id"`
+}
+
+func NodeIdHandler(w http.ResponseWriter, r *http.Request) {
+	info := &NodeIdInfo{Id: compass.NodeID()}
+	bytes, err := json.Marshal(info)
+	if err == nil {
+		w.Write(bytes)
+	} else {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		log.Error().Err(err)
+	}
+}
+
 func main() {
 	log.Info().Msg("starting communities api root is" + compass.HabitatPath() + " communnities is " + compass.CommunitiesPath() + "\n ===== Node id is " + compass.NodeID())
 
@@ -276,6 +292,7 @@ func main() {
 	r.HandleFunc("/connect", ConnectHandler)
 	r.HandleFunc("/communities", GetCommunitiesHandler)
 	r.HandleFunc("/add", AddMemberHandler)
+	r.HandleFunc("/node", NodeIdHandler)
 	http.Handle("/", r)
 
 	srv := &http.Server{
