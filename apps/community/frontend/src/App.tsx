@@ -58,11 +58,6 @@ function App() {
         // we have created or joined this community but not connected
         return (
           <div>
-            <ConnectCommunity
-              commId={props!.commId}
-              communities={connectedCommunities}
-              setCommunities={setConnectedCommunities}
-            ></ConnectCommunity>
             <AddMember commId={props!.commId}></AddMember>
           </div>
         );
@@ -107,7 +102,7 @@ function App() {
         }}
         items={[
           {
-            title: "Add Community",
+            title: "Home",
             itemId: "/add",
             // you can use your own custom Icon component as well
             // icon is optional
