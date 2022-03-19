@@ -12,6 +12,10 @@ import (
 	"github.com/eagraf/habitat/pkg/raft/transport"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
+	"github.com/libp2p/go-libp2p-core/host"
+	peer "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-core/peerstore"
+	ma "github.com/multiformats/go-multiaddr"
 	"github.com/rs/zerolog/log"
 )
 
@@ -22,8 +26,9 @@ const (
 
 // ClusterService is an implementation of cluster.ClusterManager
 type ClusterService struct {
-	mux       transport.RaftMultiplexer
 	instances map[string]*raftClusterInstance
+
+	host host.Host
 
 	nodeID string
 }
@@ -36,10 +41,10 @@ type raftClusterInstance struct {
 	stateMachine *fsm.CommunityStateMachine
 }
 
-func NewClusterService() *ClusterService {
+func NewClusterService(host host.Host) *ClusterService {
 	cs := &ClusterService{
-		mux:       *transport.NewRaftMultiplexer(),
 		instances: make(map[string]*raftClusterInstance),
+		host:      host,
 
 		nodeID: compass.NodeID(),
 	}
@@ -48,7 +53,6 @@ func NewClusterService() *ClusterService {
 }
 
 func (cs *ClusterService) Start() error {
-	go cs.mux.Listen(getMultiplexerAddress())
 	return nil
 }
 
@@ -60,14 +64,9 @@ func (cs *ClusterService) CreateCluster(communityID string) error {
 
 	stateMachine := fsm.NewCommunityStateMachine()
 
-	ra, ht, err := setupRaftInstance(communityID, stateMachine, true)
+	ra, err := setupRaftInstance(communityID, stateMachine, true, cs.host)
 	if err != nil {
 		return fmt.Errorf("failed to setup raft instance: %s", err.Error())
-	}
-
-	err = cs.mux.RegisterListener(communityID, ht)
-	if err != nil {
-		return fmt.Errorf("failed to register listener: %s", err.Error())
 	}
 
 	raftInstance := &raftClusterInstance{
@@ -97,14 +96,9 @@ func (cs *ClusterService) JoinCluster(communityID string, address string) error 
 
 	stateMachine := fsm.NewCommunityStateMachine()
 
-	ra, ht, err := setupRaftInstance(communityID, stateMachine, false)
+	ra, err := setupRaftInstance(communityID, stateMachine, false, cs.host)
 	if err != nil {
 		return fmt.Errorf("failed to setup raft instance: %s", err.Error())
-	}
-
-	err = cs.mux.RegisterListener(communityID, ht)
-	if err != nil {
-		return fmt.Errorf("failed to register listener: %s", err.Error())
 	}
 
 	raftInstance := &raftClusterInstance{
@@ -128,14 +122,9 @@ func (cs *ClusterService) RestoreNode(communityID string) error {
 
 	stateMachine := fsm.NewCommunityStateMachine()
 
-	ra, ht, err := setupRaftInstance(communityID, stateMachine, false)
+	ra, err := setupRaftInstance(communityID, stateMachine, false, cs.host)
 	if err != nil {
 		log.Error().Msgf("failed to setup raft instance: %s", err.Error())
-	}
-
-	err = cs.mux.RegisterListener(communityID, ht)
-	if err != nil {
-		log.Error().Msgf("failed to register listener: %s", err.Error())
 	}
 
 	raftInstance := &raftClusterInstance{
@@ -191,8 +180,23 @@ func (cs *ClusterService) GetState(communityID string) ([]byte, error) {
 
 // AddNode adds a new node to a cluster. After a node has been added, it must execute
 // the JoinCluster routine to begin listening for state updates.
+// nodeID represents a libp2p peer id base58 encoded in this instance
 func (cs *ClusterService) AddNode(communityID string, nodeID string, address string) error {
 	log.Info().Msgf("received request for %s at %s to join %s", nodeID, address, communityID)
+
+	// add remote node address to this host's peer store
+	addr, err := ma.NewMultiaddr(address)
+	if err != nil {
+		return err
+	}
+
+	// decode base58 encoded peer id for setting addresses
+	peerID, err := peer.Decode(nodeID)
+	if err != nil {
+		return err
+	}
+
+	cs.host.Peerstore().AddAddrs(peerID, []ma.Multiaddr{addr}, peerstore.PermanentAddrTTL)
 
 	// TODO the joining server should be authenticated at this point
 
@@ -234,7 +238,7 @@ func (cs *ClusterService) RemoveNode(communityID string, nodeID string) error {
 }
 
 // Internal wrapper of Hashicorp raft stuff
-func setupRaftInstance(communityID string, stateMachine *fsm.CommunityStateMachine, newCommunity bool) (*raft.Raft, *transport.HTTPTransport, error) {
+func setupRaftInstance(communityID string, stateMachine *fsm.CommunityStateMachine, newCommunity bool, host host.Host) (*raft.Raft, error) {
 	log.Info().Msgf("setting up raft instance for node %s at %s", getServerID(communityID), getCommunityAddress(communityID))
 
 	// setup raft folder
@@ -245,32 +249,30 @@ func setupRaftInstance(communityID string, stateMachine *fsm.CommunityStateMachi
 	if errors.Is(err, os.ErrNotExist) {
 		err := os.Mkdir(raftDirPath, 0700)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error creating raft directory for new community: %s", err)
+			return nil, fmt.Errorf("error creating raft directory for new community: %s", err)
 		}
 
 		raftDBFile, err := os.OpenFile(raftDBPath, os.O_CREATE|os.O_RDONLY, 0600)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error creating raft bolt db file: %s", err)
+			return nil, fmt.Errorf("error creating raft bolt db file: %s", err)
 		}
 		defer raftDBFile.Close()
 	} else if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Setup Raft configuration.
 	config := raft.DefaultConfig()
-	config.LocalID = raft.ServerID(getServerID(communityID))
+	config.LocalID = raft.ServerID(host.ID().Pretty())
 
 	// Setup Raft communication.
-	httpTransport, err := transport.NewHTTPTransport(getCommunityAddress(communityID))
-	if err != nil {
-		return nil, nil, err
-	}
+	protocol := getClusterProtocol(communityID)
+	libP2PTransport := transport.NewLibP2PTransport(host, protocol)
 
 	// Create the snapshot store. This allows the Raft to truncate the log.
 	snapshots, err := raft.NewFileSnapshotStore(getCommunityRaftDirectory(communityID), RetainSnapshotCount, os.Stderr)
 	if err != nil {
-		return nil, nil, fmt.Errorf("file snapshot store: %s", err)
+		return nil, fmt.Errorf("file snapshot store: %s", err)
 	}
 
 	// Create the log store and stable store.
@@ -278,15 +280,15 @@ func setupRaftInstance(communityID string, stateMachine *fsm.CommunityStateMachi
 	var stableStore raft.StableStore
 	boltDB, err := raftboltdb.NewBoltStore(filepath.Join(getCommunityRaftDirectory(communityID), "raft.db"))
 	if err != nil {
-		return nil, nil, fmt.Errorf("new bolt store: %s", err)
+		return nil, fmt.Errorf("new bolt store: %s", err)
 	}
 	logStore = boltDB
 	stableStore = boltDB
 
 	// Instantiate the Raft systems.
-	ra, err := raft.NewRaft(config, stateMachine, logStore, stableStore, snapshots, httpTransport)
+	ra, err := raft.NewRaft(config, stateMachine, logStore, stableStore, snapshots, libP2PTransport)
 	if err != nil {
-		return nil, nil, fmt.Errorf("new raft: %s", err)
+		return nil, fmt.Errorf("new raft: %s", err)
 	}
 
 	// If this node is creating the community, bootstrap the raft cluster as well
@@ -295,12 +297,12 @@ func setupRaftInstance(communityID string, stateMachine *fsm.CommunityStateMachi
 			Servers: []raft.Server{
 				{
 					ID:      config.LocalID,
-					Address: httpTransport.LocalAddr(),
+					Address: libP2PTransport.LocalAddr(),
 				},
 			},
 		}
 		ra.BootstrapCluster(configuration)
 	}
 
-	return ra, httpTransport, nil
+	return ra, nil
 }

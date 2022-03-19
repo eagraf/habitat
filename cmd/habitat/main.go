@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/eagraf/habitat/cmd/habitat/community"
+	"github.com/eagraf/habitat/cmd/habitat/p2p"
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
 	"github.com/eagraf/habitat/pkg/compass"
@@ -27,6 +28,8 @@ const (
 	HabitatCTLPort   = "2040"
 	ReverseProxyHost = "0.0.0.0"
 	ReverseProxyPort = "2041"
+
+	P2PPort = "6000"
 )
 
 // TODO dependency inject this state so we don't use globals
@@ -63,12 +66,14 @@ func main() {
 		log.Fatal().Msgf("unable to read apps.yml: %s", err)
 	}
 
+	p2pNode := p2p.NewNode(P2PPort)
+
 	// Start reverse proxy
 	reverseProxy := proxy.NewServer()
 	go reverseProxy.Start(fmt.Sprintf("%s:%s", ReverseProxyHost, ReverseProxyPort))
 
 	// Create community manager
-	CommunityManager, err = community.NewManager(communityDir, &reverseProxy.Rules)
+	CommunityManager, err = community.NewManager(communityDir, &reverseProxy.Rules, p2pNode.Host())
 	if err != nil {
 		log.Fatal().Msgf("unable to start community manager: %s", err)
 	}
@@ -106,7 +111,7 @@ func handleRequest(conn net.Conn) error {
 		return err
 	}
 
-	fmt.Println(string(buf))
+	//	fmt.Println(string(buf))
 
 	req, err := decodeRequest(buf)
 	if err != nil {

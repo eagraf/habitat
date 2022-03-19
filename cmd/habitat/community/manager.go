@@ -13,17 +13,20 @@ import (
 	"github.com/eagraf/habitat/pkg/ipfs"
 	"github.com/eagraf/habitat/structs/community"
 	"github.com/google/uuid"
+	"github.com/libp2p/go-libp2p-core/host"
 )
 
 type Manager struct {
-	Path           string
-	config         *ipfs.IPFSConfig
+	Path    string
+	config  *ipfs.IPFSConfig
+	p2pHost host.Host
+
 	clusterManager *cluster.ClusterManager
 	communities    []*community.Community
 }
 
-func NewManager(path string, proxyRules *proxy.RuleSet) (*Manager, error) {
-	clusterManager := cluster.NewClusterManager()
+func NewManager(path string, proxyRules *proxy.RuleSet, host host.Host) (*Manager, error) {
+	clusterManager := cluster.NewClusterManager(host)
 
 	err := clusterManager.Start(proxyRules)
 	if err != nil {
@@ -37,6 +40,7 @@ func NewManager(path string, proxyRules *proxy.RuleSet) (*Manager, error) {
 			// TODO: @arushibandi remove this usage of compass
 			StartCmd: filepath.Join(compass.ProcsPath(), "bin", "amd64-darwin", "start-ipfs"),
 		},
+		p2pHost:        host,
 		clusterManager: clusterManager,
 	}, nil
 }
