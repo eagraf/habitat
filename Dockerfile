@@ -10,10 +10,7 @@ COPY ./Makefile /habitat/Makefile
 COPY ./common.mk /habitat/common.mk
 
 RUN apt-get update && \
-    apt-get install -y wget && \
-    apt-get install -y make && \
-    apt-get install nodejs -y && \
-    apt-get install npm -y
+    apt-get install -y wget make nodejs npm
 
 RUN wget https://dist.ipfs.io/go-ipfs/v0.9.0/go-ipfs_v0.9.0_linux-amd64.tar.gz && \
     tar -xvzf go-ipfs_v0.9.0_linux-amd64.tar.gz && \

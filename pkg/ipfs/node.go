@@ -57,6 +57,8 @@ func (c *IPFSConfig) NewCommunityIPFSNode(name string, path string) (error, stri
 
 	// json struct of config : here we can modify it and write back
 	// ignore the peers for now (connect after bootstrapping?)
+	/* choose a random port to be used by ipfs config (so that having)
+	   multiple ipfs instances doesn't cause a conflict */
 	addr := data.Addresses.API
 	addrstring := addr[0]
 	parts := strings.Split(addrstring, "/")

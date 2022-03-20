@@ -52,7 +52,6 @@ var NodeConfig = &ipfs.IPFSConfig{
 */
 func CreateCommunity(name string, id string, path string, createIpfs bool) ([]byte, error) {
 	res, err := commands.SendRequest(ctl.CommandCommunityCreate, []string{name, id, strconv.FormatBool(createIpfs)}) // need to get address from somewhere
-	fmt.Println("got res from habitat ", res)
 	var comm community.Community
 	err = json.Unmarshal([]byte(res.Message), &comm)
 	if err != nil {
@@ -119,7 +118,6 @@ func JoinCommunity(name string, path string, key string, btstpaddr string, rafta
 
 	var comm community.Community
 	err = json.Unmarshal([]byte(res.Message), &comm)
-	fmt.Println("--- message ---", res.Message)
 	if err != nil {
 		log.Err(err).Msg(fmt.Sprintf("unable to get community id %s", commId))
 	}
@@ -172,7 +170,6 @@ func AddMemberHandler(w http.ResponseWriter, r *http.Request) {
 	node := args.Get("node")
 	addr := args.Get("address")
 	comm := args.Get("comm")
-	fmt.Println(args)
 	if node == "" || comm == "" || addr == "" {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Need node id and comm params"))
@@ -215,7 +212,7 @@ func AddMemberHandler(w http.ResponseWriter, r *http.Request) {
  - just run the daemon & return the API or IPFS Client
 */
 func ConnectCommunity(name string, id string) (*ipfs.ConnectedConfig, error) {
-	fmt.Println("Connect community called with ", name, id)
+	log.Info().Msg(fmt.Sprintf("Connect community called with %s %s", name, id))
 	return NodeConfig.ConnectCommunityIPFSNode(name, id)
 }
 
