@@ -3,7 +3,7 @@ package commands
 import (
 	"fmt"
 
-	"github.com/eagraf/habitat/pkg/habitatctl/client"
+	client "github.com/eagraf/habitat/pkg/habitat_client"
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/spf13/viper"
 )
