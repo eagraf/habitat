@@ -78,7 +78,9 @@ func (m *Manager) StartProcess(req *ctl.Request) (error, string) {
 	return nil, subName
 }
 
-// start arbitrary process
+/*
+// TODO: @arushibandi revisit this when adding ipfs to process manager
+// see: https://github.com/eagraf/habitat/pull/14#discussion_r827603513
 func (m *Manager) StartArbitraryProcess(name string, cmdPath string, dataPath string, env []string, flags []string, args []string) (error, string) {
 	proc := &Proc{
 		Name:     name,
@@ -100,6 +102,7 @@ func (m *Manager) StartArbitraryProcess(name string, cmdPath string, dataPath st
 	m.Procs[name] = proc
 	return nil, name
 }
+*/
 
 func (m *Manager) StopProcess(subName string) error {
 	m.lock.Lock()
