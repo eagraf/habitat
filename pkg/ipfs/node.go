@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	config "github.com/ipfs/go-ipfs-config"
 	"github.com/rs/zerolog/log"
@@ -161,13 +160,36 @@ func (c *IPFSConfig) ConnectCommunityIPFSNode(name string, id string) (*Connecte
 
 	pathEnv := fmt.Sprintf("IPFS_PATH=%s", filepath.Join(c.CommunitiesPath, id, "ipfs"))
 	cmdConnect := exec.Command("ipfs", "daemon")
-	cmdConnect.Stdout = os.Stdout
+	stdout, _ := cmdConnect.StdoutPipe()
+
 	cmdConnect.Stderr = os.Stderr
 	cmdConnect.Env = []string{pathEnv}
-	go cmdConnect.Run()
 
-	// TODO: don't use time.Sleep
-	time.Sleep(1 * time.Second)
+	done := make(chan struct{})
+
+	scanner := bufio.NewScanner(stdout)
+
+	// Use the scanner to scan the output line by line and log it
+	// It's running in a goroutine so that it doesn't block
+	go func() {
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.Contains(line, "Daemon is ready") {
+				done <- struct{}{}
+				return
+			}
+		}
+	}()
+
+	// Start the command and check for errors
+	err = cmdConnect.Start()
+	if err != nil {
+		log.Err(err).Msg("error running ipfs daemon")
+		return nil, err
+	}
+
+	// Wait for 'Daemon is ready'
+	<-done
 
 	cmdId := exec.Command("ipfs", "id")
 	cmdId.Env = []string{pathEnv}
