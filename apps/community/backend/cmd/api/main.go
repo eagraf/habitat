@@ -59,7 +59,6 @@ func CreateCommunity(name string, id string, path string, createIpfs bool) ([]by
 	}
 
 	if createIpfs {
-		time.Sleep(1 * time.Second) // TODO: @arushibandi need to remove this at some point --> basically wait til ipfs comm is created before connecting
 		conf, err := ConnectCommunity(name, comm.Id)
 		if err != nil {
 			log.Err(err).Msg(fmt.Sprintf("unable to connect to community %s", name))
@@ -122,7 +121,6 @@ func JoinCommunity(name string, path string, key string, btstpaddr string, rafta
 		log.Err(err).Msg(fmt.Sprintf("unable to get community id %s", commId))
 	}
 
-	time.Sleep(1 * time.Second) // TODO: @arushibandi need to remove this at some point --> basically wait til ipfs comm is created before connecting
 	conf, err := ConnectCommunity(name, commId)
 	if err != nil {
 		return nil, err
