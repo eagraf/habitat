@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/eagraf/habitat/cmd/habitatctl/commands"
 	"github.com/eagraf/habitat/pkg/compass"
-	"github.com/eagraf/habitat/pkg/habitatctl/commands"
 	"github.com/eagraf/habitat/pkg/ipfs"
 	"github.com/eagraf/habitat/structs/community"
 	"github.com/eagraf/habitat/structs/ctl"

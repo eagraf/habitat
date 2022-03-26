@@ -12,8 +12,8 @@ all : build
 
 build : clean install-community
 	mkdir -p $(BIN_DIR) $(BIN_DIR)/amd64-linux
-	go build -o $(BIN_DIR) github.com/eagraf/habitat/cmd/habitat github.com/eagraf/habitat/pkg/habitatctl
-	GOOS=linux GOARCH=amd64 go build -o $(BIN_DIR)/amd64-linux github.com/eagraf/habitat/cmd/habitat github.com/eagraf/habitat/pkg/habitatctl
+	go build -o $(BIN_DIR) github.com/eagraf/habitat/cmd/habitat github.com/eagraf/habitat/cmd/habitatctl
+	GOOS=linux GOARCH=amd64 go build -o $(BIN_DIR)/amd64-linux github.com/eagraf/habitat/cmd/habitat github.com/eagraf/habitat/cmd/habitatctl
 
 clean :
 	rm -rf $(BIN_DIR)
