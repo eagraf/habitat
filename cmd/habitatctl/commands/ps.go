@@ -16,7 +16,6 @@ limitations under the License.
 package commands
 
 import (
-	client "github.com/eagraf/habitat/pkg/habitat_client"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +25,7 @@ var psCmd = &cobra.Command{
 	Short: "List running habitat processes",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		client.SendRequest("ps", args)
+		SendRequestAndPrint("ps", args)
 	},
 }
 

@@ -20,8 +20,6 @@ import (
 
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/spf13/cobra"
-
-	client "github.com/eagraf/habitat/pkg/habitat_client"
 )
 
 // communityCmd represents the community command
@@ -52,10 +50,10 @@ var communityCmd = &cobra.Command{
 				if len(args) < 3 {
 					fmt.Printf("No member id specified for community add command")
 				}
-				client.SendRequest(ctl.CommandCommunityAddMember, []string{args[1], args[2]})
+				SendRequestAndPrint(ctl.CommandCommunityAddMember, []string{args[1], args[2]})
 				return
 			case "propose":
-				client.SendRequest(ctl.CommandCommunityPropose, []string{})
+				SendRequestAndPrint(ctl.CommandCommunityPropose, []string{})
 				return
 			default:
 				fmt.Printf("%s is an invalid subcommand for community %s\n", args[1], args[0])
@@ -77,7 +75,7 @@ var communityCreateCmd = &cobra.Command{
 			return
 		}
 
-		client.SendRequest(ctl.CommandCommunityCreate, []string{name.Value.String(), address.Value.String()})
+		SendRequestAndPrint(ctl.CommandCommunityCreate, []string{name.Value.String(), address.Value.String()})
 	},
 }
 
@@ -98,7 +96,7 @@ var communityJoinCmd = &cobra.Command{
 			return
 		}
 
-		client.SendRequest(ctl.CommandCommunityJoin, []string{address.Value.String(), communityID.Value.String()})
+		SendRequestAndPrint(ctl.CommandCommunityJoin, []string{address.Value.String(), communityID.Value.String()})
 	},
 }
 
@@ -124,7 +122,7 @@ var communityAddMemberCmd = &cobra.Command{
 			return
 		}
 
-		client.SendRequest(ctl.CommandCommunityAddMember, []string{
+		SendRequestAndPrint(ctl.CommandCommunityAddMember, []string{
 			communityID.Value.String(),
 			nodeID.Value.String(),
 			address.Value.String(),
@@ -148,7 +146,7 @@ var communityProposeTransitionCmd = &cobra.Command{
 		}
 		b64Patch := args[0]
 
-		client.SendRequest(ctl.CommandCommunityPropose, []string{communityID.Value.String(), b64Patch})
+		SendRequestAndPrint(ctl.CommandCommunityPropose, []string{communityID.Value.String(), b64Patch})
 	},
 }
 
@@ -162,7 +160,7 @@ var communityStateCmd = &cobra.Command{
 			return
 		}
 
-		client.SendRequest(ctl.CommandCommunityState, []string{communityID.Value.String()})
+		SendRequestAndPrint(ctl.CommandCommunityState, []string{communityID.Value.String()})
 	},
 }
 
@@ -170,7 +168,7 @@ var communityListCmd = &cobra.Command{
 	Use:   "ls",
 	Short: "list the communities that this node is a part of",
 	Run: func(cmd *cobra.Command, args []string) {
-		client.SendRequest(ctl.CommandCommunityList, []string{})
+		SendRequestAndPrint(ctl.CommandCommunityList, []string{})
 	},
 }
 
