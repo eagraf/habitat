@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/eagraf/habitat/cmd/habitatctl/commands"
 	"github.com/eagraf/habitat/pkg/compass"
+	client "github.com/eagraf/habitat/pkg/habitat_client"
 	"github.com/eagraf/habitat/pkg/ipfs"
 	"github.com/eagraf/habitat/structs/community"
 	"github.com/eagraf/habitat/structs/ctl"
@@ -51,8 +51,11 @@ var NodeConfig = &ipfs.IPFSConfig{
 		swarm key and name of it and peer ids in it
 */
 func CreateCommunity(name string, id string, path string, createIpfs bool) ([]byte, error) {
-	res, err := commands.SendRequest(ctl.CommandCommunityCreate, []string{name, id, strconv.FormatBool(createIpfs)}) // need to get address from somewhere
+	res, err := client.SendRequest(ctl.CommandCommunityCreate, []string{name, id, strconv.FormatBool(createIpfs)}) // need to get address from somewhere
 	var comm community.Community
+	if err != nil {
+		log.Err(err).Msg("Unable to send request to habitatctl client")
+	}
 	err = json.Unmarshal([]byte(res.Message), &comm)
 	if err != nil {
 		log.Err(err).Msg(fmt.Sprintf("unable to get community id %s", name))
@@ -113,7 +116,7 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
   can either use the api returned by createNode or connect to a new client
 */
 func JoinCommunity(name string, path string, key string, btstpaddr string, raftaddr string, commId string) ([]byte, error) {
-	res, err := commands.SendRequest(ctl.CommandCommunityJoin, []string{name, key, btstpaddr, raftaddr, commId}) // need to get address from somewhere
+	res, err := client.SendRequest(ctl.CommandCommunityJoin, []string{name, key, btstpaddr, raftaddr, commId}) // need to get address from somewhere
 
 	var comm community.Community
 	err = json.Unmarshal([]byte(res.Message), &comm)
@@ -174,7 +177,7 @@ func AddMemberHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := commands.SendRequest(ctl.CommandCommunityAddMember, []string{comm, node, addr}) // need to get address from somewhere
+	res, err := client.SendRequest(ctl.CommandCommunityAddMember, []string{comm, node, addr}) // need to get address from somewhere
 	if err != nil {
 		log.Error().Err(err)
 		w.WriteHeader(http.StatusInternalServerError)

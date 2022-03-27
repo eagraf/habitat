@@ -7,7 +7,6 @@ import (
 	client "github.com/eagraf/habitat/pkg/habitat_client"
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func parseFlags(args []string) ([]string, []string) {
@@ -31,7 +30,7 @@ var ipfsCmd = &cobra.Command{
 	Long:  `TODO create long description`,
 	Args:  cobra.MinimumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := client.NewClient(viper.GetString("port"))
+		client, err := client.NewClient()
 		if err != nil {
 			fmt.Println("Error: couldn't connect to habitat service")
 			return
@@ -65,7 +64,7 @@ var startCmd = &cobra.Command{
 			fmt.Println("Error: only one process should be specified before -- number specified: ", cmd.ArgsLenAtDash())
 			return
 		}
-		client, err := client.NewClient(viper.GetString("port"))
+		client, err := client.NewClient()
 		if err != nil {
 			fmt.Println("Error: couldn't connect to habitat service")
 			return
