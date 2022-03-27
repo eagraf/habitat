@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM node:16
 
 WORKDIR /habitat
 
@@ -10,7 +10,7 @@ COPY ./Makefile /habitat/Makefile
 COPY ./common.mk /habitat/common.mk
 
 RUN apt-get update && \
-    apt-get install -y wget make nodejs npm
+    apt-get install -y wget make
 
 RUN wget https://dist.ipfs.io/go-ipfs/v0.9.0/go-ipfs_v0.9.0_linux-amd64.tar.gz && \
     tar -xvzf go-ipfs_v0.9.0_linux-amd64.tar.gz && \
