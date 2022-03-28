@@ -2,13 +2,18 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/eagraf/habitat/pkg/compass"
+	client "github.com/eagraf/habitat/pkg/habitat_client"
 	"github.com/eagraf/habitat/pkg/ipfs"
+	"github.com/eagraf/habitat/structs/community"
+	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
 )
@@ -28,10 +33,9 @@ type UserCommunities struct {
 	Communities []CommunityConfig
 }
 
-var NodeConfig = &ipfs.IPFSNodeConfig{
-	HabitatPath: compass.HabitatPath(),
-	StartCmd:    filepath.Join(compass.HabitatPath(), "apps", "ipfs", "start"),
-	IPFSPath:    filepath.Join(compass.HabitatPath(), "data", "ipfs"),
+var NodeConfig = &ipfs.IPFSConfig{
+	CommunitiesPath: compass.CommunitiesPath(),
+	StartCmd:        filepath.Join(compass.HabitatPath(), "apps", "ipfs", "start"),
 }
 
 /*
@@ -46,8 +50,29 @@ var NodeConfig = &ipfs.IPFSNodeConfig{
  TODO: 	create CommunityConfig struct which contains globals for the community like
 		swarm key and name of it and peer ids in it
 */
-func CreateCommunity(name string, path string) (error, string, string, []string) {
-	return NodeConfig.NewCommunityIPFSNode(name, path)
+func CreateCommunity(name string, id string, path string, createIpfs bool) ([]byte, error) {
+	res, err := client.SendRequest(ctl.CommandCommunityCreate, []string{name, id, strconv.FormatBool(createIpfs)}) // need to get address from somewhere
+	var comm community.Community
+	if err != nil {
+		log.Err(err).Msg("Unable to send request to habitatctl client")
+	}
+	err = json.Unmarshal([]byte(res.Message), &comm)
+	if err != nil {
+		log.Err(err).Msg(fmt.Sprintf("unable to get community id %s", name))
+	}
+
+	if createIpfs {
+		conf, err := ConnectCommunity(name, comm.Id)
+		if err != nil {
+			log.Err(err).Msg(fmt.Sprintf("unable to connect to community %s", name))
+			return nil, err
+		}
+		bytes, err := json.Marshal(conf)
+		return bytes, err
+	} else {
+		return []byte("did not create ipfs node, only raft"), nil
+	}
+
 }
 
 type CommunityInfo struct {
@@ -68,24 +93,14 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err, key, peerid, addrs := CreateCommunity(name, name)
-
+	bytes, err := CreateCommunity(name, args.Get("id"), name, args.Get("ipfs") == "true")
+	log.Info().Msg(fmt.Sprintf("Comm is %s", string(bytes)))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		log.Error().Err(err)
 	}
 
-	CommConfig := &CommunityConfig{
-		Name:           name,
-		SwarmKey:       key,
-		BootstrapPeers: addrs,
-		Peers:          []string{peerid},
-	}
-
-	commstr, _ := json.Marshal(CommConfig)
-	log.Info().Msg("Community Config is " + string(commstr))
-	bytes, err := json.Marshal(*CommConfig)
 	w.Write(bytes)
 }
 
@@ -100,40 +115,96 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
  - Return peer id: need to kick off some way for all other nodes to add this node
   can either use the api returned by createNode or connect to a new client
 */
-func JoinCommunity(name string, path string, key string, btsppeers []string, peers []string) (error, string) {
-	return NodeConfig.JoinCommunityIPFSNode(name, path, key, btsppeers, peers)
+func JoinCommunity(name string, path string, key string, btstpaddr string, raftaddr string, commId string) ([]byte, error) {
+	res, err := client.SendRequest(ctl.CommandCommunityJoin, []string{name, key, btstpaddr, raftaddr, commId}) // need to get address from somewhere
+
+	var comm community.Community
+	err = json.Unmarshal([]byte(res.Message), &comm)
+	if err != nil {
+		log.Err(err).Msg(fmt.Sprintf("unable to get community id %s", commId))
+	}
+
+	conf, err := ConnectCommunity(name, commId)
+	if err != nil {
+		return nil, err
+	}
+	bytes, err := json.Marshal(conf)
+	return bytes, err
 }
 
 func JoinHandler(w http.ResponseWriter, r *http.Request) {
 	args := r.URL.Query()
 	name := args.Get("name")
 	key := args.Get("key")
-	addr := args.Get("addr")
-	if name == "" || key == "" || addr == "" {
+	btstpaddr := args.Get("btstpaddr")
+	raftaddr := args.Get("raftaddr")
+	comm := args.Get("comm")
+	if name == "" || key == "" || btstpaddr == "" || raftaddr == "" || comm == "" {
 		log.Error().Msg("Error in community join handler: name or key or addr arg is not supplied")
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("name or key or addr arg is not supplied"))
 		return
 	}
 
-	btsppeers := []string{addr}
-	err, peerid := JoinCommunity(name, name, key, btsppeers, make([]string, 0))
+	bytes, err := JoinCommunity(name, name, key, btstpaddr, raftaddr, comm)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		log.Error().Err(err)
+		return
 	}
 
-	CommConfig := &CommunityConfig{
-		Name:           name,
-		SwarmKey:       key,
-		BootstrapPeers: btsppeers,
-		Peers:          []string{peerid},
-	}
-
-	bytes, err := json.Marshal(CommConfig)
 	w.Write(bytes)
+}
+
+type AddMemberResponse struct {
+	MemberId string
+	NodeId   string
+}
+
+// Add Member to a community
+// expects node and comm params
+func AddMemberHandler(w http.ResponseWriter, r *http.Request) {
+	log.Info().Msg(fmt.Sprintf("got request to add node at member %s", compass.NodeID()))
+	args := r.URL.Query()
+	node := args.Get("node")
+	addr := args.Get("address")
+	comm := args.Get("comm")
+	if node == "" || comm == "" || addr == "" {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Need node id and comm params"))
+		return
+	}
+
+	res, err := client.SendRequest(ctl.CommandCommunityAddMember, []string{comm, node, addr}) // need to get address from somewhere
+	if err != nil {
+		log.Error().Err(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	if res.Status == ctl.StatusOK {
+		log.Info().Msg(fmt.Sprintf("successfully added member with message %s", res.Message))
+		bytes, err := json.Marshal(
+			&AddMemberResponse{
+				MemberId: node,
+				NodeId:   compass.NodeID(),
+			},
+		)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			log.Error().Err(err)
+			return
+		}
+		w.Write(bytes)
+	} else {
+		log.Error().Msg(res.Message)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(res.Message))
+	}
+
 }
 
 /*
@@ -141,14 +212,21 @@ func JoinHandler(w http.ResponseWriter, r *http.Request) {
  - meant to be used by nodes that are already in a community
  - just run the daemon & return the API or IPFS Client
 */
-func ConnectCommunity(name string) (ipfs.ConnectedConfig, error) {
-	return NodeConfig.ConnectCommunityIPFSNode(name)
+func ConnectCommunity(name string, id string) (*ipfs.ConnectedConfig, error) {
+	log.Info().Msg(fmt.Sprintf("Connect community called with %s %s", name, id))
+	return NodeConfig.ConnectCommunityIPFSNode(name, id)
 }
 
 func ConnectHandler(w http.ResponseWriter, r *http.Request) {
 	args := r.URL.Query()
 	name := args.Get("name")
-	conf, err := ConnectCommunity(name)
+	id := args.Get("id")
+	if name == "" || id == "" {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Need name and id params"))
+		return
+	}
+	conf, err := ConnectCommunity(name, id)
 	if err == nil {
 		bytes, _ := json.Marshal(conf)
 		w.Write(bytes)
@@ -168,9 +246,8 @@ type CommunitiesListResponse struct {
  - return all communities in user's data/ipfs folder
 */
 func GetCommunitiesHandler(w http.ResponseWriter, r *http.Request) {
-	root := compass.HabitatPath()
-	ipfsPath := filepath.Join(root, "data", "ipfs")
-	communityFiles, err := ioutil.ReadDir(ipfsPath)
+	comms := compass.CommunitiesPath()
+	communityFiles, err := ioutil.ReadDir(comms)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -185,8 +262,24 @@ func GetCommunitiesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type NodeIdInfo struct {
+	Id string `json:"id"`
+}
+
+func NodeIdHandler(w http.ResponseWriter, r *http.Request) {
+	info := &NodeIdInfo{Id: compass.NodeID()}
+	bytes, err := json.Marshal(info)
+	if err == nil {
+		w.Write(bytes)
+	} else {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		log.Error().Err(err)
+	}
+}
+
 func main() {
-	log.Info().Msg("starting communities api root is" + compass.HabitatPath() + " communnities is " + compass.CommunitiesPath())
+	log.Info().Msg("starting communities api root is" + compass.HabitatPath() + " communnities is " + compass.CommunitiesPath() + "\n ===== Node id is " + compass.NodeID())
 
 	r := mux.NewRouter()
 	// r.HandleFunc("/home", HomeHandler)
@@ -196,6 +289,8 @@ func main() {
 	// I'm imagining a side panel and when you click on a community name it connects
 	r.HandleFunc("/connect", ConnectHandler)
 	r.HandleFunc("/communities", GetCommunitiesHandler)
+	r.HandleFunc("/add", AddMemberHandler)
+	r.HandleFunc("/node", NodeIdHandler)
 	http.Handle("/", r)
 
 	srv := &http.Server{

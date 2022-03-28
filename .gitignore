@@ -3,6 +3,7 @@ bin
 data/procs/*
 data/communities/*
 data/node_id
+data/ipfs
 !data/procs/apps.yml
 node_modules/
 package-lock.json

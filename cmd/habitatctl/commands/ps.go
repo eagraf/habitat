@@ -25,7 +25,7 @@ var psCmd = &cobra.Command{
 	Short: "List running habitat processes",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		sendRequest("ps", args)
+		SendRequestAndPrint("ps", args)
 	},
 }
 

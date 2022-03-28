@@ -1,6 +1,7 @@
 package community
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -9,35 +10,65 @@ import (
 
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/structs/ctl"
+	"github.com/rs/zerolog/log"
 )
 
 type CTLHandler func(req *ctl.Request) (*ctl.Response, error)
 
+// TODO: make request args a map
+// for now: always send [name, address]
 func (m *Manager) CommunityCreateHandler(req *ctl.Request) (*ctl.Response, error) {
-	id, err := m.CreateCommunity()
+	community, err := m.CreateCommunity(req.Args[0], req.Args[1], req.Args[2] == "true")
 	if err != nil {
-		return nil, err
+		log.Err(err)
+		return &ctl.Response{
+			Status:  500,
+			Message: err.Error(),
+		}, err
+	}
+
+	bytes, err := json.Marshal(community)
+	if err != nil {
+		log.Err(err)
+		return &ctl.Response{
+			Status:  500,
+			Message: err.Error(),
+		}, err
 	}
 	return &ctl.Response{
 		Status:  ctl.StatusOK,
-		Message: fmt.Sprintf("created community with uuid: %s", id),
+		Message: string(bytes),
 	}, nil
 }
 
+// TODO: make request args a map
+// for now: always send [name, swarmkey, bootstrap peer (one only), address, communityid]
 func (m *Manager) CommunityJoinHandler(req *ctl.Request) (*ctl.Response, error) {
 	// validate args
-	if len(req.Args) != 2 {
-		return nil, errors.New("need 2 arguments to join community")
+	if len(req.Args) < 2 {
+		return nil, errors.New("need atleast 2 arguments to join community")
 	}
 
-	err := m.JoinCommunity(req.Args[0], req.Args[1])
+	community, err := m.JoinCommunity(req.Args[0], req.Args[1], []string{req.Args[2]}, req.Args[3], req.Args[4])
 	if err != nil {
-		return nil, err
+		log.Err(err)
+		return &ctl.Response{
+			Status:  500,
+			Message: err.Error(),
+		}, err
 	}
 
+	bytes, err := json.Marshal(community)
+	if err != nil {
+		log.Err(err)
+		return &ctl.Response{
+			Status:  500,
+			Message: err.Error(),
+		}, err
+	}
 	return &ctl.Response{
 		Status:  ctl.StatusOK,
-		Message: fmt.Sprintf("joined community %s", req.Args[0]),
+		Message: string(bytes),
 	}, nil
 }
 
@@ -62,7 +93,10 @@ func (m *Manager) CommunityStateHandler(req *ctl.Request) (*ctl.Response, error)
 
 func (m *Manager) CommunityAddMemberHandler(req *ctl.Request) (*ctl.Response, error) {
 	if len(req.Args) != 3 {
-		return nil, errors.New("need 3 arguments to get add community member")
+		return &ctl.Response{
+			Status:  ctl.StatusInternalServerError,
+			Message: errors.New("need 3 arguments to get add community member").Error(),
+		}, nil
 	}
 
 	communityID := req.Args[0]
@@ -71,7 +105,11 @@ func (m *Manager) CommunityAddMemberHandler(req *ctl.Request) (*ctl.Response, er
 
 	err := m.clusterManager.AddNode(communityID, nodeID, address)
 	if err != nil {
-		return nil, err
+		log.Err(err)
+		return &ctl.Response{
+			Status:  ctl.StatusInternalServerError,
+			Message: err.Error(),
+		}, nil
 	}
 
 	return &ctl.Response{

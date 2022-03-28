@@ -50,10 +50,10 @@ var communityCmd = &cobra.Command{
 				if len(args) < 3 {
 					fmt.Printf("No member id specified for community add command")
 				}
-				sendRequest(ctl.CommandCommunityAddMember, []string{args[1], args[2]})
+				SendRequestAndPrint(ctl.CommandCommunityAddMember, []string{args[1], args[2]})
 				return
 			case "propose":
-				sendRequest(ctl.CommandCommunityPropose, []string{})
+				SendRequestAndPrint(ctl.CommandCommunityPropose, []string{})
 				return
 			default:
 				fmt.Printf("%s is an invalid subcommand for community %s\n", args[1], args[0])
@@ -69,12 +69,13 @@ var communityCreateCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		address := cmd.Flags().Lookup("address")
-		if address == nil {
-			fmt.Println("address flag needs to be set")
+		name := cmd.Flags().Lookup("name")
+		if address == nil || name == nil {
+			fmt.Println("address and name flags need to be set")
 			return
 		}
 
-		sendRequest(ctl.CommandCommunityCreate, []string{address.Value.String()})
+		SendRequestAndPrint(ctl.CommandCommunityCreate, []string{name.Value.String(), address.Value.String()})
 	},
 }
 
@@ -95,7 +96,7 @@ var communityJoinCmd = &cobra.Command{
 			return
 		}
 
-		sendRequest(ctl.CommandCommunityJoin, []string{address.Value.String(), communityID.Value.String()})
+		SendRequestAndPrint(ctl.CommandCommunityJoin, []string{address.Value.String(), communityID.Value.String()})
 	},
 }
 
@@ -121,7 +122,7 @@ var communityAddMemberCmd = &cobra.Command{
 			return
 		}
 
-		sendRequest(ctl.CommandCommunityAddMember, []string{
+		SendRequestAndPrint(ctl.CommandCommunityAddMember, []string{
 			communityID.Value.String(),
 			nodeID.Value.String(),
 			address.Value.String(),
@@ -145,7 +146,7 @@ var communityProposeTransitionCmd = &cobra.Command{
 		}
 		b64Patch := args[0]
 
-		sendRequest(ctl.CommandCommunityPropose, []string{communityID.Value.String(), b64Patch})
+		SendRequestAndPrint(ctl.CommandCommunityPropose, []string{communityID.Value.String(), b64Patch})
 	},
 }
 
@@ -159,7 +160,7 @@ var communityStateCmd = &cobra.Command{
 			return
 		}
 
-		sendRequest(ctl.CommandCommunityState, []string{communityID.Value.String()})
+		SendRequestAndPrint(ctl.CommandCommunityState, []string{communityID.Value.String()})
 	},
 }
 
@@ -167,12 +168,13 @@ var communityListCmd = &cobra.Command{
 	Use:   "ls",
 	Short: "list the communities that this node is a part of",
 	Run: func(cmd *cobra.Command, args []string) {
-		sendRequest(ctl.CommandCommunityList, []string{})
+		SendRequestAndPrint(ctl.CommandCommunityList, []string{})
 	},
 }
 
 func init() {
 	communityCreateCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
+	communityCreateCmd.Flags().StringP("name", "n", "", "name of the community being created")
 
 	communityJoinCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
 	communityJoinCmd.Flags().StringP("community", "c", "", "id of community to be joined")

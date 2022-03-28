@@ -1,16 +1,25 @@
 export type CreateCommunityResponse = {
     name: string
+    id: string
+    peer_id: string
     swarm_key: string
-    btstp_peers: string[]
     peers: string[]
+    addrs: string[]
   }
 
 export type JoinCommunityResponse = CreateCommunityResponse
 
+export type AddMemberResponse = {
+  MemberId: string
+  NodeId: string
+}
+
 export type ConnectCommunityResponse = {
+  PeerId: string
+  CommId: string
+  Name: string
   Addresses: string[]
   AgentVersion: string
-  ID: string
   ProtocolVersion: string
   Protocols: string[]
   PublicKey: string
