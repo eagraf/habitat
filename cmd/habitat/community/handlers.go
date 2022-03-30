@@ -137,7 +137,7 @@ func (m *Manager) CommunityProposeHandler(req *ctl.Request) (*ctl.Response, erro
 
 func (m *Manager) CommunityListHandler(req *ctl.Request) (*ctl.Response, error) {
 	b := strings.Builder{}
-	b.WriteString(fmt.Sprintf("node id: %s\n", compass.NodeID()))
+	b.WriteString(fmt.Sprintf("node id: %s\n", compass.PeerID()))
 
 	communityDir := compass.CommunitiesPath()
 
