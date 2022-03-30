@@ -33,7 +33,7 @@ EOF
 )
 docker-compose -f docker-compose-raft.yml up 2> /dev/null &
 
-sleep 2
+sleep 10 
 
 ALICE_NODE_ID=`./bin/habitatctl -p 2000 community ls | awk '{print $3}'`
 BOB_NODE_ID=`./bin/habitatctl -p 2001 community ls | awk '{print $3}'`
@@ -41,29 +41,28 @@ CHARLIE_NODE_ID=`./bin/habitatctl -p 2002 community ls | awk '{print $3}'`
 
 COMMUNITY_UUID=`./bin/habitatctl -p 2000 community create | awk '{print $NF}'`
 
-sleep 1
+sleep 2
 
 ./bin/habitatctl -p 2000 community propose -c $COMMUNITY_UUID $TRANSITION1
 
-ALICE_CONTAINER_ID=`docker ps | grep 'habitat_alice_1' | awk '{print $1}'`
-BOB_CONTAINER_ID=`docker ps | grep 'habitat_bob_1' | awk '{print $1}'`
-CHARLIE_CONTAINER_ID=`docker ps | grep 'habitat_charlie_1' | awk '{print $1}'`
+ALICE_IP=`docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' habitat_alice_1`
+BOB_IP=`docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' habitat_bob_1`
+CHARLIE_IP=`docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' habitat_charlie_1`
 
 sleep 1
-./bin/habitatctl -p 2000 community add -c $COMMUNITY_UUID -n $BOB_NODE_ID -a http://$BOB_CONTAINER_ID:2041/raft/msg/$COMMUNITY_UUID
-./bin/habitatctl -p 2000 community add -c $COMMUNITY_UUID -n $CHARLIE_NODE_ID -a http://$CHARLIE_CONTAINER_ID:2041/raft/msg/$COMMUNITY_UUID
-./bin/habitatctl -p 2001 community join -c $COMMUNITY_UUID -a http://$ALICE_CONTAINER_ID:2041/raft/rpc/add
-./bin/habitatctl -p 2002 community join -c $COMMUNITY_UUID -a http://$ALICE_CONTAINER_ID:2041/raft/rpc/add
+./bin/habitatctl -p 2001 community join -c $COMMUNITY_UUID -a /ip4/$ALICE_IP/tcp/6000
+./bin/habitatctl -p 2002 community join -c $COMMUNITY_UUID -a /ip4/$ALICE_IP/tcp/6000
+sleep 3
+./bin/habitatctl -p 2000 community add -c $COMMUNITY_UUID -n $BOB_NODE_ID -a /ip4/$BOB_IP/tcp/6000
+./bin/habitatctl -p 2000 community add -c $COMMUNITY_UUID -n $CHARLIE_NODE_ID -a /ip4/$CHARLIE_IP/tcp/6000
 
 sleep 1
 
-docker restart $BOB_CONTAINER_ID
+docker restart habitat_bob_1
+
 ./bin/habitatctl -p 2000 community propose -c $COMMUNITY_UUID $TRANSITION2
 
-
-#./bin/habitatctl -p 2001 start raft
-
-sleep 3
+sleep 6
 
 COUNTER1=`./bin/habitatctl -p 2000 community state -c $COMMUNITY_UUID | jq .counter`
 COUNTER2=`./bin/habitatctl -p 2001 community state -c $COMMUNITY_UUID | jq .counter`
