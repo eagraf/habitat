@@ -31,7 +31,7 @@ TRANSITION3=$(base64 <<EOF
 }]
 EOF
 )
-docker-compose up 2> /dev/null &
+docker-compose -f docker-compose-raft.yml up 2> /dev/null &
 
 sleep 4
 
@@ -65,8 +65,8 @@ COUNTER1=`./bin/habitatctl -p 2000 community state -c $COMMUNITY_UUID | jq .coun
 COUNTER2=`./bin/habitatctl -p 2001 community state -c $COMMUNITY_UUID | jq .counter`
 COUNTER3=`./bin/habitatctl -p 2002 community state -c $COMMUNITY_UUID | jq .counter`
 
-docker-compose down 2> /dev/null
-docker-compose rm 2> /dev/null
+docker-compose -f docker-compose-raft.yml down 2> /dev/null
+docker-compose rm -f 2> /dev/null
 
 [[ $COUNTER1 -eq 3 ]] || log::fatal "alice's counter should be 3, not $COUNTER1"
 [[ $COUNTER2 -eq 3 ]] || log::fatal "bob's counter should be 3, not $COUNTER2"
