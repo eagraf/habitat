@@ -168,7 +168,7 @@ func (t *LibP2PTransport) genericRPC(id raft.ServerID, target raft.ServerAddress
 		return err
 	}
 
-	req := &HTTPTransportPostRequest{
+	req := &RaftRequest{
 		RPCType: rpcType,
 		Args:    buf,
 	}
@@ -199,7 +199,7 @@ func (t *LibP2PTransport) genericRPC(id raft.ServerID, target raft.ServerAddress
 		return err
 	}
 
-	var htResp HTTPTransportPostResponse
+	var htResp RaftResponse
 	err = json.Unmarshal(marshaledResp, &htResp)
 	if err != nil {
 		return err
@@ -257,7 +257,7 @@ func (t *LibP2PTransport) handleCommand(rw *bufio.ReadWriter) error {
 		return err
 	}
 
-	var req HTTPTransportPostRequest
+	var req RaftRequest
 	err = json.Unmarshal(marshaled, &req)
 	if err != nil {
 		return err
@@ -322,7 +322,7 @@ RESP:
 			respBody = buf
 		}
 
-		httpRespBody := &HTTPTransportPostResponse{
+		httpRespBody := &RaftResponse{
 			RPCType: req.RPCType,
 			Resp:    []byte(respBody),
 		}

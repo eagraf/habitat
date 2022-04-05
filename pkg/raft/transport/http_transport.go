@@ -12,13 +12,6 @@ import (
 	"github.com/hashicorp/raft"
 )
 
-const (
-	rpcAppendEntries uint8 = iota
-	rpcRequestVote
-	rpcInstallSnapshot
-	rpcTimeoutNow
-)
-
 // The main idea of HTTPTransport is to allow multiple instances of Raft on one machine communicate with peers in their respective clusters
 // through a single port on a single process, while remaining isolated from each other.
 type HTTPTransport struct {
@@ -28,16 +21,6 @@ type HTTPTransport struct {
 
 	heartbeatFn     func(raft.RPC)
 	heartbeatFnLock sync.Mutex
-}
-
-type HTTPTransportPostRequest struct {
-	RPCType uint8  `json:"rpc_type"`
-	Args    []byte `json:"args"`
-}
-
-type HTTPTransportPostResponse struct {
-	RPCType uint8  `json:"rpc_type"`
-	Resp    []byte `json:"resp"`
 }
 
 func NewHTTPTransport(address string) (*HTTPTransport, error) {
@@ -106,7 +89,7 @@ func (ht *HTTPTransport) genericRPC(id raft.ServerID, target raft.ServerAddress,
 		return err
 	}
 
-	req := &HTTPTransportPostRequest{
+	req := &RaftRequest{
 		RPCType: rpcType,
 		Args:    buf,
 	}
@@ -132,76 +115,11 @@ func (ht *HTTPTransport) genericRPC(id raft.ServerID, target raft.ServerAddress,
 
 	}
 
-	var htResp HTTPTransportPostResponse
+	var htResp RaftResponse
 	err = json.Unmarshal(respBody, &htResp)
 	if err != nil {
 		return err
 	}
 
 	return unmarshalRPCResponse(rpcType, htResp.Resp, resp)
-}
-
-func unmarshalRPCRequest(rpcType uint8, buf []byte) (interface{}, error) {
-	switch rpcType {
-	case rpcAppendEntries:
-		var res raft.AppendEntriesRequest
-		err := json.Unmarshal(buf, &res)
-		if err != nil {
-			return nil, err
-		}
-		return &res, nil
-	case rpcRequestVote:
-		var res raft.RequestVoteRequest
-		err := json.Unmarshal(buf, &res)
-		if err != nil {
-			return nil, err
-		}
-		return &res, nil
-	case rpcInstallSnapshot:
-		var res raft.InstallSnapshotRequest
-		err := json.Unmarshal(buf, &res)
-		if err != nil {
-			return nil, err
-		}
-		return &res, nil
-	case rpcTimeoutNow:
-		var res raft.TimeoutNowRequest
-		err := json.Unmarshal(buf, &res)
-		if err != nil {
-			return nil, err
-		}
-		return &res, nil
-	default:
-		return nil, fmt.Errorf("%d is not a valid rpc type", rpcType)
-	}
-}
-
-func unmarshalRPCResponse(rpcType uint8, buf []byte, resp interface{}) error {
-	switch rpcType {
-	case rpcAppendEntries:
-		err := json.Unmarshal(buf, resp)
-		if err != nil {
-			return err
-		}
-	case rpcRequestVote:
-		err := json.Unmarshal(buf, resp)
-		if err != nil {
-			return err
-		}
-	case rpcInstallSnapshot:
-		err := json.Unmarshal(buf, resp)
-		if err != nil {
-			return err
-		}
-	case rpcTimeoutNow:
-		err := json.Unmarshal(buf, resp)
-		if err != nil {
-			return err
-		}
-	default:
-		resp = nil
-		return fmt.Errorf("%d is not a valid rpc type", rpcType)
-	}
-
-	return nil
 }
