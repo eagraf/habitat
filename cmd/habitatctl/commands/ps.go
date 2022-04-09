@@ -16,6 +16,10 @@ limitations under the License.
 package commands
 
 import (
+	"errors"
+	"fmt"
+
+	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +29,19 @@ var psCmd = &cobra.Command{
 	Short: "List running habitat processes",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		SendRequestAndPrint("ps", args)
+		resWrapper := sendRequest(&ctl.PSRequest{})
+		if resWrapper.Error != "" {
+			printError(errors.New(resWrapper.Error))
+		}
+
+		var res ctl.PSResponse
+		err := resWrapper.Deserialize(&res)
+		if err != nil {
+			printError(errors.New(resWrapper.Error))
+		}
+		for _, p := range res.ProcIDs {
+			fmt.Println(p)
+		}
 	},
 }
 

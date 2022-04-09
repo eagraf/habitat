@@ -1,7 +1,6 @@
 package community
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -71,16 +70,13 @@ func (m *Manager) checkCommunityExists(communityID string) bool {
 
 }
 
-func (m *Manager) CreateCommunity(name string, id string, createIpfs bool) (*community.Community, error) {
+func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Community, error) {
 	// Generate UUID for now
-	communityID := id
-	if communityID == "" {
-		communityID = uuid.New().String()
-	}
+	communityID := uuid.New().String()
 
 	commExists, err := m.setupCommunity(communityID)
 	if commExists {
-		return nil, errors.New(fmt.Sprintf("can't create community that already exists %s", communityID))
+		return nil, fmt.Errorf("can't create community that already exists %s", communityID)
 	} else if err != nil {
 		return nil, err
 	}
@@ -90,6 +86,7 @@ func (m *Manager) CreateCommunity(name string, id string, createIpfs bool) (*com
 		return nil, err
 	}
 
+	// TODO @eagraf have this be downstream of a Raft update
 	if createIpfs {
 		err, swarmkey, peerid, addrs := m.config.NewCommunityIPFSNode(name, filepath.Join(m.Path, communityID))
 		if err != nil {
@@ -118,7 +115,7 @@ func (m *Manager) CreateCommunity(name string, id string, createIpfs bool) (*com
 
 func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, acceptingNodeAddr string, communityID string) (*community.Community, error) {
 	commExists, err := m.setupCommunity(communityID)
-	if err != nil && commExists != true {
+	if err != nil && !commExists {
 		return nil, fmt.Errorf("error setting up community: %s", err)
 	}
 
@@ -127,6 +124,7 @@ func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, a
 		return nil, err
 	}
 
+	// TODO @eagraf have this be downstream of a Raft update
 	peerid, err := m.config.JoinCommunityIPFSNode(name, communityID, swarmkey, btstps)
 	if err != nil {
 		return nil, err

@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 
 	"github.com/eagraf/habitat/cmd/habitat/community"
 	"github.com/eagraf/habitat/cmd/habitat/p2p"
@@ -111,28 +110,28 @@ func handleRequest(conn net.Conn) error {
 		return err
 	}
 
-	//	fmt.Println(string(buf))
-
 	req, err := decodeRequest(buf)
 	if err != nil {
-		return writeResponse(conn, &ctl.Response{
-			Status:  ctl.StatusBadRequest,
-			Message: err.Error(),
+		return writeResponse(conn, &ctl.ResponseWrapper{
+			Type:   req.Type,
+			Status: ctl.StatusBadRequest,
+			Error:  err.Error(),
 		})
 	}
 
 	res, err := requestRouter(req)
 	if err != nil {
-		return writeResponse(conn, &ctl.Response{
-			Status:  ctl.StatusInternalServerError,
-			Message: err.Error(),
+		return writeResponse(conn, &ctl.ResponseWrapper{
+			Type:   req.Type,
+			Status: ctl.StatusInternalServerError,
+			Error:  err.Error(),
 		})
 	}
 
 	return writeResponse(conn, res)
 }
 
-func writeResponse(conn net.Conn, res *ctl.Response) error {
+func writeResponse(conn net.Conn, res *ctl.ResponseWrapper) error {
 	msg, err := res.Encode()
 	if err != nil {
 		return err
@@ -147,13 +146,13 @@ func writeResponse(conn net.Conn, res *ctl.Response) error {
 	return nil
 }
 
-func decodeRequest(buf []byte) (*ctl.Request, error) {
+func decodeRequest(buf []byte) (*ctl.RequestWrapper, error) {
 	decoded, err := base64.StdEncoding.DecodeString(string(buf))
 	if err != nil {
 		return nil, err
 	}
 
-	var req ctl.Request
+	var req ctl.RequestWrapper
 	err = json.Unmarshal(decoded, &req)
 	if err != nil {
 		return nil, err
@@ -162,62 +161,15 @@ func decodeRequest(buf []byte) (*ctl.Request, error) {
 	return &req, nil
 }
 
-func requestRouter(req *ctl.Request) (*ctl.Response, error) {
+func requestRouter(req *ctl.RequestWrapper) (*ctl.ResponseWrapper, error) {
 
-	switch req.Command {
+	switch req.Type {
 	case ctl.CommandStart:
-		err, procName := ProcessManager.StartProcess(req)
-		if err != nil {
-			return &ctl.Response{
-				Status:  ctl.StatusInternalServerError,
-				Message: err.Error(),
-			}, nil
-		}
-		fmt.Println("Processes running: ", ProcessManager.Procs)
-
-		return &ctl.Response{
-			Status:  ctl.StatusOK,
-			Message: fmt.Sprintf("started process %s", procName),
-		}, nil
+		return ProcessManager.StartProcessHandler(req)
 	case ctl.CommandStop:
-		if len(req.Args) != 1 {
-			return nil, fmt.Errorf("stop has %d arguments, expected 1", len(req.Args))
-		}
-
-		err := ProcessManager.StopProcess(req.Args[0])
-		if err != nil {
-			return &ctl.Response{
-				Status:  ctl.StatusInternalServerError,
-				Message: err.Error(),
-			}, nil
-		}
-		fmt.Println("Processes running: ", ProcessManager.Procs)
-
-		return &ctl.Response{
-			Status:  ctl.StatusOK,
-			Message: fmt.Sprintf("stopped process %s", req.Args[0]),
-		}, nil
-
+		return ProcessManager.StopProcessHandler(req)
 	case ctl.CommandListProcesses:
-
-		procs, err := ProcessManager.ListProcesses()
-		if err != nil {
-			return &ctl.Response{
-				Status:  ctl.StatusInternalServerError,
-				Message: err.Error(),
-			}, nil
-		}
-
-		var b strings.Builder
-		for _, p := range procs {
-			fmt.Fprintf(&b, "%s\n", p.Name)
-		}
-
-		return &ctl.Response{
-			Status:  ctl.StatusOK,
-			Message: b.String(),
-		}, nil
-
+		return ProcessManager.ListProcessesHandler(req)
 	case ctl.CommandCommunityCreate:
 		return CommunityManager.CommunityCreateHandler(req)
 	case ctl.CommandCommunityJoin:
@@ -231,9 +183,10 @@ func requestRouter(req *ctl.Request) (*ctl.Response, error) {
 	case ctl.CommandCommunityList:
 		return CommunityManager.CommunityListHandler(req)
 	default:
-		return &ctl.Response{
-			Status:  ctl.StatusBadRequest,
-			Message: fmt.Sprintf("command %s does not exist", req.Command),
+		return &ctl.ResponseWrapper{
+			Type:   req.Type,
+			Status: ctl.StatusBadRequest,
+			Error:  fmt.Sprintf("command %s does not exist", req.Type),
 		}, nil
 	}
 }

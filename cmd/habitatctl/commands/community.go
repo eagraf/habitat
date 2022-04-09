@@ -16,6 +16,7 @@ limitations under the License.
 package commands
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/eagraf/habitat/structs/ctl"
@@ -33,33 +34,7 @@ var communityCmd = &cobra.Command{
 	<community_id> propose <data>
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-
-		if len(args) < 1 {
-			fmt.Println("No subcommand specified")
-			return
-		}
-		switch args[0] {
-		default:
-			// Assume the community id was specified
-			if len(args) < 2 {
-				fmt.Printf("No subcommand for community %s specified\n", args[0])
-				return
-			}
-			switch args[1] {
-			case "add":
-				if len(args) < 3 {
-					fmt.Printf("No member id specified for community add command")
-				}
-				SendRequestAndPrint(ctl.CommandCommunityAddMember, []string{args[1], args[2]})
-				return
-			case "propose":
-				SendRequestAndPrint(ctl.CommandCommunityPropose, []string{})
-				return
-			default:
-				fmt.Printf("%s is an invalid subcommand for community %s\n", args[1], args[0])
-				return
-			}
-		}
+		fmt.Printf("%s is an invalid subcommand for community %s\n", args[1], args[0])
 	},
 }
 
@@ -68,14 +43,28 @@ var communityCreateCmd = &cobra.Command{
 	Short: "create a new community",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		address := cmd.Flags().Lookup("address")
 		name := cmd.Flags().Lookup("name")
-		if address == nil || name == nil {
-			fmt.Println("address and name flags need to be set")
+		if name == nil {
+			fmt.Println("name flag needs to be set")
 			return
 		}
 
-		SendRequestAndPrint(ctl.CommandCommunityCreate, []string{name.Value.String(), address.Value.String()})
+		req := &ctl.CommunityCreateRequest{
+			CommunityName:     name.Value.String(),
+			CreateIPFSCluster: false,
+		}
+		resWrapper := sendRequest(req)
+		if resWrapper.Error != "" {
+			printError(errors.New(resWrapper.Error))
+		}
+
+		var res ctl.CommunityCreateResponse
+		err := resWrapper.Deserialize(&res)
+		if err != nil {
+			printError(err)
+		}
+
+		fmt.Println(res.CommunityID)
 	},
 }
 
@@ -96,7 +85,15 @@ var communityJoinCmd = &cobra.Command{
 			return
 		}
 
-		SendRequestAndPrint(ctl.CommandCommunityJoin, []string{address.Value.String(), communityID.Value.String()})
+		req := &ctl.CommunityJoinRequest{
+			CommunityID:       communityID.Value.String(),
+			AcceptingNodeAddr: address.Value.String(),
+		}
+
+		resWrapper := sendRequest(req)
+		if resWrapper.Error != "" {
+			printError(errors.New(resWrapper.Error))
+		}
 	},
 }
 
@@ -122,11 +119,16 @@ var communityAddMemberCmd = &cobra.Command{
 			return
 		}
 
-		SendRequestAndPrint(ctl.CommandCommunityAddMember, []string{
-			communityID.Value.String(),
-			nodeID.Value.String(),
-			address.Value.String(),
-		})
+		req := &ctl.CommunityAddMemberRequest{
+			CommunityID:        communityID.Value.String(),
+			NodeID:             nodeID.Value.String(),
+			JoiningNodeAddress: address.Value.String(),
+		}
+
+		resWrapper := sendRequest(req)
+		if resWrapper.Error != "" {
+			printError(errors.New(resWrapper.Error))
+		}
 	},
 }
 
@@ -146,7 +148,14 @@ var communityProposeTransitionCmd = &cobra.Command{
 		}
 		b64Patch := args[0]
 
-		SendRequestAndPrint(ctl.CommandCommunityPropose, []string{communityID.Value.String(), b64Patch})
+		req := &ctl.CommunityProposeRequest{
+			CommunityID:     communityID.Value.String(),
+			StateTransition: []byte(b64Patch),
+		}
+		resWrapper := sendRequest(req)
+		if resWrapper.Error != "" {
+			printError(errors.New(resWrapper.Error))
+		}
 	},
 }
 
@@ -160,7 +169,20 @@ var communityStateCmd = &cobra.Command{
 			return
 		}
 
-		SendRequestAndPrint(ctl.CommandCommunityState, []string{communityID.Value.String()})
+		resWrapper := sendRequest(&ctl.CommunityStateRequest{
+			CommunityID: communityID.Value.String(),
+		})
+		if resWrapper.Error != "" {
+			printError(errors.New(resWrapper.Error))
+		}
+
+		var res ctl.CommunityStateResponse
+		err := resWrapper.Deserialize(&res)
+		if err != nil {
+			printError(err)
+		}
+
+		fmt.Println(string(res.State))
 	},
 }
 
@@ -168,7 +190,20 @@ var communityListCmd = &cobra.Command{
 	Use:   "ls",
 	Short: "list the communities that this node is a part of",
 	Run: func(cmd *cobra.Command, args []string) {
-		SendRequestAndPrint(ctl.CommandCommunityList, []string{})
+		resWrapper := sendRequest(&ctl.CommunityListRequest{})
+		if resWrapper.Error != "" {
+			printError(errors.New(resWrapper.Error))
+		}
+
+		var res ctl.CommunityListResponse
+		err := resWrapper.Deserialize(&res)
+		if err != nil {
+			printError(errors.New(resWrapper.Error))
+		}
+		fmt.Printf("node id: %s", res.NodeID)
+		for _, c := range res.Communities {
+			fmt.Println(c)
+		}
 	},
 }
 

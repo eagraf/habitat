@@ -29,7 +29,7 @@ func NewClient(addr string) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) WriteRequest(message *ctl.Request) error {
+func (c *Client) WriteRequest(message *ctl.RequestWrapper) error {
 	buf, err := json.Marshal(message)
 	if err != nil {
 		return err
@@ -48,7 +48,7 @@ func (c *Client) WriteRequest(message *ctl.Request) error {
 	return nil
 }
 
-func (c *Client) ReadResponse() (*ctl.Response, error) {
+func (c *Client) ReadResponse() (*ctl.ResponseWrapper, error) {
 	buf, err := bufio.NewReader(c.conn).ReadBytes('\n')
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func (c *Client) ReadResponse() (*ctl.Response, error) {
 		return nil, err
 	}
 
-	var res ctl.Response
+	var res ctl.ResponseWrapper
 	err = json.Unmarshal(decoded, &res)
 	if err != nil {
 		return nil, err
@@ -71,21 +71,23 @@ func (c *Client) ReadResponse() (*ctl.Response, error) {
 }
 
 // SendRequest sends a request to the default address of the habitat service
-func SendRequest(command string, args []string) (*ctl.Response, error) {
-	return SendRequestToAddress(HabitatServiceAddr, command, args)
+func SendRequest(req interface{}) (*ctl.ResponseWrapper, error) {
+	return SendRequestToAddress(HabitatServiceAddr, req)
 }
 
-func SendRequestToAddress(addr, command string, args []string) (*ctl.Response, error) {
+func SendRequestToAddress(addr string, req interface{}) (*ctl.ResponseWrapper, error) {
 	client, err := NewClient(addr)
 	if err != nil {
 		fmt.Println("Error: couldn't connect to habitat service")
 		return nil, err
 	}
 
-	err = client.WriteRequest(&ctl.Request{
-		Command: command,
-		Args:    args,
-	})
+	reqWrapper, err := ctl.NewRequestWrapper(req)
+	if err != nil {
+		return nil, err
+	}
+
+	err = client.WriteRequest(reqWrapper)
 	if err != nil {
 		fmt.Printf("Error creating request to habitat service: %s", err)
 	}
