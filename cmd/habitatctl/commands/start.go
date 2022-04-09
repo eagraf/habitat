@@ -30,7 +30,7 @@ var ipfsCmd = &cobra.Command{
 	Long:  `TODO create long description`,
 	Args:  cobra.MinimumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := client.NewClient()
+		client, err := client.NewClient(habitatServiceAddr())
 		if err != nil {
 			fmt.Println("Error: couldn't connect to habitat service")
 			return
@@ -64,7 +64,7 @@ var startCmd = &cobra.Command{
 			fmt.Println("Error: only one process should be specified before -- number specified: ", cmd.ArgsLenAtDash())
 			return
 		}
-		client, err := client.NewClient()
+		client, err := client.NewClient(habitatServiceAddr())
 		if err != nil {
 			fmt.Println("Error: couldn't connect to habitat service")
 			return
@@ -95,5 +95,4 @@ func init() {
 	startCmd.PersistentFlags().StringVarP(&commName, "comm", "c", "", "name of community for which to start process")
 	startCmd.AddCommand(ipfsCmd)
 	rootCmd.AddCommand(startCmd)
-
 }

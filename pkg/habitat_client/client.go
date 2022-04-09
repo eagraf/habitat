@@ -10,17 +10,16 @@ import (
 	"github.com/eagraf/habitat/structs/ctl"
 )
 
-// TODO: don't hard code this value in
 const (
-	ClientHost = "localhost:2040"
+	HabitatServiceAddr = "localhost:2040"
 )
 
 type Client struct {
 	conn net.Conn
 }
 
-func NewClient() (*Client, error) {
-	conn, err := net.Dial("tcp", ClientHost)
+func NewClient(addr string) (*Client, error) {
+	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
@@ -71,8 +70,13 @@ func (c *Client) ReadResponse() (*ctl.Response, error) {
 	return &res, nil
 }
 
+// SendRequest sends a request to the default address of the habitat service
 func SendRequest(command string, args []string) (*ctl.Response, error) {
-	client, err := NewClient()
+	return SendRequestToAddress(HabitatServiceAddr, command, args)
+}
+
+func SendRequestToAddress(addr, command string, args []string) (*ctl.Response, error) {
+	client, err := NewClient(addr)
 	if err != nil {
 		fmt.Println("Error: couldn't connect to habitat service")
 		return nil, err
