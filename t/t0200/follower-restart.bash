@@ -31,7 +31,7 @@ TRANSITION3=$(base64 <<EOF
 }]
 EOF
 )
-docker-compose -f docker-compose-raft.yml up 2> /dev/null &
+docker-compose -f docker-compose-raft.yml up -V 2> /dev/null &
 
 sleep 10 
 
