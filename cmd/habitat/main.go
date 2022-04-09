@@ -40,23 +40,7 @@ func main() {
 	procsDir := compass.ProcsPath()
 	communityDir := compass.CommunitiesPath()
 
-	_, err := os.Stat(procsDir)
-	if err != nil {
-		log.Fatal().Msgf("invalid procs directory: %s", err)
-	}
-
-	// Get node id
-	nodeID := compass.NodeID()
-	if err != nil {
-		log.Fatal().Msgf("unable to read node ID", err)
-	}
-	viper.Set("node_id", nodeID)
-
-	// Read apps configuration in proc dir
-	appConfigs, err := configuration.ReadAppConfigs(filepath.Join(procsDir, "apps.yml"))
-	if err != nil {
-		log.Fatal().Msgf("unable to read apps.yml: %s", err)
-	}
+	appConfigs := initHabitatDirectory()
 
 	p2pNode := p2p.NewNode(P2PPort)
 
@@ -65,6 +49,7 @@ func main() {
 	go reverseProxy.Start(fmt.Sprintf("%s:%s", ReverseProxyHost, ReverseProxyPort))
 
 	// Create community manager
+	var err error
 	CommunityManager, err = community.NewManager(communityDir, &reverseProxy.Rules, p2pNode.Host())
 	if err != nil {
 		log.Fatal().Msgf("unable to start community manager: %s", err)
@@ -76,6 +61,27 @@ func main() {
 	go handleInterupt(ProcessManager)
 
 	listen()
+}
+
+func initHabitatDirectory() *configuration.AppConfiguration {
+	err := os.MkdirAll(compass.CommunitiesPath(), 0700)
+	if err != nil {
+		log.Fatal().Msgf("unable to create communities directory: %s", err)
+	}
+	procsDir := compass.ProcsPath()
+
+	_, err = os.Stat(procsDir)
+	if err != nil {
+		log.Fatal().Msgf("invalid procs directory: %s", err)
+	}
+
+	// Read apps configuration in proc dir
+	appConfigs, err := configuration.ReadAppConfigs(filepath.Join(procsDir, "apps.yml"))
+	if err != nil {
+		log.Fatal().Msgf("unable to read apps.yml: %s", err)
+	}
+
+	return appConfigs
 }
 
 func handleInterupt(manager *procs.Manager) {
