@@ -106,14 +106,13 @@ func LocalIPv4() (net.IP, error) {
 	defer conn.Close()
 
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	fmt.Println("LOCAL ADDR", localAddr.IP)
 
 	return localAddr.IP, nil
 }
 
 func PublicIP() (net.IP, error) {
 	// TODO if we are in dockerland, fake this
-	url := "https://api.ipify.org?format=text"
+	url := "https://api64.ipify.org?format=text"
 	resp, err := http.Get(url)
 	if err != nil {
 		panic(err)
