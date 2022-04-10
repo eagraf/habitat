@@ -3,7 +3,9 @@ package compass
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -106,6 +108,25 @@ func LocalIPv4() (net.IP, error) {
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
 
 	return localAddr.IP, nil
+}
+
+func PublicIP() (net.IP, error) {
+	// TODO if we are in dockerland, fake this
+	url := "https://api64.ipify.org?format=text"
+	resp, err := http.Get(url)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	ip := net.ParseIP(string(body))
+	if ip == nil {
+		return nil, errors.New("invalid IP address")
+	}
+	return ip, nil
 }
 
 func InDockerContainer() bool {
