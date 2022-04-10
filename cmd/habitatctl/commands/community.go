@@ -200,7 +200,7 @@ var communityListCmd = &cobra.Command{
 		if err != nil {
 			printError(errors.New(resWrapper.Error))
 		}
-		fmt.Printf("node id: %s", res.NodeID)
+		fmt.Printf("node id: %s\n", res.NodeID)
 		for _, c := range res.Communities {
 			fmt.Println(c)
 		}
