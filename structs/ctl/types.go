@@ -33,6 +33,7 @@ type CommunityCreateRequest struct {
 
 type CommunityCreateResponse struct {
 	CommunityID string `json:"community_id"`
+	JoinToken   string `json:"join_code"`
 }
 
 type CommunityJoinRequest struct {
@@ -44,6 +45,7 @@ type CommunityJoinRequest struct {
 }
 
 type CommunityJoinResponse struct {
+	AddMemberToken string `json:"add_member_code"`
 }
 
 type CommunityAddMemberRequest struct {
@@ -77,4 +79,15 @@ type CommunityListRequest struct {
 type CommunityListResponse struct {
 	NodeID      string   `json:"node_id"`
 	Communities []string `json:"communities"`
+}
+
+type JoinInfo struct {
+	CommunityID string `json:"community_id"`
+	Address     string `json:"address"`
+}
+
+type AddMemberInfo struct {
+	CommunityID string `json:"community_id"`
+	Address     string `json:"address"`
+	NodeID      string `json:"node_id"`
 }
