@@ -16,6 +16,8 @@ limitations under the License.
 package commands
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -65,6 +67,7 @@ var communityCreateCmd = &cobra.Command{
 		}
 
 		fmt.Println(res.CommunityID)
+		fmt.Println(res.JoinToken)
 	},
 }
 
@@ -73,27 +76,51 @@ var communityJoinCmd = &cobra.Command{
 	Short: "join a community",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		address := cmd.Flags().Lookup("address")
-		if address == nil {
-			fmt.Println("address flag needs to be set")
-			return
+		req := &ctl.CommunityJoinRequest{}
+		token, err := cmd.Flags().GetString("token")
+		if err != nil {
+			printError(err)
 		}
+		if token == "" {
+			address := cmd.Flags().Lookup("address")
+			if address == nil {
+				fmt.Println("address flag needs to be set")
+				return
+			}
 
-		communityID := cmd.Flags().Lookup("community")
-		if communityID == nil {
-			fmt.Println("community flag needs to be set")
-			return
-		}
-
-		req := &ctl.CommunityJoinRequest{
-			CommunityID:       communityID.Value.String(),
-			AcceptingNodeAddr: address.Value.String(),
+			communityID := cmd.Flags().Lookup("community")
+			if communityID == nil {
+				fmt.Println("community flag needs to be set")
+				return
+			}
+			req.AcceptingNodeAddr = address.Value.String()
+			req.CommunityID = communityID.Value.String()
+		} else {
+			decoded, err := base64.StdEncoding.DecodeString(token)
+			if err != nil {
+				printError(err)
+			}
+			var joinInfo ctl.JoinInfo
+			err = json.Unmarshal(decoded, &joinInfo)
+			if err != nil {
+				printError(err)
+			}
+			req.AcceptingNodeAddr = joinInfo.Address
+			req.CommunityID = joinInfo.CommunityID
 		}
 
 		resWrapper := sendRequest(req)
 		if resWrapper.Error != "" {
 			printError(errors.New(resWrapper.Error))
 		}
+
+		var res ctl.CommunityJoinResponse
+		err = resWrapper.Deserialize(&res)
+		if err != nil {
+			printError(err)
+		}
+
+		fmt.Println(res.AddMemberToken)
 	},
 }
 
@@ -101,28 +128,45 @@ var communityAddMemberCmd = &cobra.Command{
 	Use:   "add",
 	Short: "add a member to the community",
 	Run: func(cmd *cobra.Command, args []string) {
-		address := cmd.Flags().Lookup("address")
-		if address == nil {
-			fmt.Println("address flag needs to be set")
-			return
+		req := &ctl.CommunityAddMemberRequest{}
+		token, err := cmd.Flags().GetString("token")
+		if err != nil {
+			printError(err)
 		}
+		if token == "" {
+			address := cmd.Flags().Lookup("address")
+			if address == nil {
+				fmt.Println("address flag needs to be set")
+				return
+			}
 
-		communityID := cmd.Flags().Lookup("community")
-		if communityID == nil {
-			fmt.Println("community flag needs to be set")
-			return
-		}
+			communityID := cmd.Flags().Lookup("community")
+			if communityID == nil {
+				fmt.Println("community flag needs to be set")
+				return
+			}
 
-		nodeID := cmd.Flags().Lookup("node")
-		if communityID == nil {
-			fmt.Println("node flag needs to be set")
-			return
-		}
-
-		req := &ctl.CommunityAddMemberRequest{
-			CommunityID:        communityID.Value.String(),
-			NodeID:             nodeID.Value.String(),
-			JoiningNodeAddress: address.Value.String(),
+			nodeID := cmd.Flags().Lookup("node")
+			if communityID == nil {
+				fmt.Println("node flag needs to be set")
+				return
+			}
+			req.JoiningNodeAddress = address.Value.String()
+			req.CommunityID = communityID.Value.String()
+			req.NodeID = nodeID.Value.String()
+		} else {
+			decoded, err := base64.StdEncoding.DecodeString("")
+			if err != nil {
+				printError(err)
+			}
+			var addInfo ctl.AddMemberInfo
+			err = json.Unmarshal(decoded, &addInfo)
+			if err != nil {
+				printError(err)
+			}
+			req.JoiningNodeAddress = addInfo.Address
+			req.CommunityID = addInfo.CommunityID
+			req.NodeID = addInfo.NodeID
 		}
 
 		resWrapper := sendRequest(req)
@@ -213,10 +257,12 @@ func init() {
 
 	communityJoinCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
 	communityJoinCmd.Flags().StringP("community", "c", "", "id of community to be joined")
+	communityJoinCmd.Flags().StringP("token", "t", "", "token to join the community")
 
 	communityAddMemberCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
 	communityAddMemberCmd.Flags().StringP("community", "c", "", "id of community to be joined")
 	communityAddMemberCmd.Flags().StringP("node", "n", "", "node id of node that is being added")
+	communityAddMemberCmd.Flags().StringP("token", "t", "", "token to add member to the community")
 
 	communityProposeTransitionCmd.Flags().StringP("community", "c", "", "id of community to be joined")
 
