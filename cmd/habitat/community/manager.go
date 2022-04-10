@@ -125,14 +125,9 @@ func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, a
 	}
 
 	// TODO @eagraf have this be downstream of a Raft update
-	peerid, err := m.config.JoinCommunityIPFSNode(name, communityID, swarmkey, btstps)
-	if err != nil {
-		return nil, err
-	}
 	return &community.Community{
 		Name:      name,
 		Id:        communityID,
-		PeerId:    peerid,
 		Peers:     btstps,
 		SwarmKey:  swarmkey,
 		Addresses: []string{},
