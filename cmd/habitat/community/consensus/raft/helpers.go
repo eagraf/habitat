@@ -6,6 +6,7 @@ import (
 
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	ma "github.com/multiformats/go-multiaddr"
 	"github.com/rs/zerolog/log"
 )
 
@@ -16,6 +17,7 @@ const (
 
 	MultiplexerPort = "6000"
 	RPCPort         = "6001"
+	P2PPort         = "6000"
 )
 
 func getMultiplexerAddress() string {
@@ -44,4 +46,20 @@ func getCommunityRaftDirectory(communityID string) string {
 
 func getClusterProtocol(communityID string) protocol.ID {
 	return protocol.ID(filepath.Join("/habitat-raft", "0.0.1", communityID))
+}
+
+func getPublicMultiaddr() (ma.Multiaddr, error) {
+	ip, err := compass.PublicIP()
+	if err != nil {
+		return nil, err
+	}
+	ipVersion := "ip4"
+	if ip.To4() == nil {
+		ipVersion = "ip6"
+	}
+	addr, err := ma.NewMultiaddr(fmt.Sprintf("/%s/%s/tcp/%s", ipVersion, ip.String(), P2PPort))
+	if err != nil {
+		return nil, err
+	}
+	return addr, nil
 }

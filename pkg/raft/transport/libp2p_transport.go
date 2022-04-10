@@ -34,22 +34,22 @@ type LibP2PTransport struct {
 
 	logger hclog.Logger
 
-	maxPool int
-
 	shutdown     bool
 	shutdownCh   chan struct{}
 	shutdownLock sync.Mutex
 
-	host     host.Host
-	protocol protocol.ID
+	host       host.Host
+	protocol   protocol.ID
+	publicAddr raft.ServerAddress
 }
 
 // LibP2PTransportConfig encapsulates configuration for the network transport layer.
 type LibP2PTransportConfig struct {
 	Logger hclog.Logger
 
-	Host     host.Host
-	Protocol protocol.ID
+	Host       host.Host
+	Protocol   protocol.ID
+	PublicAddr raft.ServerAddress
 }
 
 // NewLibP2PTransportWithConfig creates a new network transport with the given config struct
@@ -69,6 +69,7 @@ func NewLibP2PTransportWithConfig(
 		shutdownCh: make(chan struct{}),
 		host:       config.Host,
 		protocol:   config.Protocol,
+		publicAddr: config.PublicAddr,
 	}
 
 	trans.host.SetStreamHandler(trans.protocol, trans.streamHandler)
@@ -83,12 +84,18 @@ func NewLibP2PTransportWithConfig(
 func NewLibP2PTransport(
 	host host.Host,
 	protocol protocol.ID,
+	publicAddr raft.ServerAddress,
 ) *LibP2PTransport {
 	logger := hclog.New(&hclog.LoggerOptions{
 		Name:  "raft-net",
 		Level: hclog.DefaultLevel,
 	})
-	config := &LibP2PTransportConfig{Host: host, Protocol: protocol, Logger: logger}
+	config := &LibP2PTransportConfig{
+		Host:       host,
+		Protocol:   protocol,
+		PublicAddr: publicAddr,
+		Logger:     logger,
+	}
 	return NewLibP2PTransportWithConfig(config)
 }
 
@@ -122,7 +129,7 @@ func (t *LibP2PTransport) Consumer() <-chan raft.RPC {
 // LocalAddr implements the Transport interface.
 func (t *LibP2PTransport) LocalAddr() raft.ServerAddress {
 	// TODO fixme
-	return raft.ServerAddress(t.host.Addrs()[0].String())
+	return t.publicAddr
 }
 
 // AppendEntriesPipeline returns an interface that can be used to pipeline

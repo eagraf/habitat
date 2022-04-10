@@ -265,9 +265,13 @@ func setupRaftInstance(communityID string, stateMachine *fsm.CommunityStateMachi
 	config := raft.DefaultConfig()
 	config.LocalID = raft.ServerID(host.ID().Pretty())
 
+	pubAddr, err := getPublicMultiaddr()
+	if err != nil {
+		return nil, nil, err
+	}
 	// Setup Raft communication.
 	protocol := getClusterProtocol(communityID)
-	libP2PTransport := transport.NewLibP2PTransport(host, protocol)
+	libP2PTransport := transport.NewLibP2PTransport(host, protocol, raft.ServerAddress(pubAddr.String()))
 
 	// Create the snapshot store. This allows the Raft to truncate the log.
 	snapshots, err := raft.NewFileSnapshotStore(getCommunityRaftDirectory(communityID), RetainSnapshotCount, os.Stderr)
@@ -297,7 +301,7 @@ func setupRaftInstance(communityID string, stateMachine *fsm.CommunityStateMachi
 			Servers: []raft.Server{
 				{
 					ID:      config.LocalID,
-					Address: libP2PTransport.LocalAddr(),
+					Address: raft.ServerAddress(pubAddr.String()),
 				},
 			},
 		}
