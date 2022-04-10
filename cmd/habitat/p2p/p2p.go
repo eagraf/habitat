@@ -28,6 +28,7 @@ func NewNode(port string) *Node {
 	h, _ := libp2p.New(
 		libp2p.ListenAddrs(listen),
 		libp2p.Identity(priv),
+		libp2p.NATPortMap(),
 	)
 	node := &Node{
 		listenAddr: listen,
