@@ -2,27 +2,21 @@ import { Observable } from 'lib0/observable'
 
 import * as Y from 'yjs';
 
-export default class BackendProvider {
+import Provider from './Provider'
+
+export default class BackendProvider implements Provider {
     docName: string
     yDoc: Y.Doc
     ws: WebSocket
     backendUrl: string
     
-    constructor(docName, yDoc, backendUrl) {
+    constructor(docName: string, yDoc: Y.Doc, backendUrl: string) {
         this.docName = docName
         this.yDoc = yDoc
         this.backendUrl = backendUrl
     }
 
     async connect() {
-
-        /*const response = await fetch('http://' + this.backendUrl + '/doc?name=' + this.docName)
-        const update = new Uint8Array(await response.arrayBuffer())
-        console.log(update)
-        if(update.length > 0) {
-            Y.applyUpdate(this.yDoc, update)
-        }*/
-
         this.ws = new WebSocket('ws://' + this.backendUrl + '?name=' + this.docName)
         this.ws.binaryType = 'arraybuffer'
 
@@ -32,9 +26,7 @@ export default class BackendProvider {
         })
 
         await new Promise((resolve, reject) => {
-            console.log('hello world')
             this.ws.addEventListener('open', event => {
-                console.log('hello')
                 resolve(event)
             })
             this.ws.addEventListener('error', error => {
@@ -49,5 +41,11 @@ export default class BackendProvider {
                 console.log('sent update')
             }
         })
+    }
+
+    async disconnect() {
+        if(this.ws) {
+            this.ws.close()
+        }
     }
 }

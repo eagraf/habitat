@@ -1,0 +1,166 @@
+:root {
+    --light-green: #E0F5E2;
+    --dark-green: #3E7A4B;
+    --text: #374931;
+    --selection: #D1F0D4
+}
+body {
+    margin: 0;
+    color: var(--text);
+}
+.ProseMirror-focused {
+    outline: none;
+}
+
+/* Give a remote user a caret */
+.collaboration-cursor__caret {
+    border-left: 1px solid #0d0d0d;
+    border-right: 1px solid #0d0d0d;
+    margin-left: -1px;
+    margin-right: -1px;
+    pointer-events: none;
+    position: relative;
+    word-break: normal;
+}
+  
+/* Render the username above the caret */
+.collaboration-cursor__label {
+    border-radius: 3px 3px 3px 0;
+    color: #0d0d0d;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 600;
+    left: -1px;
+    line-height: normal;
+    padding: 0.1rem 0.3rem;
+    position: absolute;
+    top: -1.4em;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.notes-app {
+    height: 100vh;
+    display: flex;
+    flex-direction: row;
+}
+
+.notes-menu {
+    flex: 1;
+    max-width: 256px;
+    height: 100vh;
+    padding: 0;
+    background-color: var(--light-green);
+    display: flex;
+    flex-direction: column;
+}
+
+.notes-menu h1 {
+    font-weight: 700;
+    font-size: x-large;
+    margin: 8px;
+    margin-top: 16px;
+    color: var(--dark-green);
+    align-self: center;
+}
+
+.notes-menu h2 {
+    font-size: small;
+    margin: 8px;
+    color: var(--dark-green);
+    text-transform: uppercase;
+}
+
+.notes-editor-container {
+    flex: 3;
+    height: 100vh;
+    overflow: scroll;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+}
+.notes-editor {
+    height: 100%;
+    background-color: white;
+    flex: 1;
+    max-width: 700px;
+    padding: 48px;
+}
+
+.notes-doclist {
+    background-color: transparent;
+    box-shadow: none;
+    flex: 1;
+    overflow: scroll;
+}
+
+.notes-doclist-item {
+    color: var(--text);
+    background-color: transparent;
+    border: none;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    list-style-type: none;
+}
+
+
+.notes-doclist-item:hover {
+    color: var(--text);
+    background-color: var(--selection);
+}
+
+.notes-doclist-item-selected, .notes-doclist-item-selected:hover {
+    color: var(--light-green);
+    background-color: var(--dark-green);
+}
+
+a {
+    color: var(--dark-green);
+    text-decoration: none;
+}
+
+.notes-new-buttons-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    justify-content: space-evenly;
+    margin-bottom: 8px;
+
+}
+
+.notes-button, .notes-icon-button {
+    border: none;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: transparent;
+}
+
+.notes-icon-button {
+    font-size: 1.25rem;
+}
+
+.notes-icon-button span {
+    font-size: 0.75rem;
+}
+
+.notes-button:hover, .notes-icon-button:hover {
+    border: none;
+    background-color: var(--selection);
+    color: var(--text);
+}
+
+.modal-content {
+    border: none;
+}
+
+.modal-header {
+    background-color: var(--light-green);
+    border: none;
+}
+
+.modal-footer {
+    border: none;
+}

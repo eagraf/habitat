@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { AsyncState } from './types'
+import { AsyncState } from '../types/asyncTypes'
 
-export default function useAsync<T>(async: () => Promise<T>, dependencies?: any[], cleanup?: () => void): AsyncState<T> {
+export default function useAsync<T>(asyncFn: () => Promise<T>, dependencies?: any[], cleanup?: () => void): AsyncState<T> {
     const [state, setState] = useState<AsyncState<T>>({ state: 'loading' });
 
     useEffect(() => {
-        async().then(result => {
+        asyncFn().then(result => {
             setState({ 
                 state: 'success',
                 data: result

@@ -1,22 +1,21 @@
 import React from 'react';
-import './App.css';
 import Editor from './Editor';
 
-import { 
+import {
     BrowserRouter as Router,
     Route,
 } from 'react-router-dom';
+import Layout from './Layout';
 
 function App() {
+
     return <Router>
-        <Route path={ "temp" /*["/notes/:file", "/notes"]*/ }>
+        <Route path={"temp" /*["/notes/:file", "/notes"]*/}>
             <div className="app">
             </div>
         </Route>
-        <Route path={ ["/notes/:file", "/notes"] }>
-            <div className="app">
-                <Editor />
-            </div>
+        <Route path={["/notes/:file", "/notes"]}>
+            <Layout />
         </Route>
     </Router>
 }

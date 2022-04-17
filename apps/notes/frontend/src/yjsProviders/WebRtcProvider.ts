@@ -12,6 +12,10 @@ import * as awarenessProtocol from 'y-protocols/awareness'
 
 import * as ipfsHttpClient from 'ipfs-http-client'
 
+import Provider from './Provider'
+
+import { useState, useEffect } from 'react';
+
 type ProviderEvents = 'ready' 
                     | 'error'
                     | 'newPeer'
@@ -30,7 +34,7 @@ enum MessageTypes {
 
 type ProviderPeer = Peer.Instance & { ready?: boolean }
 
-export default class YjsProvider extends Observable<ProviderEvents> {
+export default class WebRtcProvider extends Observable<ProviderEvents> implements Provider {
 
   docName: string
   yDoc: Y.Doc
@@ -38,27 +42,19 @@ export default class YjsProvider extends Observable<ProviderEvents> {
   peerId: string
   peers: Map<string, ProviderPeer>
   awareness: awarenessProtocol.Awareness
-  ws: WebSocket
 
   constructor(docName: string, yDoc: Y.Doc, ipfs: ipfsHttpClient.IPFSHTTPClient) {
     super()
     this.docName = docName
     this.yDoc = yDoc
-    this.ipfs = ipfs
-    this.peerId = random.uuidv4()   
-    this.peers = new Map()
     this.awareness = new awarenessProtocol.Awareness(yDoc)
-  }
-
-  _broadcastMessage(encoder: encoding.Encoder) {
-    this.peers.forEach(peer => {
-      if (peer.ready) {
-        peer.send(encoding.toUint8Array(encoder))
-      }
-    })
+    this.ipfs = ipfs
+    this.peerId = random.uuidv4()
+    this.peers = new Map()
   }
 
   async connect() {
+
     try {
 
       this.yDoc.on('update', update => {
@@ -114,6 +110,16 @@ export default class YjsProvider extends Observable<ProviderEvents> {
     this.peers.forEach((peer, id) => {
       peer.destroy()
     })
+    this.awareness.destroy()
+  }
+
+
+  _broadcastMessage(encoder: encoding.Encoder) {
+    this.peers.forEach(peer => {
+      if (peer.ready) {
+        peer.send(encoding.toUint8Array(encoder))
+      }
+    })
   }
 
   async _announce() {
@@ -121,6 +127,13 @@ export default class YjsProvider extends Observable<ProviderEvents> {
     encoding.writeVarString(encoder, this.peerId)
     encoding.writeUint8(encoder, SignallingEvents.Announce)
     await this.ipfs.pubsub.publish(this.docName, encoding.toUint8Array(encoder))
+  }
+
+  async _handleAnnounce(sender: string, decoder: decoding.Decoder) {
+    this._acknowledge(sender)
+    if(this.peerId < sender) {
+      this._createPeer(sender, { initiator: true })
+    }
   }
 
   async _acknowledge(recipient: string) {
@@ -131,6 +144,16 @@ export default class YjsProvider extends Observable<ProviderEvents> {
     await this.ipfs.pubsub.publish(this.docName, encoding.toUint8Array(encoder))
   }
 
+  async _handleAcknowledgement(sender: string, decoder: decoding.Decoder) {
+    const recipient = decoding.readVarString(decoder)
+    if(recipient !== this.peerId) {
+      return
+    }
+    if(this.peerId < sender) {
+      this._createPeer(sender, { initiator: true })
+    }
+  }
+
   async _signal(recipient: string, data: any) {
     const encoder = encoding.createEncoder()
     encoding.writeVarString(encoder, this.peerId)
@@ -138,6 +161,20 @@ export default class YjsProvider extends Observable<ProviderEvents> {
     encoding.writeVarString(encoder, recipient)
     encoding.writeAny(encoder, data)
     await this.ipfs.pubsub.publish(this.docName, encoding.toUint8Array(encoder))
+  }
+
+
+  async _handleSignal(sender: string, decoder: decoding.Decoder) {
+    const recipient = decoding.readVarString(decoder)
+    if(recipient !== this.peerId) {
+      return
+    }
+    const data = decoding.readAny(decoder)
+    if(!this.peers.has(sender)) {
+      this._createPeer(sender)
+    }
+    const peer = this.peers.get(sender)
+    peer.signal(data)
   }
 
   _createPeer(peerId: string, opts?: Peer.Options) {
@@ -204,39 +241,4 @@ export default class YjsProvider extends Observable<ProviderEvents> {
 
     return peer
   }
-
-
-  async _handleAnnounce(sender: string, decoder: decoding.Decoder) {
-    this._acknowledge(sender)
-    if(this.peerId < sender) {
-      this._createPeer(sender, { initiator: true })
-    }
-  }
-
-  async _handleAcknowledgement(sender: string, decoder: decoding.Decoder) {
-    const recipient = decoding.readVarString(decoder)
-    if(recipient !== this.peerId) {
-      return
-    }
-    if(this.peerId < sender) {
-      this._createPeer(sender, { initiator: true })
-    }
-  }
-
-  async _handleSignal(sender: string, decoder: decoding.Decoder) {
-
-    const recipient = decoding.readVarString(decoder)
-    if(recipient !== this.peerId) {
-      return
-    }
-    const data = decoding.readAny(decoder)
-    if(!this.peers.has(sender)) {
-      this._createPeer(sender)
-    }
-    const peer = this.peers.get(sender)
-    peer.signal(data)
-  }
 }
-
-
-
