@@ -35,9 +35,11 @@ async function main() {
 
   const stored = await storage.get('docs')
   console.log(stored)
-  stored.forEach((x: string) => {
-    docs.set(x, null)
-  })
+  if(stored) {
+    stored.forEach((x: string) => {
+      docs.set(x, null)
+    })
+  }
 
   const peerId = (await ipfs.id()).id
   console.log(peerId)
