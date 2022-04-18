@@ -155,7 +155,7 @@ var communityAddMemberCmd = &cobra.Command{
 			req.CommunityID = communityID.Value.String()
 			req.NodeID = nodeID.Value.String()
 		} else {
-			decoded, err := base64.StdEncoding.DecodeString("")
+			decoded, err := base64.StdEncoding.DecodeString(token)
 			if err != nil {
 				printError(err)
 			}
