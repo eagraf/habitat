@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter&display=swap');
+
 :root {
     --light-green: #E0F5E2;
     --dark-green: #3E7A4B;
@@ -7,6 +9,7 @@
 body {
     margin: 0;
     color: var(--text);
+    font-family: 'Inter', sans-serif;
 }
 .ProseMirror-focused {
     outline: none;

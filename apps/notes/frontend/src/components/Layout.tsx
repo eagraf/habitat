@@ -90,7 +90,12 @@ export default function Layout() {
             <Form onSubmit={event => {
                 event.preventDefault()
                 //@ts-ignore
-                console.log(event.target.noteAddr.value)
+                const addr = event.target.noteAddr.value
+                dispatch({ type: 'ADD_DOC', doc: addr })
+                dispatch({ type: 'UPDATE_CURRENT_DOC', doc: addr })
+
+                setModal(null)
+
             }}>
 
                 <Modal.Body>
