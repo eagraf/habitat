@@ -1,3 +1,9 @@
 bin
 procs/*
 !procs/apps.yml
+
+.vscode
+habitat.code-workspace
+*.DS_Store
+
+orbitdb
