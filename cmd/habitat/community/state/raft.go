@@ -1,4 +1,4 @@
-package fsm
+package state
 
 import (
 	"bufio"
@@ -10,13 +10,25 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type CommunityStateMachine struct {
+package state 
+
+import (
+	"bufio"
+	"encoding/base64"
+	"io"
+
+	jsonpatch "github.com/evanphx/json-patch"
+	"github.com/hashicorp/raft"
+	"github.com/rs/zerolog/log"
+)
+
+type RaftFSMAdapter struct {
 	Log       []string `json:"log"`
 	StateJSON []byte
 }
 
-func NewCommunityStateMachine() *CommunityStateMachine {
-	return &CommunityStateMachine{
+func NewRaftFSMAdapter() *RaftFSMAdapter {
+	return &RaftFSMAdapter{
 		Log:       make([]string, 0),
 		StateJSON: []byte("{}"),
 	}
@@ -26,7 +38,7 @@ func NewCommunityStateMachine() *CommunityStateMachine {
 // It returns a value which will be made available in the
 // ApplyFuture returned by Raft.Apply method if that
 // method was called on the same Raft node as the FSM.
-func (sm *CommunityStateMachine) Apply(entry *raft.Log) interface{} {
+func (sm *RaftFSMAdapter) Apply(entry *raft.Log) interface{} {
 	sm.Log = append(sm.Log, string(entry.Data))
 	log.Info().Msgf("applying state transition %v", entry)
 
@@ -59,14 +71,14 @@ func (sm *CommunityStateMachine) Apply(entry *raft.Log) interface{} {
 // threads, but Apply will be called concurrently with Persist. This means
 // the FSM should be implemented in a fashion that allows for concurrent
 // updates while a snapshot is happening.
-func (sm *CommunityStateMachine) Snapshot() (raft.FSMSnapshot, error) {
+func (sm *RaftFSMAdapter) Snapshot() (raft.FSMSnapshot, error) {
 	return &CSMSnapshot{Log: sm.Log}, nil
 }
 
 // Restore is used to restore an FSM from a snapshot. It is not called
 // concurrently with any other command. The FSM must discard all previous
 // state.
-func (sm *CommunityStateMachine) Restore(reader io.ReadCloser) error {
+func (sm *RaftFSMAdapter) Restore(reader io.ReadCloser) error {
 	newLog := make([]string, 0)
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
@@ -76,7 +88,7 @@ func (sm *CommunityStateMachine) Restore(reader io.ReadCloser) error {
 	return scanner.Err()
 }
 
-func (sm *CommunityStateMachine) State() ([]byte, error) {
+func (sm *RaftFSMAdapter) State() ([]byte, error) {
 	return sm.StateJSON, nil
 }
 
