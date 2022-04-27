@@ -32,9 +32,8 @@ func TestJSONState(t *testing.T) {
 	initState := []byte(`{
 		"community_id": "abc"
 	}`)
-	jsonState, keyErrs, err := NewJSONState(communityStateSchema, initState)
+	jsonState, err := NewJSONState(communityStateSchema, initState)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(keyErrs))
 
 	patch := []byte(`[{
 		"op": "add",
@@ -47,9 +46,8 @@ func TestJSONState(t *testing.T) {
 }
 
 func TestCounterIncrement(t *testing.T) {
-	jsonState, keyErrs, err := NewJSONState(communityStateSchema, []byte(`{"community_id":"abc"}`))
+	jsonState, err := NewJSONState(communityStateSchema, []byte(`{"community_id":"abc"}`))
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(keyErrs))
 
 	csm := NewCommunityStateMachine(jsonState, &LocalDispatcher{jsonState: jsonState})
 	state, err := csm.State()

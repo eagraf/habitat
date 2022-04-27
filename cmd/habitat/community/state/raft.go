@@ -1,37 +1,27 @@
 package state
 
 import (
-	"bufio"
 	"encoding/base64"
 	"io"
+	"io/ioutil"
 
-	jsonpatch "github.com/evanphx/json-patch"
-	"github.com/hashicorp/raft"
-	"github.com/rs/zerolog/log"
-)
-
-package state 
-
-import (
-	"bufio"
-	"encoding/base64"
-	"io"
-
-	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/hashicorp/raft"
 	"github.com/rs/zerolog/log"
 )
 
 type RaftFSMAdapter struct {
-	Log       []string `json:"log"`
-	StateJSON []byte
+	jsonState *JSONState
 }
 
-func NewRaftFSMAdapter() *RaftFSMAdapter {
-	return &RaftFSMAdapter{
-		Log:       make([]string, 0),
-		StateJSON: []byte("{}"),
+func NewRaftFSMAdapter(commState []byte) (*RaftFSMAdapter, error) {
+	state, err := NewJSONState(communityStateSchema, commState)
+	if err != nil {
+		return nil, err
 	}
+
+	return &RaftFSMAdapter{
+		jsonState: state,
+	}, nil
 }
 
 // Apply log is invoked once a log entry is committed.
@@ -39,29 +29,37 @@ func NewRaftFSMAdapter() *RaftFSMAdapter {
 // ApplyFuture returned by Raft.Apply method if that
 // method was called on the same Raft node as the FSM.
 func (sm *RaftFSMAdapter) Apply(entry *raft.Log) interface{} {
-	sm.Log = append(sm.Log, string(entry.Data))
-	log.Info().Msgf("applying state transition %v", entry)
-
 	// Base64 decode so that no weird JSON quoting interferes along the way
-	decoded, err := base64.StdEncoding.DecodeString(string(entry.Data))
+	/*	decoded, err := base64.StdEncoding.DecodeString(string(entry.Data))
+		if err != nil {
+			log.Error().Msgf("error decoding log entry data: %s")
+		}
+
+		// TODO patching should be validated by the leader beforehand so there
+		// is no chance of an error here
+		patch, err := jsonpatch.DecodePatch(decoded)
+		if err != nil {
+			log.Error().Msgf("error decoding JSON patch: %s", err)
+		}
+
+		modified, err := patch.Apply(sm.StateJSON)
+		if err != nil {
+			log.Error().Msgf("error applying JSON patch: %s", err)
+		}
+
+		sm.StateJSON = modified*/
+
+	patch, err := base64.StdEncoding.DecodeString(string(entry.Data))
 	if err != nil {
-		log.Error().Msgf("error decoding log entry data: %s")
+		log.Error().Msgf("error decoding log entry data: %s", err)
 	}
 
-	// TODO patching should be validated by the leader beforehand so there
-	// is no chance of an error here
-	patch, err := jsonpatch.DecodePatch(decoded)
+	err = sm.jsonState.ApplyPatch(patch)
 	if err != nil {
-		log.Error().Msgf("error decoding JSON patch: %s", err)
+		log.Error().Msgf("error applying patch: %s", err)
 	}
 
-	modified, err := patch.Apply(sm.StateJSON)
-	if err != nil {
-		log.Error().Msgf("error applying JSON patch: %s", err)
-	}
-
-	sm.StateJSON = modified
-
+	// TODO apply future stuff
 	return nil
 }
 
@@ -72,43 +70,58 @@ func (sm *RaftFSMAdapter) Apply(entry *raft.Log) interface{} {
 // the FSM should be implemented in a fashion that allows for concurrent
 // updates while a snapshot is happening.
 func (sm *RaftFSMAdapter) Snapshot() (raft.FSMSnapshot, error) {
-	return &CSMSnapshot{Log: sm.Log}, nil
+	return &FSMSnapshot{
+		state: sm.jsonState.Bytes(),
+	}, nil
 }
 
 // Restore is used to restore an FSM from a snapshot. It is not called
 // concurrently with any other command. The FSM must discard all previous
 // state.
 func (sm *RaftFSMAdapter) Restore(reader io.ReadCloser) error {
-	newLog := make([]string, 0)
+	/*newLog := make([]string, 0)
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		newLog = append(newLog, scanner.Text())
 	}
 	sm.Log = newLog
-	return scanner.Err()
+	return scanner.Err()*/
+	buf, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return err
+	}
+
+	state, err := NewJSONState(communityStateSchema, buf)
+	if err != nil {
+		return err
+	}
+
+	sm.jsonState = state
+	return nil
 }
 
 func (sm *RaftFSMAdapter) State() ([]byte, error) {
-	return sm.StateJSON, nil
+	return sm.jsonState.Bytes(), nil
 }
 
-type CSMSnapshot struct {
-	Log []string
+type FSMSnapshot struct {
+	state []byte
 }
 
 // Persist should dump all necessary state to the WriteCloser 'sink',
 // and call sink.Close() when finished or call sink.Cancel() on error.
-func (s *CSMSnapshot) Persist(sink raft.SnapshotSink) error {
-	for _, entry := range s.Log {
+func (s *FSMSnapshot) Persist(sink raft.SnapshotSink) error {
+	/*for _, entry := range s.Log {
 		_, err := sink.Write([]byte(entry + "\n"))
 		if err != nil {
 			return err
 		}
-	}
+	}*/
+	sink.Write(s.state)
 	return sink.Close()
 }
 
 // Release is invoked when we are finished with the snapshot.
-func (s *CSMSnapshot) Release() {
+func (s *FSMSnapshot) Release() {
 	return
 }

@@ -76,25 +76,25 @@ type JSONState struct {
 	*sync.Mutex
 }
 
-func NewJSONState(jsonSchema []byte, initState []byte) (*JSONState, []jsonschema.KeyError, error) {
+func NewJSONState(jsonSchema []byte, initState []byte) (*JSONState, error) {
 	rs := &jsonschema.Schema{}
 	err := json.Unmarshal(jsonSchema, rs)
 	if err != nil {
-		return nil, nil, fmt.Errorf("invalid JSON schema: %s", err)
+		return nil, fmt.Errorf("invalid JSON schema: %s", err)
 	}
 	keyErrs, err := rs.ValidateBytes(context.Background(), initState)
 	if err != nil {
-		return nil, keyErrs, fmt.Errorf("error validating initial state")
+		return nil, fmt.Errorf("error validating initial state")
 	}
 	if len(keyErrs) != 0 {
-		return nil, keyErrs, fmt.Errorf("invalid initial state")
+		return nil, keyError(keyErrs)
 	}
 
 	return &JSONState{
 		schema: rs,
 		state:  initState,
 		Mutex:  &sync.Mutex{},
-	}, nil, nil
+	}, nil
 }
 
 func (s *JSONState) ApplyPatch(patchJSON []byte) error {
@@ -139,4 +139,8 @@ func (s *JSONState) applyImpl(patchJSON []byte) ([]byte, error) {
 
 func (s *JSONState) Unmarshal(dest interface{}) error {
 	return json.Unmarshal(s.state, dest)
+}
+
+func (s *JSONState) Bytes() []byte {
+	return s.state
 }
