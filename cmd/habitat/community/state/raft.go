@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// TODO refactor this into the raft package
 type RaftFSMAdapter struct {
 	jsonState *JSONState
 }

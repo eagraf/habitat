@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/eagraf/habitat/cmd/habitat/community/state"
 	"github.com/eagraf/habitat/pkg/compass"
-	"github.com/eagraf/habitat/pkg/raft/fsm"
 	"github.com/eagraf/habitat/pkg/raft/transport"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
@@ -38,7 +38,7 @@ type raftClusterInstance struct {
 	serverID     string
 	address      string
 	instance     *raft.Raft
-	stateMachine *fsm.CommunityStateMachine
+	stateMachine *state.RaftFSMAdapter
 }
 
 func NewClusterService(host host.Host) *ClusterService {
@@ -62,7 +62,12 @@ func (cs *ClusterService) CreateCluster(communityID string) error {
 		return fmt.Errorf("raft instance for community %s already initialized", communityID)
 	}
 
-	stateMachine := fsm.NewCommunityStateMachine()
+	stateMachine, err := state.NewRaftFSMAdapter([]byte(fmt.Sprintf(`{
+		"community_id": "%s"
+	}`, communityID)))
+	if err != nil {
+		return err
+	}
 
 	ra, err := setupRaftInstance(communityID, stateMachine, true, cs.host)
 	if err != nil {
@@ -94,7 +99,12 @@ func (cs *ClusterService) JoinCluster(communityID string, address string) error 
 		return fmt.Errorf("raft instance for community %s already initialized", communityID)
 	}
 
-	stateMachine := fsm.NewCommunityStateMachine()
+	stateMachine, err := state.NewRaftFSMAdapter([]byte(fmt.Sprintf(`{
+		"community_id": "%s"
+	}`, communityID)))
+	if err != nil {
+		return err
+	}
 
 	ra, err := setupRaftInstance(communityID, stateMachine, false, cs.host)
 	if err != nil {
@@ -120,7 +130,12 @@ func (cs *ClusterService) RestoreNode(communityID string) error {
 		log.Error().Msgf("raft instance for community %s already initialized", communityID)
 	}
 
-	stateMachine := fsm.NewCommunityStateMachine()
+	stateMachine, err := state.NewRaftFSMAdapter([]byte(fmt.Sprintf(`{
+		"community_id": "%s"
+	}`, communityID)))
+	if err != nil {
+		return err
+	}
 
 	ra, err := setupRaftInstance(communityID, stateMachine, false, cs.host)
 	if err != nil {
@@ -238,7 +253,7 @@ func (cs *ClusterService) RemoveNode(communityID string, nodeID string) error {
 }
 
 // Internal wrapper of Hashicorp raft stuff
-func setupRaftInstance(communityID string, stateMachine *fsm.CommunityStateMachine, newCommunity bool, host host.Host) (*raft.Raft, error) {
+func setupRaftInstance(communityID string, stateMachine *state.RaftFSMAdapter, newCommunity bool, host host.Host) (*raft.Raft, error) {
 	log.Info().Msgf("setting up raft instance for node %s at %s", getServerID(communityID), getCommunityAddress(communityID))
 
 	// setup raft folder
@@ -267,7 +282,7 @@ func setupRaftInstance(communityID string, stateMachine *fsm.CommunityStateMachi
 
 	pubAddr, err := getPublicMultiaddr()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	// Setup Raft communication.
 	protocol := getClusterProtocol(communityID)
