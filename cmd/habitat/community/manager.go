@@ -70,7 +70,7 @@ func (m *Manager) checkCommunityExists(communityID string) bool {
 
 }
 
-func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Community, error) {
+func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.CommunityState, error) {
 	// Generate UUID for now
 	communityID := uuid.New().String()
 
@@ -115,7 +115,7 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Comm
 
 }
 
-func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, acceptingNodeAddr string, communityID string) (*community.Community, error) {
+func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, acceptingNodeAddr string, communityID string) (*community.CommunityState, error) {
 	commExists, err := m.setupCommunity(communityID)
 	if err != nil && !commExists {
 		return nil, fmt.Errorf("error setting up community: %s", err)
@@ -127,7 +127,7 @@ func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, a
 	}
 
 	// TODO @eagraf have this be downstream of a Raft update
-	return &community.Community{
+	return &community.CommunityState{
 		Name:      name,
 		Id:        communityID,
 		Peers:     btstps,

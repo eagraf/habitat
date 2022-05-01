@@ -1,6 +1,6 @@
-package state
+package community
 
-var communityStateSchema = []byte(`{
+var CommunityStateSchema = []byte(`{
 	"title": "community state schema",
 	"type": "object",
 	"properties": {

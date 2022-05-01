@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/eagraf/habitat/structs/community"
 	"github.com/hashicorp/raft"
 	"github.com/rs/zerolog/log"
 )
@@ -15,7 +16,7 @@ type RaftFSMAdapter struct {
 }
 
 func NewRaftFSMAdapter(commState []byte) (*RaftFSMAdapter, error) {
-	state, err := NewJSONState(communityStateSchema, commState)
+	state, err := NewJSONState(community.CommunityStateSchema, commState)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +73,7 @@ func (sm *RaftFSMAdapter) Restore(reader io.ReadCloser) error {
 		return err
 	}
 
-	state, err := NewJSONState(communityStateSchema, buf)
+	state, err := NewJSONState(community.CommunityStateSchema, buf)
 	if err != nil {
 		return err
 	}
