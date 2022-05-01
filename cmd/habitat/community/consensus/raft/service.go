@@ -57,14 +57,12 @@ func (cs *ClusterService) Start() error {
 }
 
 // CreateCluster initializes a new Raft cluster, and bootstraps it with this nodes address
-func (cs *ClusterService) CreateCluster(communityID string) error {
+func (cs *ClusterService) CreateCluster(communityID string, initState []byte) error {
 	if _, ok := cs.instances[communityID]; ok {
 		return fmt.Errorf("raft instance for community %s already initialized", communityID)
 	}
 
-	stateMachine, err := state.NewRaftFSMAdapter([]byte(fmt.Sprintf(`{
-		"community_id": "%s"
-	}`, communityID)))
+	stateMachine, err := state.NewRaftFSMAdapter(initState)
 	if err != nil {
 		return err
 	}
