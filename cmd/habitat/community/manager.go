@@ -81,7 +81,9 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Comm
 		return nil, err
 	}
 
-	err = m.clusterManager.CreateCluster(communityID)
+	err = m.clusterManager.CreateCluster(communityID, []byte(fmt.Sprintf(`{
+			"community_id": "%s"
+		}`, communityID)))
 	if err != nil {
 		return nil, err
 	}
