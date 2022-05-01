@@ -3,6 +3,8 @@ package state
 import (
 	"errors"
 	"fmt"
+
+	"github.com/eagraf/habitat/structs/community"
 )
 
 const (
@@ -17,8 +19,8 @@ type TransitionWrapper struct {
 
 type CommunityStateTransition interface {
 	Type() string
-	Patch(oldState *CommunityState) ([]byte, error)
-	Validate(oldState *CommunityState) error
+	Patch(oldState *community.CommunityState) ([]byte, error)
+	Validate(oldState *community.CommunityState) error
 }
 
 type InitializeCounterTransition struct {
@@ -29,7 +31,7 @@ func (t *InitializeCounterTransition) Type() string {
 	return TransitionTypeInitializeCounter
 }
 
-func (t *InitializeCounterTransition) Patch(oldState *CommunityState) ([]byte, error) {
+func (t *InitializeCounterTransition) Patch(oldState *community.CommunityState) ([]byte, error) {
 	return []byte(fmt.Sprintf(`[{
 		"op": "add",
 		"path": "/counter",
@@ -37,7 +39,7 @@ func (t *InitializeCounterTransition) Patch(oldState *CommunityState) ([]byte, e
 	}]`, t.InitialCount)), nil
 }
 
-func (t *InitializeCounterTransition) Validate(oldState *CommunityState) error {
+func (t *InitializeCounterTransition) Validate(oldState *community.CommunityState) error {
 	if oldState.Counter != 0 {
 		return errors.New("counter is not 0")
 	}
@@ -50,7 +52,7 @@ func (t *IncrementCounterTransition) Type() string {
 	return TransitionTypeIncrementCounter
 }
 
-func (t *IncrementCounterTransition) Patch(oldState *CommunityState) ([]byte, error) {
+func (t *IncrementCounterTransition) Patch(oldState *community.CommunityState) ([]byte, error) {
 	return []byte(fmt.Sprintf(`[{
 		"op": "replace",
 		"path": "/counter",
@@ -58,6 +60,6 @@ func (t *IncrementCounterTransition) Patch(oldState *CommunityState) ([]byte, er
 	}]`, oldState.Counter+1)), nil
 }
 
-func (t *IncrementCounterTransition) Validate(oldState *CommunityState) error {
+func (t *IncrementCounterTransition) Validate(oldState *community.CommunityState) error {
 	return nil
 }

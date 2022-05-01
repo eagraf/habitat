@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/eagraf/habitat/structs/community"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/qri-io/jsonschema"
 )
@@ -60,8 +61,8 @@ func (csm *CommunityStateMachine) ProposeTransition(t CommunityStateTransition) 
 	return nil
 }
 
-func (csm *CommunityStateMachine) State() (*CommunityState, error) {
-	var res CommunityState
+func (csm *CommunityStateMachine) State() (*community.CommunityState, error) {
+	var res community.CommunityState
 	err := csm.jsonState.Unmarshal(&res)
 	if err != nil {
 		return nil, err

@@ -33,7 +33,7 @@ func (m *Manager) CommunityCreateHandler(req *ctl.RequestWrapper) (*ctl.Response
 	}
 
 	joinInfo := &ctl.JoinInfo{
-		CommunityID: community.Id,
+		CommunityID: community.CommunityID,
 		Address:     publicMa.String(),
 	}
 
@@ -45,7 +45,7 @@ func (m *Manager) CommunityCreateHandler(req *ctl.RequestWrapper) (*ctl.Response
 	encoded := base64.StdEncoding.EncodeToString([]byte(marshaled))
 
 	commRes := &ctl.CommunityCreateResponse{
-		CommunityID: community.Id,
+		CommunityID: community.CommunityID,
 		JoinToken:   encoded,
 	}
 	res, err := ctl.NewResponseWrapper(commRes, ctl.StatusOK, "")
@@ -75,7 +75,7 @@ func (m *Manager) CommunityJoinHandler(req *ctl.RequestWrapper) (*ctl.ResponseWr
 	}
 
 	addInfo := &ctl.AddMemberInfo{
-		CommunityID: community.Id,
+		CommunityID: community.CommunityID,
 		Address:     publicMa.String(),
 		NodeID:      compass.PeerID().Pretty(),
 	}
