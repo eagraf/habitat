@@ -1,10 +1,10 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
-	client "github.com/eagraf/habitat/pkg/habitat_client"
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/spf13/cobra"
 )
@@ -24,13 +24,13 @@ func parseFlags(args []string) ([]string, []string) {
 
 var commName string
 
-var ipfsCmd = &cobra.Command{
+/*var ipfsCmd = &cobra.Command{
 	Use:   "ipfs --comm=community_name -- -other -flags ENV_VAR=other_env_vars",
 	Short: "Starts a habitat process",
 	Long:  `TODO create long description`,
 	Args:  cobra.MinimumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := client.NewClient()
+		client, err := client.NewClient(habitatServiceAddr())
 		if err != nil {
 			fmt.Println("Error: couldn't connect to habitat service")
 			return
@@ -51,7 +51,7 @@ var ipfsCmd = &cobra.Command{
 		}
 		fmt.Println(res)
 	},
-}
+}*/
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
@@ -64,11 +64,6 @@ var startCmd = &cobra.Command{
 			fmt.Println("Error: only one process should be specified before -- number specified: ", cmd.ArgsLenAtDash())
 			return
 		}
-		client, err := client.NewClient()
-		if err != nil {
-			fmt.Println("Error: couldn't connect to habitat service")
-			return
-		}
 
 		flags, nonflags := parseFlags(args[1:])
 
@@ -76,24 +71,29 @@ var startCmd = &cobra.Command{
 		if commName != "" {
 			args = append(reqArgs, commName)
 		}
-		client.WriteRequest(&ctl.Request{
-			Command: "start",
-			Args:    reqArgs,
-			Flags:   flags,
-			Env:     nonflags,
-		})
 
-		res, err := client.ReadResponse()
-		if err != nil {
-			fmt.Println("Error: couldn't read response from habitat service")
+		resWrapper := sendRequest(&ctl.StartRequest{
+			App:   args[0],
+			Args:  reqArgs,
+			Flags: flags,
+			Env:   nonflags,
+		})
+		if resWrapper.Error != "" {
+			printError(errors.New(resWrapper.Error))
 		}
-		fmt.Println(res)
+
+		var res ctl.StartResponse
+		err := resWrapper.Deserialize(&res)
+		if err != nil {
+			printError(err)
+		}
+
+		fmt.Println(res.ProcID)
 	},
 }
 
 func init() {
 	startCmd.PersistentFlags().StringVarP(&commName, "comm", "c", "", "name of community for which to start process")
-	startCmd.AddCommand(ipfsCmd)
+	//startCmd.AddCommand(ipfsCmd)
 	rootCmd.AddCommand(startCmd)
-
 }

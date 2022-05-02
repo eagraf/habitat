@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/eagraf/habitat/pkg/compass"
+	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/rs/zerolog/log"
 )
 
@@ -39,4 +40,8 @@ func getCommunityAddress(communityID string) string {
 
 func getCommunityRaftDirectory(communityID string) string {
 	return filepath.Join(compass.CommunitiesPath(), communityID, "raft")
+}
+
+func getClusterProtocol(communityID string) protocol.ID {
+	return protocol.ID(filepath.Join("/habitat-raft", "0.0.1", communityID))
 }

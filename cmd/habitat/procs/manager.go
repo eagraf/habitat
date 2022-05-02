@@ -9,7 +9,6 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/structs/configuration"
-	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/rs/zerolog/log"
 )
 
@@ -37,45 +36,43 @@ func NewManager(procDir string, rules proxy.RuleSet, appConfigs *configuration.A
 	}
 }
 
-func (m *Manager) StartProcess(req *ctl.Request) (error, string) {
+func (m *Manager) startProcess(app, communityID string, args, env, flags []string) (string, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	name := req.Args[0]
-	subName := name
-	if len(req.Args) > 1 {
-		subName = strings.Join(req.Args, "-")
+	procID := app
+	if communityID != "" {
+		procID = fmt.Sprintf("%s-%s", app, communityID)
 	}
 
-	fmt.Printf("starting process %s \n", subName)
-	appConfig, ok := m.AppConfigs.Apps[name]
+	appConfig, ok := m.AppConfigs.Apps[app]
 	if !ok {
-		return fmt.Errorf("no app with name %s in app configurations", name), ""
+		return "", fmt.Errorf("no app with name %s in app configurations", app)
 	}
 
-	if _, ok := m.Procs[subName]; ok {
-		return fmt.Errorf("process with name %s already exists", subName), ""
+	if _, ok := m.Procs[procID]; ok {
+		return "", fmt.Errorf("process with name %s already exists", procID)
 	}
 
 	cmdPath := filepath.Join(compass.BinPath(), appConfig.Bin)
-	dataPath := filepath.Join(compass.DataPath(), name)
-	proc := NewProc(name, cmdPath, dataPath, m.errChan, req.Env, req.Flags, req.Args[1:])
+	dataPath := filepath.Join(compass.DataPath(), app)
+	proc := NewProc(app, cmdPath, dataPath, m.errChan, env, flags, args)
 	err := proc.Start()
 	if err != nil {
-		return err, ""
+		return "", err
 	}
 
 	// Update reverse proxy ruleset
 	for _, ruleConfig := range appConfig.ProxyRules {
 		rule, err := proxy.GetRuleFromConfig(ruleConfig, m.ProcDir)
 		if err != nil {
-			return err, ""
+			return "", err
 		}
 		m.ProxyRules.Add(ruleConfig.Hash(), rule)
 	}
 
-	m.Procs[subName] = proc
-	return nil, subName
+	m.Procs[procID] = proc
+	return procID, nil
 }
 
 /*
@@ -104,21 +101,20 @@ func (m *Manager) StartArbitraryProcess(name string, cmdPath string, dataPath st
 }
 */
 
-func (m *Manager) StopProcess(subName string) error {
+func (m *Manager) stopProcess(procID string) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	fmt.Printf("stopping process %s \n", subName)
-	if _, ok := m.Procs[subName]; !ok {
-		return fmt.Errorf("process with name %s does not exist", subName)
+	if _, ok := m.Procs[procID]; !ok {
+		return fmt.Errorf("process with name %s does not exist", procID)
 	}
-	err := m.Procs[subName].Stop()
+	err := m.Procs[procID].Stop()
 	if err != nil {
 		return err
 	}
-	delete(m.Procs, subName)
+	delete(m.Procs, procID)
 
-	name := strings.Split(subName, "-")[0]
+	name := strings.Split(procID, "-")[0]
 	appConfig, ok := m.AppConfigs.Apps[name]
 	if !ok {
 		return fmt.Errorf("no app with name %s in app configurations", name)
@@ -126,7 +122,6 @@ func (m *Manager) StopProcess(subName string) error {
 
 	// Remove from proxy ruleset
 	for _, rule := range appConfig.ProxyRules {
-		fmt.Printf("removing rule %s", rule.Hash())
 		m.ProxyRules.Remove(rule.Hash())
 	}
 
@@ -134,7 +129,7 @@ func (m *Manager) StopProcess(subName string) error {
 }
 
 // Return a readonly list of processes
-func (m *Manager) ListProcesses() ([]*Proc, error) {
+func (m *Manager) listProcesses() ([]*Proc, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -156,7 +151,7 @@ func (m *Manager) ListenForErrors() {
 		log.Error().Msg("proc err listener got: " + procErr.String())
 
 		// try stop command in case it has any clean up, don't worry too much about errors
-		m.StopProcess(procErr.proc.Name)
+		m.stopProcess(procErr.proc.Name)
 	}
 }
 

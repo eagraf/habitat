@@ -1,7 +1,6 @@
 package community
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -13,17 +12,20 @@ import (
 	"github.com/eagraf/habitat/pkg/ipfs"
 	"github.com/eagraf/habitat/structs/community"
 	"github.com/google/uuid"
+	"github.com/libp2p/go-libp2p-core/host"
 )
 
 type Manager struct {
-	Path           string
-	config         *ipfs.IPFSConfig
+	Path    string
+	config  *ipfs.IPFSConfig
+	p2pHost host.Host
+
 	clusterManager *cluster.ClusterManager
 	communities    []*community.Community
 }
 
-func NewManager(path string, proxyRules *proxy.RuleSet) (*Manager, error) {
-	clusterManager := cluster.NewClusterManager()
+func NewManager(path string, proxyRules *proxy.RuleSet, host host.Host) (*Manager, error) {
+	clusterManager := cluster.NewClusterManager(host)
 
 	err := clusterManager.Start(proxyRules)
 	if err != nil {
@@ -37,6 +39,7 @@ func NewManager(path string, proxyRules *proxy.RuleSet) (*Manager, error) {
 			// TODO: @arushibandi remove this usage of compass
 			StartCmd: filepath.Join(compass.ProcsPath(), "bin", "amd64-darwin", "start-ipfs"),
 		},
+		p2pHost:        host,
 		clusterManager: clusterManager,
 	}, nil
 }
@@ -67,16 +70,13 @@ func (m *Manager) checkCommunityExists(communityID string) bool {
 
 }
 
-func (m *Manager) CreateCommunity(name string, id string, createIpfs bool) (*community.Community, error) {
+func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Community, error) {
 	// Generate UUID for now
-	communityID := id
-	if communityID == "" {
-		communityID = uuid.New().String()
-	}
+	communityID := uuid.New().String()
 
 	commExists, err := m.setupCommunity(communityID)
 	if commExists {
-		return nil, errors.New(fmt.Sprintf("can't create community that already exists %s", communityID))
+		return nil, fmt.Errorf("can't create community that already exists %s", communityID)
 	} else if err != nil {
 		return nil, err
 	}
@@ -86,6 +86,7 @@ func (m *Manager) CreateCommunity(name string, id string, createIpfs bool) (*com
 		return nil, err
 	}
 
+	// TODO @eagraf have this be downstream of a Raft update
 	if createIpfs {
 		err, swarmkey, peerid, addrs := m.config.NewCommunityIPFSNode(name, filepath.Join(m.Path, communityID))
 		if err != nil {
@@ -114,7 +115,7 @@ func (m *Manager) CreateCommunity(name string, id string, createIpfs bool) (*com
 
 func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, acceptingNodeAddr string, communityID string) (*community.Community, error) {
 	commExists, err := m.setupCommunity(communityID)
-	if err != nil && commExists != true {
+	if err != nil && !commExists {
 		return nil, fmt.Errorf("error setting up community: %s", err)
 	}
 
@@ -123,14 +124,10 @@ func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, a
 		return nil, err
 	}
 
-	peerid, err := m.config.JoinCommunityIPFSNode(name, communityID, swarmkey, btstps)
-	if err != nil {
-		return nil, err
-	}
+	// TODO @eagraf have this be downstream of a Raft update
 	return &community.Community{
 		Name:      name,
 		Id:        communityID,
-		PeerId:    peerid,
 		Peers:     btstps,
 		SwarmKey:  swarmkey,
 		Addresses: []string{},

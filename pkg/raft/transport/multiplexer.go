@@ -75,7 +75,7 @@ func (rm *RaftMultiplexer) handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var reqBody HTTPTransportPostRequest
+	var reqBody RaftRequest
 	err = json.Unmarshal(buf, &reqBody)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("unable to unmarshal req body: %s", err))
@@ -138,7 +138,7 @@ RESP:
 		return
 	}
 
-	httpRespBody := &HTTPTransportPostResponse{
+	httpRespBody := &RaftResponse{
 		RPCType: reqBody.RPCType,
 		Resp:    buf,
 	}

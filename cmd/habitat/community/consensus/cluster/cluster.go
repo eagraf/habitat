@@ -9,6 +9,7 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/community/consensus/raft"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
 	"github.com/eagraf/habitat/pkg/compass"
+	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/rs/zerolog/log"
 )
 
@@ -35,8 +36,8 @@ type ClusterManager struct {
 	raftClusterService *raft.ClusterService
 }
 
-func NewClusterManager() *ClusterManager {
-	raft := raft.NewClusterService()
+func NewClusterManager(host host.Host) *ClusterManager {
+	raft := raft.NewClusterService(host)
 	return &ClusterManager{
 		raftClusterService: raft,
 	}
