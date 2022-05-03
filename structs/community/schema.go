@@ -10,6 +10,20 @@ var CommunityStateSchema = []byte(`{
 		"counter": {
 			"type": "integer",
 			"minmum": 0
+		},
+		"ipfs_config": {
+			"type": [ "object", "null" ],
+			"properties": {
+				"swarm_key": {
+					"type": "string"
+				},
+				"bootstrap_addresses": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				}
+			}
 		}
 	},
 	"required": ["community_id"]
@@ -19,6 +33,12 @@ var CommunityStateSchema = []byte(`{
 // TODO look at ways to generate this from the schema or vice versa so there is a single
 // source of truth
 type CommunityState struct {
-	CommunityID string `json:"community_id"`
-	Counter     int    `json:"counter,omitempty"`
+	CommunityID string      `json:"community_id"`
+	Counter     int         `json:"counter,omitempty"`
+	IPFSConfig  *IPFSConfig `json:"ipfs_config"`
+}
+
+type IPFSConfig struct {
+	SwarmKey           string   `json:"swarm_key"`
+	BootstrapAddresses []string `json:"bootstrap_addresses"`
 }
