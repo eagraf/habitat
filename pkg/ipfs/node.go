@@ -221,6 +221,76 @@ func (c *IPFSConfig) ConnectCommunityIPFSNode(name string, id string) (*Connecte
 	}, nil
 }
 
+type IPFSInstance struct {
+	IPFSBin  string
+	IPFSPath string
+}
+
+func (i *IPFSInstance) Init() error {
+	cmd := exec.Cmd{
+		Path: i.IPFSBin,
+		Args: []string{
+			i.IPFSBin,
+			"init",
+		},
+		Env: []string{fmt.Sprintf("IPFS_PATH=%s", i.IPFSPath)},
+	}
+
+	err := cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i *IPFSInstance) Config() (*config.Config, error) {
+	f, err := os.Open(filepath.Join(i.IPFSPath, "config"))
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	buf, err := ioutil.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+
+	var conf config.Config
+	err = json.Unmarshal(buf, &conf)
+	if err != nil {
+		return nil, err
+	}
+	return &conf, nil
+}
+
+// Configure rewrites the IPFS configuration file. Note that a restart is
+// necessary after calling this for the new configuration to take effect
+func (i *IPFSInstance) Configure(conf *config.Config) error {
+	buf, err := json.Marshal(conf)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(filepath.Join(i.IPFSPath, "config"), buf, 0700)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i *IPFSInstance) GenerateSwarmKey() (string, error) {
+	key := KeyGen()
+	keyBytes := []byte("/key/swarm/psk/1.0.0/\n/base16/\n" + key + "\n")
+	err := ioutil.WriteFile(filepath.Join(i.IPFSPath, "swarm.key"), keyBytes, 0755)
+	if err != nil {
+		return "", err
+	}
+
+	return string(keyBytes), nil
+}
+
 /*
 	The following functions use the go core API implementation in golang. which is not very well supported right now.
 	They are left commented because including them causes a lot of build problems due to all the imports from
@@ -309,3 +379,46 @@ func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) err
 	return nil
 }
 */
+
+// TODO look at this later
+// get this to work with proc manager
+func IPFSDaemon(ipfsPath string) error {
+	cmd := exec.Cmd{
+		Path: "ipfs",
+		Args: []string{
+			"daemon",
+		},
+		Env: []string{
+			fmt.Sprintf("IPFS_PATH=%s", ipfsPath),
+		},
+	}
+
+	done := make(chan struct{})
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	scanner := bufio.NewScanner(stdout)
+
+	// Use the scanner to scan the output line by line and log it
+	// It's running in a goroutine so that it doesn't block
+	go func() {
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.Contains(line, "Daemon is ready") {
+				done <- struct{}{}
+				return
+			}
+		}
+	}()
+
+	err = cmd.Start()
+	if err != nil {
+		return err
+	}
+
+	// Wait for 'Daemon is ready'
+	<-done
+
+	return nil
+}
