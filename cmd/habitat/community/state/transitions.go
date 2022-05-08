@@ -1,6 +1,7 @@
 package state
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -8,8 +9,9 @@ import (
 )
 
 const (
-	TransitionTypeInitializeCounter = "initialize_counter"
-	TransitionTypeIncrementCounter  = "increment_counter"
+	TransitionTypeInitializeCounter   = "initialize_counter"
+	TransitionTypeIncrementCounter    = "increment_counter"
+	TransitionTypeInitializeIPFSSwarm = "initialize_ipfs_swarm"
 )
 
 type TransitionWrapper struct {
@@ -61,5 +63,36 @@ func (t *IncrementCounterTransition) Patch(oldState *community.CommunityState) (
 }
 
 func (t *IncrementCounterTransition) Validate(oldState *community.CommunityState) error {
+	return nil
+}
+
+type InitializeIPFSSwarmTransition struct {
+	IPFSConfig *community.IPFSConfig
+}
+
+func (t *InitializeIPFSSwarmTransition) Type() string {
+	return TransitionTypeInitializeIPFSSwarm
+}
+
+func (t *InitializeIPFSSwarmTransition) Patch(oldState *community.CommunityState) ([]byte, error) {
+	configBytes, err := json.Marshal(t.IPFSConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(fmt.Sprintf(`[{
+		"op": "add",
+		"path": "/ipfs_config",
+		"value": %s
+	}]`, configBytes)), nil
+}
+
+func (t *InitializeIPFSSwarmTransition) Validate(oldState *community.CommunityState) error {
+	if oldState.IPFSConfig != nil {
+		return errors.New("state already has an initialized IPFS config")
+	}
+	if len(t.IPFSConfig.BootstrapAddresses) == 0 {
+		return errors.New("no bootstrap addresses supplied")
+	}
 	return nil
 }
