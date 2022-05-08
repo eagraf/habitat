@@ -14,9 +14,6 @@ var CommunityStateSchema = []byte(`{
 		"ipfs_config": {
 			"type": [ "object", "null" ],
 			"properties": {
-				"peer_id": {
-					"type": "string"
-				},
 				"swarm_key": {
 					"type": "string"
 				},
@@ -43,6 +40,5 @@ type CommunityState struct {
 
 type IPFSConfig struct {
 	SwarmKey           string   `json:"swarm_key"`
-	PeerID             string   `json:"peer_id"`
 	BootstrapAddresses []string `json:"bootstrap_addresses"`
 }
