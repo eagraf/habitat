@@ -51,9 +51,11 @@ var communityCreateCmd = &cobra.Command{
 			return
 		}
 
+		ipfs, _ := cmd.Flags().GetBool("ipfs")
+
 		req := &ctl.CommunityCreateRequest{
 			CommunityName:     name.Value.String(),
-			CreateIPFSCluster: false,
+			CreateIPFSCluster: ipfs,
 		}
 		resWrapper := sendRequest(req)
 		if resWrapper.Error != "" {
@@ -254,6 +256,7 @@ var communityListCmd = &cobra.Command{
 func init() {
 	communityCreateCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
 	communityCreateCmd.Flags().StringP("name", "n", "", "name of the community being created")
+	communityCreateCmd.Flags().Bool("ipfs", false, "create a new IPFS swarm for the community")
 
 	communityJoinCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
 	communityJoinCmd.Flags().StringP("community", "c", "", "id of community to be joined")
