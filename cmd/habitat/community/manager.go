@@ -1,12 +1,15 @@
 package community
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 
 	"github.com/eagraf/habitat/cmd/habitat/community/consensus/cluster"
+	"github.com/eagraf/habitat/cmd/habitat/community/state"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/ipfs"
@@ -81,38 +84,53 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Comm
 		return nil, err
 	}
 
-	err = m.clusterManager.CreateCluster(communityID, []byte(fmt.Sprintf(`{
-			"community_id": "%s"
-		}`, communityID)))
+	initState := &community.CommunityState{
+		CommunityID: communityID,
+	}
+	stateBuf, err := json.Marshal(initState)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO @eagraf have this be downstream of a Raft update
+	err = m.clusterManager.CreateCluster(communityID, stateBuf)
+	if err != nil {
+		return nil, err
+	}
+
 	if createIpfs {
-		err, swarmkey, peerid, addrs := m.config.NewCommunityIPFSNode(name, filepath.Join(m.Path, communityID))
+		// After cluster is created, immediately add transition to initialize IPFS
+		ipfsConfig, err := newIPFSSwarm(communityID)
 		if err != nil {
 			return nil, err
 		}
-		return &community.Community{
-			Name:      name,
-			Id:        communityID,
-			PeerId:    peerid,
-			Peers:     []string{},
-			SwarmKey:  swarmkey,
-			Addresses: addrs,
-		}, nil
-	} else {
-		return &community.Community{
-			Name:      name,
-			Id:        communityID,
-			PeerId:    "",
-			Peers:     []string{},
-			SwarmKey:  "",
-			Addresses: []string{},
-		}, nil
+
+		stateBuf, err := m.clusterManager.GetState(communityID)
+		if err != nil {
+			return nil, err
+		}
+
+		var commState community.CommunityState
+		err = json.Unmarshal(stateBuf, &commState)
+		if err != nil {
+			return nil, err
+		}
+
+		transition := &state.InitializeIPFSSwarmTransition{
+			IPFSConfig: ipfsConfig,
+		}
+		patch, err := transition.Patch(&commState)
+		if err != nil {
+			return nil, err
+		}
+		encoded := base64.StdEncoding.EncodeToString(patch)
+
+		err = m.clusterManager.ProposeTransition(communityID, []byte(encoded))
+		if err != nil {
+			return nil, err
+		}
 	}
 
+	return initState, nil
 }
 
 func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, acceptingNodeAddr string, communityID string) (*community.CommunityState, error) {
