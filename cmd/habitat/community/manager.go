@@ -1,7 +1,6 @@
 package community
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -92,7 +91,7 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Comm
 		return nil, err
 	}
 
-	err = m.clusterManager.CreateCluster(communityID, stateBuf)
+	stateMachine, err := m.clusterManager.CreateCluster(communityID, stateBuf)
 	if err != nil {
 		return nil, err
 	}
@@ -104,27 +103,11 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Comm
 			return nil, err
 		}
 
-		stateBuf, err := m.clusterManager.GetState(communityID)
-		if err != nil {
-			return nil, err
-		}
-
-		var commState community.CommunityState
-		err = json.Unmarshal(stateBuf, &commState)
-		if err != nil {
-			return nil, err
-		}
-
 		transition := &state.InitializeIPFSSwarmTransition{
 			IPFSConfig: ipfsConfig,
 		}
-		patch, err := transition.Patch(&commState)
-		if err != nil {
-			return nil, err
-		}
-		encoded := base64.StdEncoding.EncodeToString(patch)
 
-		err = m.clusterManager.ProposeTransition(communityID, []byte(encoded))
+		err = stateMachine.ProposeTransition(transition)
 		if err != nil {
 			return nil, err
 		}
@@ -133,24 +116,25 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Comm
 	return initState, nil
 }
 
+// TODO don't return community state since that is retrieved asynchronously. Or we block
 func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, acceptingNodeAddr string, communityID string) (*community.CommunityState, error) {
 	commExists, err := m.setupCommunity(communityID)
 	if err != nil && !commExists {
 		return nil, fmt.Errorf("error setting up community: %s", err)
 	}
 
-	err = m.clusterManager.JoinCluster(communityID, acceptingNodeAddr)
+	_, err = m.clusterManager.JoinCluster(communityID, acceptingNodeAddr)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO @eagraf have this be downstream of a Raft update
 	return &community.CommunityState{
-		Name:      name,
-		Id:        communityID,
-		Peers:     btstps,
-		SwarmKey:  swarmkey,
-		Addresses: []string{},
+		/*	Name:      name,
+			Id:        communityID,
+			Peers:     btstps,
+			SwarmKey:  swarmkey,
+			Addresses: []string{},*/
 	}, nil
 }
 
