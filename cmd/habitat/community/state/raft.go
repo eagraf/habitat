@@ -26,6 +26,10 @@ func NewRaftFSMAdapter(commState []byte) (*RaftFSMAdapter, error) {
 	}, nil
 }
 
+func (sm *RaftFSMAdapter) JSONState() *JSONState {
+	return sm.jsonState
+}
+
 // Apply log is invoked once a log entry is committed.
 // It returns a value which will be made available in the
 // ApplyFuture returned by Raft.Apply method if that
