@@ -103,7 +103,7 @@ func (cs *ClusterService) JoinCluster(communityID string, address string) (*stat
 	}
 
 	raftFSM, err := state.NewRaftFSMAdapter([]byte(fmt.Sprintf(`{
-		"community_id": "%s",
+		"community_id": "%s"
 	}`, communityID)))
 	if err != nil {
 		return nil, err
