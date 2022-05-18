@@ -21,6 +21,20 @@ func keyError(errs []jsonschema.KeyError) error {
 	return errors.New(s.String())
 }
 
+type StateUpdate struct {
+	NewState       []byte
+	TransitionType string
+}
+
+func (s *StateUpdate) State() (*community.CommunityState, error) {
+	var res community.CommunityState
+	err := json.Unmarshal(s.NewState, &res)
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
 type CommunityStateMachine struct {
 	jsonState  *JSONState
 	dispatcher Dispatcher
@@ -54,7 +68,12 @@ func (csm *CommunityStateMachine) ProposeTransition(t CommunityStateTransition) 
 		return err
 	}
 
-	err = csm.dispatcher.Dispatch(patch)
+	transJSON, err := t.JSON(currentState)
+	if err != nil {
+		return err
+	}
+
+	err = csm.dispatcher.Dispatch(transJSON)
 	if err != nil {
 		return err
 	}
@@ -85,7 +104,7 @@ func NewJSONState(jsonSchema []byte, initState []byte) (*JSONState, error) {
 	}
 	keyErrs, err := rs.ValidateBytes(context.Background(), initState)
 	if err != nil {
-		return nil, fmt.Errorf("error validating initial state")
+		return nil, fmt.Errorf("error validating initial state: %s", err)
 	}
 	if len(keyErrs) != 0 {
 		return nil, keyError(keyErrs)

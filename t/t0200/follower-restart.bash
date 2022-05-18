@@ -5,6 +5,15 @@ set -e
 TESTDIR=$(realpath "$(dirname "$0")")
 . "$TESTDIR/../../tools/lib.bash"
 
+function wrapTransition() {
+base64 <<EOF
+{
+    "type": "$1",
+    "patch": "$2"
+}
+EOF
+}
+
 TRANSITION1=$(base64 <<EOF
 [{
     "op": "add",
@@ -33,17 +42,19 @@ EOF
 )
 docker-compose -f docker-compose-raft.yml up -V 2> /dev/null &
 
+echo $(wrapTransition "initialize_counter" $TRANSITION1)
+
 sleep 10 
 
-ALICE_NODE_ID=`./bin/habitatctl -p 2000 community ls | awk '{print $3}'`
-BOB_NODE_ID=`./bin/habitatctl -p 2001 community ls | awk '{print $3}'`
-CHARLIE_NODE_ID=`./bin/habitatctl -p 2002 community ls | awk '{print $3}'`
+ALICE_NODE_ID=`./bin/habitatctl -p 2000 community ls | head -n1 | awk '{print $3}'`
+BOB_NODE_ID=`./bin/habitatctl -p 2001 community ls | head -n1 | awk '{print $3}'`
+CHARLIE_NODE_ID=`./bin/habitatctl -p 2002 community ls | head -n1 | awk '{print $3}'`
 
-COMMUNITY_UUID=`./bin/habitatctl -p 2000 community create | awk '{print $NF}'`
+COMMUNITY_UUID=`./bin/habitatctl -p 2000 community create | head -n1 | awk '{print $NF}'`
 
 sleep 2
 
-./bin/habitatctl -p 2000 community propose -c $COMMUNITY_UUID $TRANSITION1
+./bin/habitatctl -p 2000 community propose -c $COMMUNITY_UUID $(wrapTransition "initialize_counter" $TRANSITION1)
 
 ALICE_IP=`docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' habitat_alice_1`
 BOB_IP=`docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' habitat_bob_1`
@@ -60,7 +71,7 @@ sleep 1
 
 docker restart habitat_bob_1
 
-./bin/habitatctl -p 2000 community propose -c $COMMUNITY_UUID $TRANSITION2
+./bin/habitatctl -p 2000 community propose -c $COMMUNITY_UUID $(wrapTransition "increment_counter" $TRANSITION2)
 
 sleep 6
 

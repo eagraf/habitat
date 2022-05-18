@@ -15,14 +15,23 @@ const (
 )
 
 type TransitionWrapper struct {
-	Type       string `json:"type"`
-	Transition []byte `json:"transition"`
+	Type  string `json:"type"`
+	Patch []byte `json:"patch"`
 }
 
 type CommunityStateTransition interface {
 	Type() string
 	Patch(oldState *community.CommunityState) ([]byte, error)
+	JSON(oldState *community.CommunityState) ([]byte, error)
 	Validate(oldState *community.CommunityState) error
+}
+
+func serializeTransition(patch []byte, transitionType string) ([]byte, error) {
+	wrapper := &TransitionWrapper{
+		Type:  transitionType,
+		Patch: patch,
+	}
+	return json.Marshal(wrapper)
 }
 
 type InitializeCounterTransition struct {
@@ -39,6 +48,15 @@ func (t *InitializeCounterTransition) Patch(oldState *community.CommunityState) 
 		"path": "/counter",
 		"value": %d
 	}]`, t.InitialCount)), nil
+}
+
+func (t *InitializeCounterTransition) JSON(oldState *community.CommunityState) ([]byte, error) {
+	patch, err := t.Patch(oldState)
+	if err != nil {
+		return nil, err
+	}
+
+	return serializeTransition(patch, TransitionTypeInitializeCounter)
 }
 
 func (t *InitializeCounterTransition) Validate(oldState *community.CommunityState) error {
@@ -62,6 +80,15 @@ func (t *IncrementCounterTransition) Patch(oldState *community.CommunityState) (
 	}]`, oldState.Counter+1)), nil
 }
 
+func (t *IncrementCounterTransition) JSON(oldState *community.CommunityState) ([]byte, error) {
+	patch, err := t.Patch(oldState)
+	if err != nil {
+		return nil, err
+	}
+
+	return serializeTransition(patch, TransitionTypeIncrementCounter)
+}
+
 func (t *IncrementCounterTransition) Validate(oldState *community.CommunityState) error {
 	return nil
 }
@@ -81,10 +108,19 @@ func (t *InitializeIPFSSwarmTransition) Patch(oldState *community.CommunityState
 	}
 
 	return []byte(fmt.Sprintf(`[{
-		"op": "add",
+		"op": "replace",
 		"path": "/ipfs_config",
 		"value": %s
 	}]`, configBytes)), nil
+}
+
+func (t *InitializeIPFSSwarmTransition) JSON(oldState *community.CommunityState) ([]byte, error) {
+	patch, err := t.Patch(oldState)
+	if err != nil {
+		return nil, err
+	}
+
+	return serializeTransition(patch, TransitionTypeInitializeIPFSSwarm)
 }
 
 func (t *InitializeIPFSSwarmTransition) Validate(oldState *community.CommunityState) error {
