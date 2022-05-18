@@ -2,6 +2,7 @@ package state
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"io"
 	"io/ioutil"
 
@@ -54,12 +55,18 @@ func (sm *RaftFSMAdapter) Apply(entry *raft.Log) interface{} {
 
 		sm.StateJSON = modified*/
 
-	patch, err := base64.StdEncoding.DecodeString(string(entry.Data))
+	buf, err := base64.StdEncoding.DecodeString(string(entry.Data))
 	if err != nil {
 		log.Error().Msgf("error decoding log entry data: %s", err)
 	}
 
-	err = sm.jsonState.ApplyPatch(patch)
+	var wrapper TransitionWrapper
+	err = json.Unmarshal(buf, &wrapper)
+	if err != nil {
+		log.Error().Msgf("error unmarshaling transition wrapper: %s", err)
+	}
+
+	err = sm.jsonState.ApplyPatch(wrapper.Patch)
 	if err != nil {
 		log.Error().Msgf("error applying patch: %s", err)
 	}

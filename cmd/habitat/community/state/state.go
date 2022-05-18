@@ -44,7 +44,7 @@ func (csm *CommunityStateMachine) ProposeTransition(t CommunityStateTransition) 
 		return fmt.Errorf("transition validation failed: %s", err)
 	}
 
-	patch, err := t.Patch(currentState)
+	patch, err := t.JSON(currentState)
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func NewJSONState(jsonSchema []byte, initState []byte) (*JSONState, error) {
 	}
 	keyErrs, err := rs.ValidateBytes(context.Background(), initState)
 	if err != nil {
-		return nil, fmt.Errorf("error validating initial state")
+		return nil, fmt.Errorf("error validating initial state: %s", err)
 	}
 	if len(keyErrs) != 0 {
 		return nil, keyError(keyErrs)
