@@ -2,7 +2,9 @@ package community
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -15,6 +17,7 @@ import (
 	"github.com/eagraf/habitat/structs/community"
 	"github.com/google/uuid"
 	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/rs/zerolog/log"
 )
 
 type Manager struct {
@@ -32,6 +35,19 @@ func NewManager(path string, proxyRules *proxy.RuleSet, host host.Host) (*Manage
 	err := clusterManager.Start(proxyRules)
 	if err != nil {
 		return nil, fmt.Errorf("error starting cluster manager: %s", err)
+	}
+
+	// Restart any existing communities
+	comDirs, err := ioutil.ReadDir(compass.CommunitiesPath())
+	if err == nil {
+		for _, dir := range comDirs {
+			_, err := clusterManager.RestoreNode(dir.Name())
+			if err != nil {
+				log.Error().Err(err).Msgf("error restoring cluster for community %s", dir.Name())
+			}
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
 	}
 
 	return &Manager{

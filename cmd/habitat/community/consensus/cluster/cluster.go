@@ -1,17 +1,12 @@
 package cluster
 
 import (
-	"errors"
-	"io/ioutil"
 	"net/url"
-	"os"
 
 	"github.com/eagraf/habitat/cmd/habitat/community/consensus/raft"
 	"github.com/eagraf/habitat/cmd/habitat/community/state"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
-	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/rs/zerolog/log"
 )
 
 type ClusterService interface {
@@ -61,19 +56,6 @@ func (cm *ClusterManager) Start(proxyRules *proxy.RuleSet) error {
 
 	err = cm.raftClusterService.Start()
 	if err != nil {
-		return err
-	}
-
-	// Restart any existing communities
-	comDirs, err := ioutil.ReadDir(compass.CommunitiesPath())
-	if err == nil {
-		for _, dir := range comDirs {
-			_, err := cm.RestoreNode(dir.Name())
-			if err != nil {
-				log.Error().Err(err).Msgf("error restoring cluster for community %s", dir.Name())
-			}
-		}
-	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 
