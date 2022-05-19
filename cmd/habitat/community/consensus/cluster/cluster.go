@@ -12,10 +12,10 @@ import (
 type ClusterService interface {
 	Start() error
 
-	CreateCluster(communityID string, initState []byte) (*state.CommunityStateMachine, error)
+	CreateCluster(communityID string, initState []byte) (<-chan state.StateUpdate, error)
 	RemoveCluster(communityID string) error
-	JoinCluster(communityID string, address string) (*state.CommunityStateMachine, error)
-	RestoreNode(communityID string) (*state.CommunityStateMachine, error)
+	JoinCluster(communityID string, address string) (<-chan state.StateUpdate, error)
+	RestoreNode(communityID string) (<-chan state.StateUpdate, error)
 
 	// these should not be the main way to access and update statem,
 	// these methods are useful for debugging and using the cli
@@ -62,7 +62,7 @@ func (cm *ClusterManager) Start(proxyRules *proxy.RuleSet) error {
 	return nil
 }
 
-func (cm *ClusterManager) CreateCluster(communityID string, initState []byte) (*state.CommunityStateMachine, error) {
+func (cm *ClusterManager) CreateCluster(communityID string, initState []byte) (<-chan state.StateUpdate, error) {
 	return cm.raftClusterService.CreateCluster(communityID, initState)
 }
 
@@ -71,11 +71,11 @@ func (cm *ClusterManager) RemoveCluster(communityID string) error {
 
 }
 
-func (cm *ClusterManager) JoinCluster(communityID string, address string) (*state.CommunityStateMachine, error) {
+func (cm *ClusterManager) JoinCluster(communityID string, address string) (<-chan state.StateUpdate, error) {
 	return cm.raftClusterService.JoinCluster(communityID, address)
 }
 
-func (cm *ClusterManager) RestoreNode(communityID string) (*state.CommunityStateMachine, error) {
+func (cm *ClusterManager) RestoreNode(communityID string) (<-chan state.StateUpdate, error) {
 	return cm.raftClusterService.RestoreNode(communityID)
 }
 
