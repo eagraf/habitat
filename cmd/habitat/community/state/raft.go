@@ -12,7 +12,8 @@ import (
 )
 
 type RaftFSMAdapter struct {
-	jsonState *JSONState
+	jsonState      *JSONState
+	transitionChan chan<- *CommunityStateTransition
 }
 
 func NewRaftFSMAdapter(commState []byte) (*RaftFSMAdapter, error) {
@@ -22,12 +23,17 @@ func NewRaftFSMAdapter(commState []byte) (*RaftFSMAdapter, error) {
 	}
 
 	return &RaftFSMAdapter{
-		jsonState: state,
+		jsonState:      state,
+		transitionChan: make(chan<- *CommunityStateTransition, 0),
 	}, nil
 }
 
 func (sm *RaftFSMAdapter) JSONState() *JSONState {
 	return sm.jsonState
+}
+
+func (sm *RaftFSMAdapter) TransitionChan() chan<- *CommunityStateTransition {
+	return sm.transitionChan
 }
 
 // Apply log is invoked once a log entry is committed.
