@@ -12,19 +12,19 @@ import (
 )
 
 type RaftFSMAdapter struct {
-	jsonState      *JSONState
-	transitionChan chan<- *CommunityStateTransition
+	jsonState  *JSONState
+	updateChan chan StateUpdate
 }
 
 func NewRaftFSMAdapter(commState []byte) (*RaftFSMAdapter, error) {
-	state, err := NewJSONState(community.CommunityStateSchema, commState)
+	jsonState, err := NewJSONState(community.CommunityStateSchema, commState)
 	if err != nil {
 		return nil, err
 	}
 
 	return &RaftFSMAdapter{
-		jsonState:      state,
-		transitionChan: make(chan<- *CommunityStateTransition, 0),
+		jsonState:  jsonState,
+		updateChan: make(chan StateUpdate, 0),
 	}, nil
 }
 
@@ -32,8 +32,8 @@ func (sm *RaftFSMAdapter) JSONState() *JSONState {
 	return sm.jsonState
 }
 
-func (sm *RaftFSMAdapter) TransitionChan() chan<- *CommunityStateTransition {
-	return sm.transitionChan
+func (sm *RaftFSMAdapter) UpdateChan() <-chan StateUpdate {
+	return sm.updateChan
 }
 
 // Apply log is invoked once a log entry is committed.
@@ -75,6 +75,11 @@ func (sm *RaftFSMAdapter) Apply(entry *raft.Log) interface{} {
 	err = sm.jsonState.ApplyPatch(wrapper.Patch)
 	if err != nil {
 		log.Error().Msgf("error applying patch: %s", err)
+	}
+
+	sm.updateChan <- StateUpdate{
+		TransitionType: wrapper.Type,
+		NewState:       sm.jsonState.Bytes(),
 	}
 
 	// TODO apply future stuff

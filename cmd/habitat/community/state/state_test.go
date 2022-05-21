@@ -45,31 +45,3 @@ func TestJSONState(t *testing.T) {
 	err = jsonState.ApplyPatch(patch)
 	assert.Nil(t, err)
 }
-
-func TestCounterIncrement(t *testing.T) {
-	jsonState, err := NewJSONState(community.CommunityStateSchema, []byte(`{"community_id":"abc"}`))
-	assert.Nil(t, err)
-
-	csm := NewCommunityStateMachine(jsonState, &LocalDispatcher{jsonState: jsonState})
-	state, err := csm.State()
-	assert.Nil(t, err)
-	assert.Equal(t, state.CommunityID, "abc")
-
-	initCounter := &InitializeCounterTransition{
-		InitialCount: 1,
-	}
-	err = csm.ProposeTransition(initCounter)
-	assert.Nil(t, err)
-
-	state, err = csm.State()
-	assert.Nil(t, err)
-	assert.Equal(t, state.Counter, 1)
-
-	incCounter := &IncrementCounterTransition{}
-	err = csm.ProposeTransition(incCounter)
-	assert.Nil(t, err)
-
-	state, err = csm.State()
-	assert.Nil(t, err)
-	assert.Equal(t, state.Counter, 2)
-}

@@ -57,7 +57,7 @@ func (cs *ClusterService) Start() error {
 }
 
 // CreateCluster initializes a new Raft cluster, and bootstraps it with this nodes address
-func (cs *ClusterService) CreateCluster(communityID string, initState []byte) (*state.CommunityStateMachine, error) {
+func (cs *ClusterService) CreateCluster(communityID string, initState []byte) (<-chan state.StateUpdate, error) {
 	if _, ok := cs.instances[communityID]; ok {
 		return nil, fmt.Errorf("raft instance for community %s already initialized", communityID)
 	}
@@ -81,12 +81,12 @@ func (cs *ClusterService) CreateCluster(communityID string, initState []byte) (*
 	}
 	cs.instances[communityID] = raftInstance
 
-	communityStateMachine := state.NewCommunityStateMachine(raftFSM.JSONState(), &RaftDispatcher{
+	/*communityStateMachine := state.NewCommunityStateMachine(raftFSM.JSONState(), &RaftDispatcher{
 		communityID:    communityID,
 		clusterService: cs,
-	})
+	})*/
 
-	return communityStateMachine, nil
+	return raftFSM.UpdateChan(), nil
 }
 
 func (cs *ClusterService) RemoveCluster(communityID string) error {
@@ -97,7 +97,7 @@ func (cs *ClusterService) RemoveCluster(communityID string) error {
 // JoinCluster requests for this node to join a cluster.
 // In this implementation, the address is unused because the leader will begin sending
 // heartbeets to this node once its AddNode routine has been called.
-func (cs *ClusterService) JoinCluster(communityID string, address string) (*state.CommunityStateMachine, error) {
+func (cs *ClusterService) JoinCluster(communityID string, address string) (<-chan state.StateUpdate, error) {
 	if _, ok := cs.instances[communityID]; ok {
 		return nil, fmt.Errorf("raft instance for community %s already initialized", communityID)
 	}
@@ -123,17 +123,12 @@ func (cs *ClusterService) JoinCluster(communityID string, address string) (*stat
 	}
 	cs.instances[communityID] = raftInstance
 
-	communityStateMachine := state.NewCommunityStateMachine(raftFSM.JSONState(), &RaftDispatcher{
-		communityID:    communityID,
-		clusterService: cs,
-	})
-
-	return communityStateMachine, nil
+	return raftFSM.UpdateChan(), nil
 }
 
 // RestoreNode restarts this nodes raft instance if it has been stopped. All data is
 // restored from snapshots and the write ahead log in stable storage.
-func (cs *ClusterService) RestoreNode(communityID string) (*state.CommunityStateMachine, error) {
+func (cs *ClusterService) RestoreNode(communityID string) (<-chan state.StateUpdate, error) {
 	if _, ok := cs.instances[communityID]; ok {
 		log.Error().Msgf("raft instance for community %s already initialized", communityID)
 	}
@@ -159,12 +154,7 @@ func (cs *ClusterService) RestoreNode(communityID string) (*state.CommunityState
 	}
 	cs.instances[communityID] = raftInstance
 
-	communityStateMachine := state.NewCommunityStateMachine(raftFSM.JSONState(), &RaftDispatcher{
-		communityID:    communityID,
-		clusterService: cs,
-	})
-
-	return communityStateMachine, nil
+	return raftFSM.UpdateChan(), nil
 }
 
 // ProposeTransition takes a proposed update to community state in the form of a JSON patch,

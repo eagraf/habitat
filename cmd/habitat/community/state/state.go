@@ -11,6 +11,7 @@ import (
 	"github.com/eagraf/habitat/structs/community"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/qri-io/jsonschema"
+	"github.com/rs/zerolog/log"
 )
 
 func keyError(errs []jsonschema.KeyError) error {
@@ -21,16 +22,70 @@ func keyError(errs []jsonschema.KeyError) error {
 	return errors.New(s.String())
 }
 
-type CommunityStateMachine struct {
-	jsonState  *JSONState
-	dispatcher Dispatcher
+type Executor interface {
+	Execute(*StateUpdate)
 }
 
-func NewCommunityStateMachine(jsonState *JSONState, dispatcher Dispatcher) *CommunityStateMachine {
+type NOOPExecutor struct{}
+
+func (e *NOOPExecutor) Execute(update *StateUpdate) {
+	log.Info().Msgf("executing %s update", update.TransitionType)
+}
+
+type StateUpdate struct {
+	NewState       []byte
+	TransitionType string
+}
+
+type CommunityStateMachine struct {
+	jsonState *JSONState // this JSONState is maintained in addition to
+	//state *community.CommunityState
+	dispatcher Dispatcher
+	executor   Executor
+	//transitionChan <-chan *CommunityStateTransition
+	updateChan <-chan StateUpdate
+	doneChan   chan bool
+}
+
+func NewCommunityStateMachine(initState *community.CommunityState, updateChan <-chan StateUpdate, dispatcher Dispatcher, executor Executor) (*CommunityStateMachine, error) {
+	marshaled, err := json.Marshal(initState)
+	if err != nil {
+		return nil, err
+	}
+	jsonState, err := NewJSONState(community.CommunityStateSchema, marshaled)
+	if err != nil {
+		return nil, err
+	}
 	return &CommunityStateMachine{
 		jsonState:  jsonState,
+		updateChan: updateChan,
 		dispatcher: dispatcher,
-	}
+		doneChan:   make(chan bool, 0),
+		executor:   executor,
+	}, nil
+}
+
+func (csm *CommunityStateMachine) StartListening() {
+	go func() {
+		for {
+			select {
+			case stateUpdate := <-csm.updateChan:
+				// execute state update
+				jsonState, err := NewJSONState(community.CommunityStateSchema, stateUpdate.NewState)
+				if err != nil {
+					log.Error().Err(err).Msgf("error getting new state from state update chan")
+				}
+				csm.jsonState = jsonState
+				csm.executor.Execute(&stateUpdate)
+			case <-csm.doneChan:
+				return
+			}
+		}
+	}()
+}
+
+func (csm *CommunityStateMachine) StopListening() {
+	csm.doneChan <- true
 }
 
 func (csm *CommunityStateMachine) ProposeTransition(t CommunityStateTransition) error {
@@ -71,8 +126,9 @@ func (csm *CommunityStateMachine) State() (*community.CommunityState, error) {
 }
 
 type JSONState struct {
-	schema *jsonschema.Schema
-	state  []byte
+	schema         *jsonschema.Schema
+	state          []byte
+	transitionChan chan<- *CommunityStateTransition
 
 	*sync.Mutex
 }
@@ -92,9 +148,10 @@ func NewJSONState(jsonSchema []byte, initState []byte) (*JSONState, error) {
 	}
 
 	return &JSONState{
-		schema: rs,
-		state:  initState,
-		Mutex:  &sync.Mutex{},
+		schema:         rs,
+		state:          initState,
+		Mutex:          &sync.Mutex{},
+		transitionChan: make(chan *CommunityStateTransition, 0),
 	}, nil
 }
 
