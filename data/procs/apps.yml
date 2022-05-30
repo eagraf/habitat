@@ -3,6 +3,10 @@ apps:
     bin: ipfs
     ports:
     proxy_rules:
+  ipfs-driver:
+    bin: ipfs-driver
+    ports:
+    proxy_rules:
   notes:
     bin: notes_backend
     ports:
