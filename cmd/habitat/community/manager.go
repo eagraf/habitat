@@ -13,6 +13,7 @@ import (
 
 	"github.com/eagraf/habitat/cmd/habitat/community/consensus/cluster"
 	"github.com/eagraf/habitat/cmd/habitat/community/state"
+	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/ipfs"
@@ -23,16 +24,17 @@ import (
 )
 
 type Manager struct {
-	Path    string
-	config  *ipfs.IPFSConfig
-	p2pHost host.Host
+	Path           string
+	config         *ipfs.IPFSConfig
+	p2pHost        host.Host
+	processManager procs.Manager
 
 	clusterManager  *cluster.ClusterManager
 	communities     map[string]*state.CommunityStateMachine
 	communitiesLock *sync.Mutex
 }
 
-func NewManager(path string, proxyRules *proxy.RuleSet, host host.Host) (*Manager, error) {
+func NewManager(path string, procManager *procs.Manager, proxyRules *proxy.RuleSet, host host.Host) (*Manager, error) {
 	clusterManager := cluster.NewClusterManager(host)
 
 	err := clusterManager.Start(proxyRules)
@@ -48,6 +50,7 @@ func NewManager(path string, proxyRules *proxy.RuleSet, host host.Host) (*Manage
 			StartCmd: filepath.Join(compass.ProcsPath(), "bin", "amd64-darwin", "start-ipfs"),
 		},
 		p2pHost:         host,
+		processManager:  *procManager,
 		clusterManager:  clusterManager,
 		communities:     make(map[string]*state.CommunityStateMachine),
 		communitiesLock: &sync.Mutex{},
