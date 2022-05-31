@@ -36,7 +36,7 @@ func NewManager(procDir string, rules proxy.RuleSet, appConfigs *configuration.A
 	}
 }
 
-func (m *Manager) startProcess(app, communityID string, args, env, flags []string) (string, error) {
+func (m *Manager) StartProcess(app, communityID string, args, env, flags []string) (string, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -101,7 +101,7 @@ func (m *Manager) StartArbitraryProcess(name string, cmdPath string, dataPath st
 }
 */
 
-func (m *Manager) stopProcess(procID string) error {
+func (m *Manager) StopProcess(procID string) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -151,7 +151,7 @@ func (m *Manager) ListenForErrors() {
 		log.Error().Msg("proc err listener got: " + procErr.String())
 
 		// try stop command in case it has any clean up, don't worry too much about errors
-		m.stopProcess(procErr.proc.Name)
+		m.StopProcess(procErr.proc.Name)
 	}
 }
 
