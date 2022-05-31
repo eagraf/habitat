@@ -73,7 +73,7 @@ func NewManager(path string, procManager *procs.Manager, proxyRules *proxy.RuleS
 					communityID:    dir.Name(),
 					clusterManager: manager.clusterManager,
 				},
-				&CommunityExecutor{},
+				NewCommunityExecutor(&manager.processManager),
 			)
 
 			err = manager.addCommunity(dir.Name(), stateMachine)
@@ -141,7 +141,7 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Comm
 	stateMachine, err := state.NewCommunityStateMachine(initState, updateChan, &ClusterDispatcher{
 		communityID:    communityID,
 		clusterManager: m.clusterManager,
-	}, &CommunityExecutor{})
+	}, NewCommunityExecutor(&m.processManager))
 
 	err = m.addCommunity(communityID, stateMachine)
 	if err != nil {
@@ -186,7 +186,7 @@ func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, a
 	stateMachine, err := state.NewCommunityStateMachine(initState, updateChan, &ClusterDispatcher{
 		communityID:    communityID,
 		clusterManager: m.clusterManager,
-	}, &CommunityExecutor{})
+	}, NewCommunityExecutor(&m.processManager))
 
 	err = m.addCommunity(communityID, stateMachine)
 	if err != nil {
