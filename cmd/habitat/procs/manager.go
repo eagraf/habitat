@@ -56,7 +56,7 @@ func (m *Manager) StartProcess(app, communityID string, args, env, flags []strin
 
 	cmdPath := filepath.Join(compass.BinPath(), appConfig.Bin)
 	dataPath := filepath.Join(compass.DataPath(), app)
-	proc := NewProc(app, cmdPath, dataPath, m.errChan, env, flags, args)
+	proc := NewProc(procID, cmdPath, dataPath, m.errChan, env, flags, args)
 	err := proc.Start()
 	if err != nil {
 		return "", err
