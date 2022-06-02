@@ -214,12 +214,17 @@ func (m *Manager) GetState(communityID string) ([]byte, error) {
 		return nil, fmt.Errorf("community %s does not exist in communities directory", communityID)
 	}
 
-	state, err := m.clusterManager.GetState(communityID)
-	if err != nil {
-		return state, err
+	stateMachine := m.communities[communityID]
+	if stateMachine != nil {
+		state, err := stateMachine.State()
+		if err != nil {
+			return nil, err
+		}
+
+		return json.Marshal(state)
 	}
 
-	return state, nil
+	return nil, fmt.Errorf("community state machine for community id %s not found", communityID)
 }
 
 func (m *Manager) addCommunity(communityID string, communityState *state.CommunityStateMachine) error {
