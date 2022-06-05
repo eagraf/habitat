@@ -267,7 +267,7 @@ func setupRaftInstance(communityID string, stateMachine *fsm.CommunityStateMachi
 
 	pubAddr, err := getPublicMultiaddr()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	// Setup Raft communication.
 	protocol := getClusterProtocol(communityID)
