@@ -52,6 +52,9 @@ install-ipfs :
 	cp $(APPS_DIR)/ipfs/start-ipfs $(DEV_PROC_DIR)/bin/amd64-linux
 	cp $(APPS_DIR)/ipfs/start-ipfs $(DEV_PROC_DIR)/bin/amd64-darwin
 	
+install-ipfs-driver:
+	cp $(APPS_DIR)/ipfs-driver/bin/amd64-linux/ipfs-driver $(DEV_PROC_DIR)/bin/amd64-linux
+	cp $(APPS_DIR)/ipfs-driver/bin/amd64-darwin/ipfs-driver $(DEV_PROC_DIR)/bin/amd64-darwin
 
 install-notes : 
 	$(MAKE) -C apps/notes all

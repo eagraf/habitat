@@ -18,10 +18,11 @@ require (
 	github.com/libp2p/go-libp2p-core v0.14.0
 	github.com/libp2p/go-libp2p-record v0.1.3 // indirect
 	github.com/multiformats/go-multiaddr v0.5.0
+	github.com/qri-io/jsonschema v0.2.1 // indirect
 	github.com/rogpeppe/go-internal v1.8.0 // indirect
 	github.com/rs/zerolog v1.26.1
 	github.com/smartystreets/assertions v1.0.1 // indirect
-	github.com/spf13/cobra v1.2.1
+	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
 	github.com/stretchr/testify v1.7.0

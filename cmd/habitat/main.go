@@ -48,17 +48,17 @@ func main() {
 	reverseProxy := proxy.NewServer()
 	go reverseProxy.Start(fmt.Sprintf("%s:%s", ReverseProxyHost, ReverseProxyPort))
 
-	// Create community manager
-	var err error
-	CommunityManager, err = community.NewManager(communityDir, &reverseProxy.Rules, p2pNode.Host())
-	if err != nil {
-		log.Fatal().Msgf("unable to start community manager: %s", err)
-	}
-
 	// Start process manager
 	ProcessManager = procs.NewManager(procsDir, reverseProxy.Rules, appConfigs)
 	go ProcessManager.ListenForErrors()
 	go handleInterupt(ProcessManager)
+
+	// Create community manager
+	var err error
+	CommunityManager, err = community.NewManager(communityDir, ProcessManager, &reverseProxy.Rules, p2pNode.Host())
+	if err != nil {
+		log.Fatal().Msgf("unable to start community manager: %s", err)
+	}
 
 	listen()
 }

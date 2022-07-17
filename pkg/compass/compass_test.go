@@ -11,3 +11,10 @@ func TestLocalIPv4(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestPublicIP(t *testing.T) {
+	_, err := PublicIP()
+	if err != nil {
+		t.Error(err)
+	}
+}

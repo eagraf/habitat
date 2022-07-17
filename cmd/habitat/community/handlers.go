@@ -1,6 +1,8 @@
 package community
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -20,13 +22,31 @@ func (m *Manager) CommunityCreateHandler(req *ctl.RequestWrapper) (*ctl.Response
 		return nil, err
 	}
 
+	publicMa, err := compass.PublicRaftMultiaddr()
+	if err != nil {
+		return nil, err
+	}
+
 	community, err := m.CreateCommunity(commReq.CommunityName, commReq.CreateIPFSCluster)
 	if err != nil {
 		return nil, err
 	}
 
+	joinInfo := &ctl.JoinInfo{
+		CommunityID: community.CommunityID,
+		Address:     publicMa.String(),
+	}
+
+	marshaled, err := json.Marshal(joinInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	encoded := base64.StdEncoding.EncodeToString([]byte(marshaled))
+
 	commRes := &ctl.CommunityCreateResponse{
-		CommunityID: community.Id,
+		CommunityID: community.CommunityID,
+		JoinToken:   encoded,
 	}
 	res, err := ctl.NewResponseWrapper(commRes, ctl.StatusOK, "")
 	if err != nil {
@@ -44,12 +64,32 @@ func (m *Manager) CommunityJoinHandler(req *ctl.RequestWrapper) (*ctl.ResponseWr
 		return nil, err
 	}
 
-	_, err = m.JoinCommunity(commReq.CommunityName, commReq.SwarmKey, commReq.BootstrapPeers, commReq.AcceptingNodeAddr, commReq.CommunityID)
+	community, err := m.JoinCommunity(commReq.CommunityName, commReq.SwarmKey, commReq.BootstrapPeers, commReq.AcceptingNodeAddr, commReq.CommunityID)
 	if err != nil {
 		return nil, err
 	}
 
-	commRes := &ctl.CommunityJoinResponse{}
+	publicMa, err := compass.PublicRaftMultiaddr()
+	if err != nil {
+		return nil, err
+	}
+
+	addInfo := &ctl.AddMemberInfo{
+		CommunityID: community.CommunityID,
+		Address:     publicMa.String(),
+		NodeID:      compass.PeerID().Pretty(),
+	}
+
+	marshaled, err := json.Marshal(addInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	encoded := base64.StdEncoding.EncodeToString([]byte(marshaled))
+
+	commRes := &ctl.CommunityJoinResponse{
+		AddMemberToken: encoded,
+	}
 	res, err := ctl.NewResponseWrapper(commRes, ctl.StatusOK, "")
 	if err != nil {
 		return nil, err

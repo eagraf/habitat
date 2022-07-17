@@ -1,26 +1,24 @@
 package cluster
 
 import (
-	"errors"
-	"io/ioutil"
 	"net/url"
-	"os"
 
 	"github.com/eagraf/habitat/cmd/habitat/community/consensus/raft"
+	"github.com/eagraf/habitat/cmd/habitat/community/state"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
-	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/rs/zerolog/log"
 )
 
 type ClusterService interface {
 	Start() error
 
-	CreateCluster(communityID string) error
+	CreateCluster(communityID string, initState []byte) (<-chan state.StateUpdate, error)
 	RemoveCluster(communityID string) error
-	JoinCluster(communityID string, address string) error
-	RestoreNode(communityID string) error
+	JoinCluster(communityID string, address string) (<-chan state.StateUpdate, error)
+	RestoreNode(communityID string) (<-chan state.StateUpdate, error)
 
+	// these should not be the main way to access and update statem,
+	// these methods are useful for debugging and using the cli
 	ProposeTransition(communityID string, transition []byte) error
 	GetState(communityID string) ([]byte, error)
 
@@ -61,24 +59,11 @@ func (cm *ClusterManager) Start(proxyRules *proxy.RuleSet) error {
 		return err
 	}
 
-	// Restart any existing communities
-	comDirs, err := ioutil.ReadDir(compass.CommunitiesPath())
-	if err == nil {
-		for _, dir := range comDirs {
-			err := cm.RestoreNode(dir.Name())
-			if err != nil {
-				log.Error().Err(err).Msgf("error restoring cluster for community %s", dir.Name())
-			}
-		}
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return err
-	}
-
 	return nil
 }
 
-func (cm *ClusterManager) CreateCluster(communityID string) error {
-	return cm.raftClusterService.CreateCluster(communityID)
+func (cm *ClusterManager) CreateCluster(communityID string, initState []byte) (<-chan state.StateUpdate, error) {
+	return cm.raftClusterService.CreateCluster(communityID, initState)
 }
 
 func (cm *ClusterManager) RemoveCluster(communityID string) error {
@@ -86,11 +71,11 @@ func (cm *ClusterManager) RemoveCluster(communityID string) error {
 
 }
 
-func (cm *ClusterManager) JoinCluster(communityID string, address string) error {
+func (cm *ClusterManager) JoinCluster(communityID string, address string) (<-chan state.StateUpdate, error) {
 	return cm.raftClusterService.JoinCluster(communityID, address)
 }
 
-func (cm *ClusterManager) RestoreNode(communityID string) error {
+func (cm *ClusterManager) RestoreNode(communityID string) (<-chan state.StateUpdate, error) {
 	return cm.raftClusterService.RestoreNode(communityID)
 }
 

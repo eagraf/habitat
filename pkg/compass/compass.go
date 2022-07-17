@@ -3,12 +3,15 @@ package compass
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
 
 	"github.com/google/uuid"
+	"github.com/multiformats/go-multiaddr"
 )
 
 const (
@@ -19,6 +22,8 @@ const (
 	defaultHabitatPathUnix = "~/.habitat"
 
 	nodeIDRelativePath = "node_id"
+
+	p2pPort = "6000"
 )
 
 func HabitatPath() string {
@@ -106,6 +111,41 @@ func LocalIPv4() (net.IP, error) {
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
 
 	return localAddr.IP, nil
+}
+
+func PublicIP() (net.IP, error) {
+	// TODO if we are in dockerland, fake this
+	url := "https://api64.ipify.org?format=text"
+	resp, err := http.Get(url)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	ip := net.ParseIP(string(body))
+	if ip == nil {
+		return nil, errors.New("invalid IP address")
+	}
+	return ip, nil
+}
+
+func PublicRaftMultiaddr() (multiaddr.Multiaddr, error) {
+	ip, err := PublicIP()
+	if err != nil {
+		return nil, err
+	}
+	ipVersion := "ip4"
+	if ip.To4() == nil {
+		ipVersion = "ip6"
+	}
+	addr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/%s/%s/tcp/%s", ipVersion, ip.String(), p2pPort))
+	if err != nil {
+		return nil, err
+	}
+	return addr, nil
 }
 
 func InDockerContainer() bool {

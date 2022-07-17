@@ -9,7 +9,7 @@ func (m *Manager) StartProcessHandler(req *ctl.RequestWrapper) (*ctl.ResponseWra
 		return nil, err
 	}
 
-	procID, err := m.startProcess(startReq.App, startReq.CommunityID, startReq.Args, startReq.Env, startReq.Flags)
+	procID, err := m.StartProcess(startReq.App, startReq.CommunityID, startReq.Args, startReq.Env, startReq.Flags)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func (m *Manager) StopProcessHandler(req *ctl.RequestWrapper) (*ctl.ResponseWrap
 		return nil, err
 	}
 
-	err = m.stopProcess(stopReq.ProcID)
+	err = m.StopProcess(stopReq.ProcID)
 	if err != nil {
 		return nil, err
 	}
