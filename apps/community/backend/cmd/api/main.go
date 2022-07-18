@@ -88,7 +88,6 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := CreateCommunity(name, args.Get("id"), name, args.Get("ipfs") == "true")
-	log.Info().Msg(fmt.Sprintf("Comm is %s", string(bytes)))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -118,14 +117,17 @@ func JoinCommunity(name string, path string, key string, btstpaddr string, rafta
 		BootstrapPeers:    []string{btstpaddr}, // This should include the entire list
 	}
 	res, err := client.SendRequest(joinCommunityReq) // need to get address from somewhere
+	if err != nil {
+		return err
+	}
 
 	var joinCommunityRes ctl.CommunityJoinResponse
 	err = json.Unmarshal([]byte(res.Serialized), &joinCommunityRes)
 	if err != nil {
-		log.Err(err).Msg(fmt.Sprintf("unable to get community id %s", commId))
+		return err
 	}
 
-	return err
+	return nil
 }
 
 func JoinHandler(w http.ResponseWriter, r *http.Request) {
@@ -206,36 +208,6 @@ func AddMemberHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-/*
- ConnectCommunity:
- - meant to be used by nodes that are already in a community
- - just run the daemon & return the API or IPFS Client
-*/
-/*func ConnectCommunity(name string, id string) (*ipfs.ConnectedConfig, error) {
-	log.Info().Msg(fmt.Sprintf("Connect community called with %s %s", name, id))
-	return NodeConfig.ConnectCommunityIPFSNode(name, id)
-}
-
-func ConnectHandler(w http.ResponseWriter, r *http.Request) {
-	args := r.URL.Query()
-	name := args.Get("name")
-	id := args.Get("id")
-	if name == "" || id == "" {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Need name and id params"))
-		return
-	}
-	conf, err := ConnectCommunity(name, id)
-	if err == nil {
-		bytes, _ := json.Marshal(conf)
-		w.Write(bytes)
-	} else {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		log.Error().Err(err)
-	}
-}*/
-
 type CommunitiesListResponse struct {
 	Communities []string `json:"Communities"`
 }
@@ -284,9 +256,6 @@ func main() {
 	// r.HandleFunc("/home", HomeHandler)
 	r.HandleFunc("/create", CreateHandler)
 	r.HandleFunc("/join", JoinHandler)
-	// at some point this should be abstracted away from user
-	// I'm imagining a side panel and when you click on a community name it connects
-	r.HandleFunc("/connect", ConnectHandler)
 	r.HandleFunc("/communities", GetCommunitiesHandler)
 	r.HandleFunc("/add", AddMemberHandler)
 	r.HandleFunc("/node", NodeIdHandler)
