@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/eagraf/habitat/pkg/compass"
@@ -50,29 +50,23 @@ var NodeConfig = &ipfs.IPFSConfig{
  TODO: 	create CommunityConfig struct which contains globals for the community like
 		swarm key and name of it and peer ids in it
 */
-func CreateCommunity(name string, id string, path string, createIpfs bool) ([]byte, error) {
-	res, err := client.SendRequest(ctl.CommandCommunityCreate, []string{name, id, strconv.FormatBool(createIpfs)}) // need to get address from somewhere
+func CreateCommunity(name string, id string, path string, createIpfs bool) error {
+
+	createCommunityReq := &ctl.CommunityCreateRequest{
+		CommunityName:     name,
+		CreateIPFSCluster: createIpfs,
+	}
+	res, err := client.SendRequest(createCommunityReq) // need to get address from somewhere
 	var comm community.Community
 	if err != nil {
 		log.Err(err).Msg("Unable to send request to habitatctl client")
 	}
-	err = json.Unmarshal([]byte(res.Message), &comm)
+	err = json.Unmarshal([]byte(res.Serialized), &comm)
 	if err != nil {
 		log.Err(err).Msg(fmt.Sprintf("unable to get community id %s", name))
 	}
 
-	if createIpfs {
-		conf, err := ConnectCommunity(name, comm.Id)
-		if err != nil {
-			log.Err(err).Msg(fmt.Sprintf("unable to connect to community %s", name))
-			return nil, err
-		}
-		bytes, err := json.Marshal(conf)
-		return bytes, err
-	} else {
-		return []byte("did not create ipfs node, only raft"), nil
-	}
-
+	return nil
 }
 
 type CommunityInfo struct {
@@ -93,7 +87,7 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bytes, err := CreateCommunity(name, args.Get("id"), name, args.Get("ipfs") == "true")
+	err := CreateCommunity(name, args.Get("id"), name, args.Get("ipfs") == "true")
 	log.Info().Msg(fmt.Sprintf("Comm is %s", string(bytes)))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -101,7 +95,7 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		log.Error().Err(err)
 	}
 
-	w.Write(bytes)
+	w.WriteHeader(ctl.StatusOK)
 }
 
 /*
@@ -115,21 +109,23 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
  - Return peer id: need to kick off some way for all other nodes to add this node
   can either use the api returned by createNode or connect to a new client
 */
-func JoinCommunity(name string, path string, key string, btstpaddr string, raftaddr string, commId string) ([]byte, error) {
-	res, err := client.SendRequest(ctl.CommandCommunityJoin, []string{name, key, btstpaddr, raftaddr, commId}) // need to get address from somewhere
+func JoinCommunity(name string, path string, key string, btstpaddr string, raftaddr string, commId string) error {
+	joinCommunityReq := &ctl.CommunityJoinRequest{
+		CommunityID:       commId,
+		CommunityName:     name,
+		AcceptingNodeAddr: raftaddr,
+		SwarmKey:          key,
+		BootstrapPeers:    []string{btstpaddr}, // This should include the entire list
+	}
+	res, err := client.SendRequest(joinCommunityReq) // need to get address from somewhere
 
-	var comm community.Community
-	err = json.Unmarshal([]byte(res.Message), &comm)
+	var joinCommunityRes ctl.CommunityJoinResponse
+	err = json.Unmarshal([]byte(res.Serialized), &joinCommunityRes)
 	if err != nil {
 		log.Err(err).Msg(fmt.Sprintf("unable to get community id %s", commId))
 	}
 
-	conf, err := ConnectCommunity(name, commId)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err := json.Marshal(conf)
-	return bytes, err
+	return err
 }
 
 func JoinHandler(w http.ResponseWriter, r *http.Request) {
@@ -146,7 +142,7 @@ func JoinHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bytes, err := JoinCommunity(name, name, key, btstpaddr, raftaddr, comm)
+	err := JoinCommunity(name, name, key, btstpaddr, raftaddr, comm)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -155,7 +151,7 @@ func JoinHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write(bytes)
+	w.WriteHeader(http.StatusOK)
 }
 
 type AddMemberResponse struct {
@@ -177,7 +173,12 @@ func AddMemberHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := client.SendRequest(ctl.CommandCommunityAddMember, []string{comm, node, addr}) // need to get address from somewhere
+	addMemberReq := &ctl.CommunityAddMemberRequest{
+		CommunityID:        comm,
+		NodeID:             node,
+		JoiningNodeAddress: addr,
+	}
+	res, err := client.SendRequest(addMemberReq) // need to get address from somewhere
 	if err != nil {
 		log.Error().Err(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -185,26 +186,24 @@ func AddMemberHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if res.Status == ctl.StatusOK {
-		log.Info().Msg(fmt.Sprintf("successfully added member with message %s", res.Message))
-		bytes, err := json.Marshal(
+		bytes, err := json.Marshal( // TODO unify this response type with the ctl structs
 			&AddMemberResponse{
 				MemberId: node,
 				NodeId:   compass.NodeID(),
 			},
 		)
 		if err != nil {
+			log.Error().Err(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
-			log.Error().Err(err)
 			return
 		}
 		w.Write(bytes)
 	} else {
-		log.Error().Msg(res.Message)
+		log.Error().Err(errors.New(res.Error)).Msgf("error adding member to community")
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(res.Message))
+		w.Write([]byte(res.Error))
 	}
-
 }
 
 /*
@@ -212,7 +211,7 @@ func AddMemberHandler(w http.ResponseWriter, r *http.Request) {
  - meant to be used by nodes that are already in a community
  - just run the daemon & return the API or IPFS Client
 */
-func ConnectCommunity(name string, id string) (*ipfs.ConnectedConfig, error) {
+/*func ConnectCommunity(name string, id string) (*ipfs.ConnectedConfig, error) {
 	log.Info().Msg(fmt.Sprintf("Connect community called with %s %s", name, id))
 	return NodeConfig.ConnectCommunityIPFSNode(name, id)
 }
@@ -235,7 +234,7 @@ func ConnectHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 		log.Error().Err(err)
 	}
-}
+}*/
 
 type CommunitiesListResponse struct {
 	Communities []string `json:"Communities"`
