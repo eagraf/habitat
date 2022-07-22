@@ -6,7 +6,7 @@ TESTDIR=$(realpath "$(dirname "$0")")
 . "$TESTDIR/../../tools/lib.bash"
 
 function wrapTransition() {
-base64 <<EOF
+base64 -w 0 <<EOF
 {
     "type": "$1",
     "patch": "$2"
@@ -14,7 +14,7 @@ base64 <<EOF
 EOF
 }
 
-TRANSITION1=$(base64 <<EOF
+TRANSITION1=$(base64 -w 0 <<EOF
 [{
     "op": "add",
     "path": "/counter",
@@ -23,7 +23,7 @@ TRANSITION1=$(base64 <<EOF
 EOF
 )
 
-TRANSITION2=$(base64 <<EOF
+TRANSITION2=$(base64 -w 0 <<EOF
 [{
     "op": "replace",
     "path": "/counter",
@@ -32,7 +32,7 @@ TRANSITION2=$(base64 <<EOF
 EOF
 )
 
-TRANSITION3=$(base64 <<EOF
+TRANSITION3=$(base64 -w 0 <<EOF
 [{
     "op": "replace",
     "path": "/counter",
@@ -54,9 +54,6 @@ COMMUNITY_UUID=`./bin/habitatctl -p 2000 community create | head -n1 | awk '{pri
 
 sleep 2
 
-echo $COMMUNITY_UUID
-echo "TRANSITION"
-echo $TRANSITION1
 ./bin/habitatctl -p 2000 community propose -c $COMMUNITY_UUID $(wrapTransition "initialize_counter" $TRANSITION1)
 ./bin/habitatctl -p 2000 community propose -c $COMMUNITY_UUID $(wrapTransition "increment_counter" $TRANSITION2)
 
@@ -64,10 +61,8 @@ ALICE_IP=`docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{e
 BOB_IP=`docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' habitat_bob_1`
 CHARLIE_IP=`docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' habitat_charlie_1`
 
-echo "WHUT"
 ./bin/habitatctl -p 2001 community join -c $COMMUNITY_UUID -a /ip4/$ALICE_IP/tcp/6000
 ./bin/habitatctl -p 2002 community join -c $COMMUNITY_UUID -a /ip4/$ALICE_IP/tcp/6000
-echo "WHUT"
 sleep 3
 ./bin/habitatctl -p 2000 community add -c $COMMUNITY_UUID -n $BOB_NODE_ID -a /ip4/$BOB_IP/tcp/6000
 ./bin/habitatctl -p 2000 community add -c $COMMUNITY_UUID -n $CHARLIE_NODE_ID -a /ip4/$CHARLIE_IP/tcp/6000
