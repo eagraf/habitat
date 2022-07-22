@@ -62,22 +62,37 @@ atexit __cleanup
 
 __TESTING_FUNCS=()
 
+: ${__LIB_PARENT_SHELL_PID:=$BASHPID}
+export __LIB_PARENT_SHELL_PID
+
 testing::register () {
     __TESTING_FUNCS+=("$*")
 }
 
 testing::run () {
+     # Look for if our invoker wants us to focus on a specific child test.
+    if [[ -v __TESTING_RUN_FUNC ]] ; then
+        $__TESTING_RUN_FUNC
+        return 0
+    fi
+
     local count=${#__TESTING_FUNCS[@]}
     local res
     echo 1..$count
 
+    local relpath
+    relpath="./$(realpath "--relative-to=$PWD" "$0")"
+
     for (( i = 0; i < $count ; i++ )) ; do
-	local testnum=$(( $i + 1 ))
-	if res="$(${__TESTING_FUNCS[$i]})" ; then
-	    echo "ok $testnum - $res"
-	else
-	    echo "not ok $testnum - $res"
-	fi
+        local output
+        output=$(temp::file)
+
+        local testnum=$(( $i + 1 ))
+        if ( unset __LIB_PARENT_SHELL_PID ; __TESTING_RUN_FUNC="${__TESTING_FUNCS[$i]}" "$relpath" 2>&1 ) > $output 2>&1 ; then
+            echo "ok $testnum - $(cat $output)"
+        else
+            echo "not ok $testnum - $(cat $output)"
+        fi
     done
 }
 
