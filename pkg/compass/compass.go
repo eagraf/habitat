@@ -115,7 +115,8 @@ func LocalIPv4() (net.IP, error) {
 
 func PublicIP() (net.IP, error) {
 	// TODO if we are in dockerland, fake this
-	url := "https://api64.ipify.org?format=text"
+	// TODO use SSL
+	url := "http://api64.ipify.org?format=text"
 	resp, err := http.Get(url)
 	if err != nil {
 		panic(err)
