@@ -20,9 +20,11 @@ testing::run () {
     echo 1..$count
 
     for (( i = 0; i < $count ; i++ )) ; do
+    local output
+    output=$(temp::file)
 	local testnum=$(( $i + 1 ))
-	if res="$(${__TESTING_FUNCS[$i]})" ; then
-	    echo "ok $testnum - $res"
+	if res="$(${__TESTING_FUNCS[$i]})" > output 2>&1; then
+	    echo "ok $testnum - $res - $(cat $output)"
 	else
 	    echo "not ok $testnum - $res"
 	fi
