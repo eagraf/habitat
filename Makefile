@@ -40,6 +40,12 @@ run : habitat c-backend c-frontend
 
 run-docker: habitat-docker c-backend-docker c-frontend
 
+test::
+	go test ./...
+
+test::
+	prove -v -r
+
 install-setup :
 	rm -rf $(DEV_PROC_DIR)/bin/*
 	rm -rf $(DEV_PROC_DIR)/web/*
