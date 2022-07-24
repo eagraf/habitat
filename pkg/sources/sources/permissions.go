@@ -1,8 +1,8 @@
 package sources
 
 type PermissionsManager interface {
-	CheckCanRead(ReadRequest) bool
-	CheckCanWrite(WriteRequest) bool
+	CheckCanRead(*ReadRequest) bool
+	CheckCanWrite(*WriteRequest) bool
 
 	/* TODO: refine these
 	ExtendCanRead()
@@ -19,11 +19,11 @@ type PermissionsManager interface {
 
 type BasicPermissionsManager struct{}
 
-func (B *BasicPermissionsManager) CheckCanRead(ReadRequest) bool {
+func (B *BasicPermissionsManager) CheckCanRead(*ReadRequest) bool {
 	return true
 }
 
-func (B *BasicPermissionsManager) CheckCanWrite(WriteRequest) bool {
+func (B *BasicPermissionsManager) CheckCanWrite(*WriteRequest) bool {
 	return true
 }
 

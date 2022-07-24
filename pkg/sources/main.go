@@ -10,16 +10,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var reader sources.Reader
-var writer sources.Writer
+var reader *sources.Reader
+var writer *sources.Writer
 
 var rootCmd = &cobra.Command{
 	Use:   "sources",
 	Short: "Sources allows reading and writing to local data",
 	Long:  `Sources allows reading and writinng to local data`,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Run at beginning
+		basePath, _ := cmd.Flags().GetString("path")
+		sreader := sources.NewJSONReader(basePath)
+		swriter := sources.NewJSONWriter(basePath)
+		pmanager := sources.NewBasicPermissionsManager()
+		reader = sources.NewReader(sreader, pmanager)
+		writer = sources.NewWriter(swriter, pmanager)
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
-		// Do Stuff Here
-		fmt.Println("root cmd")
 	},
 }
 
@@ -29,17 +37,27 @@ var readCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
 			log.Error("Not enough arguments to read command, needs source name")
+			return
 		}
 
+		input, err := os.ReadFile(args[0])
+		if err != nil {
+			log.Error("Error reading input: ", err.Error())
+			return
+		}
 		req := &sources.ReadRequest{}
-		json.Unmarshal([]byte(args[1]), req)
-		allowed, err, data := reader.Read(*req)
+		err = json.Unmarshal(input, req)
+		if err != nil {
+			log.Error("Erroring unmarshaling json: ", err.Error())
+			return
+		}
+		allowed, err, data := reader.Read(req)
 
-		fmt.Sprintf("Source Read Request from app %s for: %s\n", req.Requester, req.Source.Name)
+		fmt.Printf("Source Read Request from app %s for: %s\n", req.Requester, req.Source.Name)
 		if err != nil {
 			log.Error("Error reading source: ", err.Error())
 		} else {
-			fmt.Sprintf("Allowed: %t, Data: %s", allowed, string(data))
+			fmt.Printf("Allowed: %t, Data: %s\n", allowed, data)
 		}
 	},
 }
@@ -50,40 +68,41 @@ var writeCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
 			log.Error("Not enough arguments to read command, needs source name")
+			return
 		}
 
+		input, err := os.ReadFile(args[0])
+		if err != nil {
+			log.Error("Error reading input: ", err.Error())
+			return
+		}
 		req := &sources.WriteRequest{}
-		json.Unmarshal([]byte(args[1]), req)
-		allowed, err := writer.Write(*req)
+		err = json.Unmarshal(input, req)
+		if err != nil {
+			log.Error("Erroring unmarshaling json: ", err.Error())
+			return
+		}
+		allowed, err := writer.Write(req)
 
-		fmt.Sprintf("Source Write Request from app %s for: %s\n", req.Requester, req.Source.Name)
+		fmt.Printf("Source Write Request from app %s for: %s\n", req.Requester, req.Source.Name)
 		if err != nil {
 			log.Error("Error reading source: ", err.Error())
 		} else {
-			fmt.Sprintf("Allowed: %t, Data: %s", allowed, string(req.Data))
+			fmt.Printf("Allowed: %t, Data: %s\n", allowed, req.Data)
 		}
 	},
 }
 
-func Execute(sreader sources.Reader, swriter sources.Writer) {
-	reader = sreader
-	writer = swriter
+func Execute() {
 	rootCmd.AddCommand(readCmd)
 	rootCmd.AddCommand(writeCmd)
-	rootCmd.Execute()
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		log.Error("Not enough arguments, enter sources directory")
-		os.Exit(1)
-	}
-	basePath := "~/Desktop/sources"
-	sreader := sources.NewJSONReader(basePath)
-	swriter := sources.NewJSONWriter(basePath)
-	pmanager := sources.NewBasicPermissionsManager()
-	reader := sources.NewReader(sreader, pmanager)
-	writer := sources.NewWriter(swriter, pmanager)
-
-	Execute(*reader, *writer)
+	rootCmd.PersistentFlags().String("path", "~/Desktop/sources", "The path where sources data is located")
+	Execute()
 }

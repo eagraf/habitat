@@ -20,7 +20,7 @@ func NewWriter(S SourceWriter, P PermissionsManager) *Writer {
 }
 
 // return (allowed, error, data)
-func (W *Writer) Write(w WriteRequest) (bool, error) {
+func (W *Writer) Write(w *WriteRequest) (bool, error) {
 	if !W.PermissionsManager.CheckCanWrite(w) {
 		return false, nil
 	}

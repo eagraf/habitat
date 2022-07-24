@@ -19,9 +19,9 @@ func NewReader(S SourceReader, P PermissionsManager) *Reader {
 }
 
 // return (allowed, error, data)
-func (R *Reader) Read(r ReadRequest) (bool, error, SourceData) {
+func (R *Reader) Read(r *ReadRequest) (bool, error, SourceData) {
 	if !R.PermissionsManager.CheckCanRead(r) {
-		return false, nil, nil
+		return false, nil, ""
 	}
 
 	err, data := R.SourceReader.Read(r.Source)
