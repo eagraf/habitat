@@ -33,8 +33,11 @@ jobs:
     - name: Build
       run: make build
 
+    - name: Docker Build
+      run: docker build .
+
     - name: Test
       run: make test
 
-    - name: lint
+    - name: Lint
       run: golint
