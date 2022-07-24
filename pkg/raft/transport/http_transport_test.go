@@ -34,7 +34,7 @@ func TestRPCMarshaling(t *testing.T) {
 	}
 
 	fmt.Println(res)
-	assert.Equal(t, raft.ProtocolVersion(3), res.(raft.AppendEntriesRequest).RPCHeader.ProtocolVersion)
-	assert.Equal(t, uint64(20), res.(raft.AppendEntriesRequest).PrevLogEntry)
-	assert.Equal(t, uint64(102), res.(raft.AppendEntriesRequest).Entries[0].Index)
+	assert.Equal(t, raft.ProtocolVersion(3), res.(*raft.AppendEntriesRequest).RPCHeader.ProtocolVersion)
+	assert.Equal(t, uint64(20), res.(*raft.AppendEntriesRequest).PrevLogEntry)
+	assert.Equal(t, uint64(102), res.(*raft.AppendEntriesRequest).Entries[0].Index)
 }

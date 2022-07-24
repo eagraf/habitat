@@ -8,23 +8,103 @@ if [ -z "${BASH_VERSION:=}" ] ; then
     exit 1
 fi
 
+_ERR_FUNCS=()
+_err_cascade () {
+    err_status=$1
+    trap - ERR
+    local i
+    for (( i = ${#_ERR_FUNCS[@]} - 1 ; i >= 0 ; i-- )) ; do
+	${_ERR_FUNCS[$i]}
+    done
+
+    exit $err_status
+}
+trap '_err_cascade $?' ERR
+
+aterr () {
+    _ERR_FUNCS+=("$@")
+}
+
+_err_report () {
+    cat 1>&2 <<EOF
+problem executing commands:
+EOF
+    local i=0
+    while caller $i 1>&2; do
+	((i += 1))
+    done
+}
+
+aterr '_err_report'
+
+_EXIT_FUNCS=()
+_exit_cascade () {
+    local i
+    for (( i = ${#_EXIT_FUNCS[@]} - 1 ; i >= 0 ; i-- )) ; do
+	${_EXIT_FUNCS[$i]}
+    done
+}
+trap '_exit_cascade' EXIT
+
+atexit () {
+    _EXIT_FUNCS+=("$@")
+}
+
+__CLEANUP_FILES=()
+__CLEANUP_DIRS=()
+
+__cleanup () {
+    [[ ${#__CLEANUP_FILES[@]} -gt 0 ]] && rm -f "${__CLEANUP_FILES[@]}"
+    rm -rf "${__CLEANUP_DIRS[@]}"
+}
+
+atexit __cleanup
+
+#_wait_for_children () {
+    #while [[ -n $(jobs) ]]; do
+	#wait
+    #done
+#}
+
+#atexit _wait_for_children
+
 __TESTING_FUNCS=()
 
+: ${__LIB_PARENT_SHELL_PID:=$BASHPID}
+export __LIB_PARENT_SHELL_PID
+
 testing::register () {
+    log::info "REGISTERING"
     __TESTING_FUNCS+=("$*")
 }
 
 testing::run () {
+     # Look for if our invoker wants us to focus on a specific child test.
+    if [[ -v __TESTING_RUN_FUNC ]] ; then
+	# On failure, let the error trace fire, and the shell exit...
+	$__TESTING_RUN_FUNC
+	# ... otherwise default to success.
+	return 0
+    fi
+
     local count=${#__TESTING_FUNCS[@]}
     local res
     echo 1..$count
 
+    local relpath
+    relpath="./$(realpath "--relative-to=$PWD" "$0")"
+
     for (( i = 0; i < $count ; i++ )) ; do
+    echo $i
+    local output
+    output=$(temp::file)
+    echo "$output"
 	local testnum=$(( $i + 1 ))
-	if res="$(${__TESTING_FUNCS[$i]})" ; then
-	    echo "ok $testnum - $res"
+    echo "$__TESTING_FUNCS[$i] grhrh"
+	if ( unset __LIB_PARENT_SHELL_PID ; __TESTING_RUN_FUNC="${__TESTING_FUNCS[$i]}" "$relpath" 2>&1 ) > $output 2>&1 ; then
+	    echo "ok $testnum - $(cat $output)"
 	else
-	    echo "not ok $testnum - $res"
+	    echo "not ok $testnum - $(cat $output)"
 	fi
     done
 }
@@ -82,4 +162,17 @@ log::fatal () {
 
 log::info () {
     echo "INFO: $*" >&${_LOGFD}
+}
+
+TMPDIR=$(mktemp -d) || log::fatal "could not create directory for temporary files"
+export TMPDIR
+__CLEANUP_DIRS+=("$TMPDIR")
+
+temp::file () {
+    log::info "abc"
+    mktemp -p "$TMPDIR" "$@"
+}
+
+temp::dir () {
+    mktemp -d -p "$TMPDIR" "$@"
 }

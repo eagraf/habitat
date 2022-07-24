@@ -51,27 +51,6 @@ func (n *node) mockHandler(stream network.Stream) {
 	rw.Flush()
 }
 
-func TestStuff(t *testing.T) {
-	ip, err := compass.LocalIPv4()
-	if err != nil {
-		t.Error(err)
-	}
-
-	h1 := makeRandomHost(ip.String(), 6000)
-	h2 := makeRandomHost(ip.String(), 6001)
-	n2 := &node{
-		Host:     h2,
-		remoteID: h1.ID(),
-	}
-
-	h2.SetStreamHandler("/fake-protocol", n2.mockHandler)
-
-	_, err = h1.NewStream(context.Background(), h2.ID(), "/fake-protocol")
-	if err != nil {
-		t.Error(err)
-	}
-}
-
 func TestLibP2PConn(t *testing.T) {
 	ip, err := compass.LocalIPv4()
 	if err != nil {

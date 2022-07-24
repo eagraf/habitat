@@ -48,10 +48,6 @@ func requestType(req interface{}) (string, error) {
 }
 
 type RequestWrapper struct {
-	/*	Command string   `json:"command"`
-		Args    []string `json:"args"`
-		Env     []string `json:"env"`
-		Flags   []string `json:"flags"`*/
 	Type       string `json:"request_type"`
 	Serialized string `json:"serialized"`
 }
@@ -120,10 +116,3 @@ func (r *ResponseWrapper) Encode() ([]byte, error) {
 
 	return msg, nil
 }
-
-/*func (r *ResponseWrapper) String() string {
-	if r.Status != 0 {
-		return fmt.Sprintf("Error: %s", r.Message)
-	}
-	return string(r.Message)
-}*/
