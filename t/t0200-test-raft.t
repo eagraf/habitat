@@ -7,7 +7,7 @@ raft-simple() {
     testing::desc "test raft consensus protocol"
     echo "HOLA"
     local ret
-    { $TESTDIR/t0200/raft-simple.bash ; ret=$? ; } > /dev/null || true
+    { $TESTDIR/t0200/raft-simple.bash ; ret=$? ; } || true
 
     echo "HEHE"
 
@@ -19,7 +19,7 @@ raft-follower-restart() {
     echo "HEHE"
 
     local ret
-    { $TESTDIR/t0200/follower-restart.bash ; ret=$? ; } > /dev/null || true
+    { $TESTDIR/t0200/follower-restart.bash ; ret=$? ; } || true
 
     return $ret
 }
