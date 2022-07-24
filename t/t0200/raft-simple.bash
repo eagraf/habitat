@@ -77,8 +77,11 @@ COUNTER2=`./bin/habitatctl -p 2001 community state -c $COMMUNITY_UUID | jq .coun
 COUNTER3=`./bin/habitatctl -p 2002 community state -c $COMMUNITY_UUID | jq .counter`
 
 docker-compose -f docker-compose-raft.yml down 2> /dev/null
-docker-compose rm -f 2> /dev/null
+#docker-compose rm -f 2> /dev/null
 
 [[ $COUNTER1 -eq 3 ]] || log::fatal "alice's counter should be 3, not $COUNTER1"
 [[ $COUNTER2 -eq 3 ]] || log::fatal "bob's counter should be 3, not $COUNTER2"
 [[ $COUNTER3 -eq 3 ]] || log::fatal "charlie's counter should be 3, not $COUNTER3"
+echo "HOLAGH"
+
+exit 0
