@@ -3,6 +3,8 @@ import DocList from "./DocList"
 import Editor from "./Editor"
 import { Form, Button, Modal } from 'react-bootstrap'
 
+const backend_url = 'http://localhost:' + (window.location.search ? window.location.search.substring(1) : 4000)
+
 const initialNotesState = {
     currentDoc: '/orbitdb/zdpuAwpxc5d1CZ1VgxSDW7sFzNrRBe3ZwXiRuHjJ1gM7FiZbA/docName',
     docList: []
@@ -61,7 +63,7 @@ export default function Layout() {
                 event.preventDefault()
                 //@ts-ignore
                 const noteName = event.target.noteName.value
-                const response = await fetch('http://localhost:4000/newDoc?name=' + noteName, { method: 'POST' })
+                const response = await fetch(backend_url + '/newDoc?name=' + noteName, { method: 'POST' })
                 const addr = await response.text()
                 console.log(addr)
                 dispatch({ type: 'ADD_DOC', doc: addr })

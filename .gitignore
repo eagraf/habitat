@@ -5,5 +5,3 @@ procs/*
 .vscode
 habitat.code-workspace
 *.DS_Store
-
-orbitdb

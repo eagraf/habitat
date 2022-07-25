@@ -37,6 +37,9 @@ const ipfs = ipfsHttpClient.create({
   port: 5001,
 })
 
+const backend_url = 'localhost:' + (window.location.search ? window.location.search.substring(1) : 4000)
+console.log(backend_url)
+
 export default function EditorContainer({ docName }: EditorContainerProps) {
 
   const [docState, setDocState] = useState(() => {
@@ -44,7 +47,7 @@ export default function EditorContainer({ docName }: EditorContainerProps) {
     return {
       yDoc,
       webrtcProvider: new WebRtcProvider(docName, yDoc, ipfs),
-      backendProvider: new BackendProvider(docName, yDoc, 'localhost:4000')
+      backendProvider: new BackendProvider(docName, yDoc, backend_url)
     }
   })
 
@@ -81,7 +84,7 @@ export default function EditorContainer({ docName }: EditorContainerProps) {
 
       const yDoc = new Y.Doc()
       const webrtcProvider = new WebRtcProvider(docName, yDoc, ipfs)
-      const backendProvider = new BackendProvider(docName, yDoc, 'localhost:4000')
+      const backendProvider = new BackendProvider(docName, yDoc, backend_url)
       setDocState({
         yDoc,
         webrtcProvider,

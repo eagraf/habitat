@@ -1,9 +1,12 @@
 import React from "react";
 import useAsync from "../util/useAsync";
 
+const backend_url = 'http://localhost:' + (window.location.search ? window.location.search.substring(1) : 4000)
+
+
 export default function DocList({ notesState, dispatch }) {
     const asyncState = useAsync<string[]>(async () => {
-        const response = await fetch('http://localhost:4000/docs')
+        const response = await fetch(backend_url + '/docs')
 
         const docList = await response.json()
 

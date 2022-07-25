@@ -13,6 +13,9 @@ import * as encoding from 'lib0/encoding'
 import syncProtocol from 'y-protocols/sync'
 
 import storage from 'node-persist';
+import { initLibp2p } from './libp2p.service'
+
+import { createFromB58String } from 'peer-id'
 
 const PORT = process.argv[2];
 
@@ -22,27 +25,33 @@ enum DocState {
   Closed,
 }
 
+const IPFS_PORT = parseInt(process.argv[3])
+
 async function main() {
+
+
   const ipfs = ipfsHttpClient.create({
     host: 'localhost',
-    port: parseInt(process.argv[3]),
+    port: IPFS_PORT,
   })
+  
+  const peerId = (await ipfs.id()).id
+  console.log(peerId)
 
   await storage.init({
-    dir: 'persist'
+    dir: 'persist' + '_' + IPFS_PORT
   })
   const docs = new Map<string, EventStore<Uint8Array> | null>()
 
   const stored = await storage.get('docs')
-  console.log(stored)
   if(stored) {
     stored.forEach((x: string) => {
       docs.set(x, null)
     })
   }
 
-  const peerId = (await ipfs.id()).id
-  console.log(peerId)
+
+
 
   ipfs.pubsub.subscribe('habitat_notes', async (msg) => {
     if(msg.from === peerId) {
@@ -69,11 +78,19 @@ async function main() {
           }
           docs.set(docName, null)
         })
+        db.events.on('replicated', (address, other) => {
+          console.log('replicated address ', address, other)
+        })
+        db.events.on('peer', (peer, address, heads) => {
+          console.log('connected to', peer)
+        })
       }
     }
   })
   
-  const orbitdb = await OrbitDb.createInstance(ipfs)
+  const orbitdb = await OrbitDb.createInstance(ipfs, {
+    directory: './orbitdb_' + IPFS_PORT
+  })
   console.log('orbitdb instance created')
 
   const app = express()
@@ -143,8 +160,18 @@ async function main() {
 
     docs.set(docName, db)
 
+    db.events.on('replicated', (address, other) => {
+      console.log('replicated address ', address, other)
+    })
+    db.events.on('peer', (peer, address, heads) => {
+      console.log('connected to', peer)
+    })
+    db.events.on('peer.exchanged', (peer, address, heads) => {
+      console.log('exchanged with ', peer)
+    })
+
     db.events.on('replicate.progress', (address, hash, entry, progress, have) => {
-      //console.log("Replicating", address, entry, progress, have)
+      console.log("Replicating", address, entry, progress, have)
       ws.send(entry.payload.value)
     })
 
@@ -173,7 +200,6 @@ async function main() {
       db.close()
       docs.set(docName, null)
       console.log("closed orbitdb after disconnect")
-
     })
   })
   

@@ -5,18 +5,22 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsc && node dist/app.js 4000 5001",
-    "start2": "tsc && node dist/app.js 4005 5002"
+    "start": "tsc && node dist/app2.js 4000 5001",
+    "start2": "tsc && node dist/app2.js 4005 5002"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@libp2p/mplex": "^1.0.3",
     "cors": "^2.8.5",
     "express": "^4.17.2",
     "ipfs-http-client": "^56.0.0",
     "lib0": "^0.2.43",
+    "libp2p": "^0.36.2",
+    "libp2p-tcp": "^0.17.2",
     "node-persist": "^3.1.0",
     "orbit-db": "^0.28.1",
+    "peer-id": "^0.16.0",
     "ws": "^8.4.2",
     "y-protocols": "^1.0.5",
     "yjs": "^13.5.24"
