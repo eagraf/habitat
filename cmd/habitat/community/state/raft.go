@@ -25,7 +25,7 @@ func NewRaftFSMAdapter(commState []byte) (*RaftFSMAdapter, error) {
 
 	return &RaftFSMAdapter{
 		jsonState:  jsonState,
-		updateChan: make(chan StateUpdate, 0),
+		updateChan: make(chan StateUpdate),
 	}, nil
 }
 
@@ -127,5 +127,4 @@ func (s *FSMSnapshot) Persist(sink raft.SnapshotSink) error {
 
 // Release is invoked when we are finished with the snapshot.
 func (s *FSMSnapshot) Release() {
-	return
 }

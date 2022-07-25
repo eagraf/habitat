@@ -36,11 +36,6 @@ func (ht *HTTPTransport) Consumer() <-chan raft.RPC {
 	return ht.consumeCh
 }
 
-// Same as Consumer(), but returns a chan that is writeable for internal use
-func (ht *HTTPTransport) consumer() chan raft.RPC {
-	return ht.consumeCh
-}
-
 func (ht *HTTPTransport) LocalAddr() raft.ServerAddress {
 	return ht.address
 }

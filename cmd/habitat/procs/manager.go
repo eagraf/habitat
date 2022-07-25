@@ -20,8 +20,6 @@ type Manager struct {
 
 	errChan chan ProcError
 	lock    *sync.Mutex
-
-	archOS string
 }
 
 func NewManager(procDir string, rules proxy.RuleSet, appConfigs *configuration.AppConfiguration) *Manager {

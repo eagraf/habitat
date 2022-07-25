@@ -9,8 +9,6 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
-const clientVersion = "cmd/habitat/p2p/0.0.1"
-
 type Node struct {
 	listenAddr ma.Multiaddr
 	host       host.Host

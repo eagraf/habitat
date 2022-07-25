@@ -89,7 +89,6 @@ func unmarshalRPCResponse(rpcType uint8, buf []byte, resp interface{}) error {
 			return err
 		}
 	default:
-		resp = nil
 		return fmt.Errorf("%d is not a valid rpc type", rpcType)
 	}
 

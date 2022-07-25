@@ -6,37 +6,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"path/filepath"
 	"time"
 
 	"github.com/eagraf/habitat/pkg/compass"
 	client "github.com/eagraf/habitat/pkg/habitat_client"
-	"github.com/eagraf/habitat/pkg/ipfs"
 	"github.com/eagraf/habitat/structs/community"
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
 )
-
-//  bootstrap peers are expected to be "always online"
-//  does ipfs have a built in way to connect to all peers from the bootstrap?
-//  we might need some protocol to do this : get peers from bootstrap node and try to connect
-type CommunityConfig struct {
-	Name           string   `json:"name"`
-	SwarmKey       string   `json:"swarm_key"`
-	BootstrapPeers []string `json:"btstp_peers"` // addresses of nodes that are bootstrap
-	Peers          []string `json:"peers"`       // peer ids of nodes
-}
-
-// This is a data structure that represents all the communities the user is a part of
-type UserCommunities struct {
-	Communities []CommunityConfig
-}
-
-var NodeConfig = &ipfs.IPFSConfig{
-	CommunitiesPath: compass.CommunitiesPath(),
-	StartCmd:        filepath.Join(compass.HabitatPath(), "apps", "ipfs", "start"),
-}
 
 /*
  CreateCommunity: create a node with new peers, serves as default bootstrap for community
@@ -67,12 +45,6 @@ func CreateCommunity(name string, id string, path string, createIpfs bool) error
 	}
 
 	return nil
-}
-
-type CommunityInfo struct {
-	Name          string `json:"name"`
-	Key           string `json:"key"`
-	BootstrapPeer string `json:"bootstrap"`
 }
 
 func CreateHandler(w http.ResponseWriter, r *http.Request) {
