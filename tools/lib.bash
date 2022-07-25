@@ -8,6 +8,58 @@ if [ -z "${BASH_VERSION:=}" ] ; then
     exit 1
 fi
 
+_ERR_FUNCS=()
+_err_cascade () {
+    err_status=$1
+    trap - ERR
+    local i
+    for (( i = ${#_ERR_FUNCS[@]} - 1 ; i >= 0 ; i-- )) ; do
+	${_ERR_FUNCS[$i]}
+    done
+
+    exit $err_status
+}
+trap '_err_cascade $?' ERR
+
+aterr () {
+    _ERR_FUNCS+=("$@")
+}
+
+_err_report () {
+    cat 1>&2 <<EOF
+problem executing commands:
+EOF
+    local i=0
+    while caller $i 1>&2; do
+	((i += 1))
+    done
+}
+
+aterr '_err_report'
+
+_EXIT_FUNCS=()
+_exit_cascade () {
+    local i
+    for (( i = ${#_EXIT_FUNCS[@]} - 1 ; i >= 0 ; i-- )) ; do
+	${_EXIT_FUNCS[$i]}
+    done
+}
+trap '_exit_cascade' EXIT
+
+atexit () {
+    _EXIT_FUNCS+=("$@")
+}
+
+__CLEANUP_FILES=()
+__CLEANUP_DIRS=()
+
+__cleanup () {
+    [[ ${#__CLEANUP_FILES[@]} -gt 0 ]] && rm -f "${__CLEANUP_FILES[@]}"
+    rm -rf "${__CLEANUP_DIRS[@]}"
+}
+
+atexit __cleanup
+
 __TESTING_FUNCS=()
 
 testing::register () {
