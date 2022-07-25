@@ -83,3 +83,15 @@ log::fatal () {
 log::info () {
     echo "INFO: $*" >&${_LOGFD}
 }
+
+TMPDIR=$(mktemp -d) || log::fatal "could not create directory for temporary files"
+export TMPDIR
+__CLEANUP_DIRS+=("$TMPDIR")
+
+temp::file () {
+    mktemp -p "$TMPDIR" "$@"
+}
+
+temp::dir () {
+    mktemp -d -p "$TMPDIR" "$@"
+}
