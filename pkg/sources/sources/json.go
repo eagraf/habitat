@@ -47,7 +47,7 @@ func (W *JSONWriter) Write(source Source, data SourceData) error {
 	path := getPath(W.Path, source)
 	verrs, err := source.Schema.ValidateBytes(context.Background(), []byte(data))
 	if err != nil {
-		log.Error("Error validating schema bytes: %s", err.Error())
+		log.Error("Error validating schema bytes: ", err.Error())
 	} else if len(verrs) > 0 {
 		for _, e := range verrs {
 			log.Error("KeyError when validating source data against schema: ", e.Error())
