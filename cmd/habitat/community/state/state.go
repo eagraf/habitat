@@ -69,7 +69,7 @@ func NewCommunityStateMachine(initState *community.CommunityState, updateChan <-
 		jsonState:  jsonState,
 		updateChan: updateChan,
 		dispatcher: dispatcher,
-		doneChan:   make(chan bool, 0),
+		doneChan:   make(chan bool),
 		executor:   executor,
 	}, nil
 }
@@ -165,7 +165,7 @@ func NewJSONState(jsonSchema []byte, initState []byte) (*JSONState, error) {
 		schema:         rs,
 		state:          initState,
 		Mutex:          &sync.Mutex{},
-		transitionChan: make(chan *CommunityStateTransition, 0),
+		transitionChan: make(chan *CommunityStateTransition),
 	}, nil
 }
 

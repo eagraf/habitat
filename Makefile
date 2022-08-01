@@ -40,6 +40,15 @@ run : habitat c-backend c-frontend
 
 run-docker: habitat-docker c-backend-docker c-frontend
 
+test::
+	go test ./...
+
+test::
+	prove -v -r
+
+lint:
+	CGO_ENABLED=0 golangci-lint run --skip-dirs '(^|/)virtctl($$|/)' -D errcheck ./...
+
 install-setup :
 	rm -rf $(DEV_PROC_DIR)/bin/*
 	rm -rf $(DEV_PROC_DIR)/web/*

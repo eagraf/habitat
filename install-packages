@@ -1,0 +1,29 @@
+#!/bin/bash
+
+. "$(dirname "$0")/tools/lib.bash"
+
+log::info "Installing packages..."
+
+# Install IPFS
+RUNDIR=$(mktemp -d)
+cd $RUNDIR
+
+mkdir -p ${HOME}/bin
+export PATH=$PATH:${HOME}/bin
+
+wget https://dist.ipfs.io/kubo/v0.14.0/kubo_v0.14.0_linux-amd64.tar.gz
+tar -xvzf kubo_v0.14.0_linux-amd64.tar.gz
+cd kubo
+sudo bash install.sh
+cd "$RUNDIR"
+
+GOLANGCI_LINT_VERSION="1.45.2"
+
+if ! which golangci-lint > /dev/null ; then
+    wget https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz
+    tar -xzf golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz
+    mv golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64/golangci-lint ${HOME}/bin/
+    rm -rf golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64*
+fi
+
+rm -rf $RUNDIR

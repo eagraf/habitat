@@ -26,6 +26,7 @@ func readSingleValueConfigFile(path string) string {
 }
 
 // singleValueCommand is good for running commands that return a single value config (e.g. hostname)
+//nolint
 func singleValueCommand(cmd string) string {
 	command := exec.Command(cmd)
 	output, err := command.CombinedOutput()

@@ -64,6 +64,9 @@ func (c *IPFSConfig) NewCommunityIPFSNode(name string, path string) (error, stri
 	parts[len(parts)-1] = fmt.Sprint(mrand.Intn(65536-9999) + 9999)
 	data.Addresses.API = []string{strings.Join(parts, "/")}
 	bytes, err = json.Marshal(data)
+	if err != nil {
+		return err, "", "", s
+	}
 	log.Info().Msg("data " + string(bytes))
 	ioutil.WriteFile(filepath.Join(path, "ipfs", "/config"), bytes, 0755)
 
@@ -72,6 +75,9 @@ func (c *IPFSConfig) NewCommunityIPFSNode(name string, path string) (error, stri
 	key := KeyGen()
 	keyBytes := []byte("/key/swarm/psk/1.0.0/\n/base16/\n" + key + "\n")
 	err = ioutil.WriteFile(filepath.Join(path, "ipfs", "swarm.key"), keyBytes, 0755)
+	if err != nil {
+		return err, "", "", s
+	}
 
 	return nil, key, data.Identity.PeerID, data.Addresses.Swarm
 }
@@ -106,6 +112,9 @@ func (c *IPFSConfig) JoinCommunityIPFSNode(name string, path string, key string,
 	parts[len(parts)-1] = fmt.Sprint(mrand.Intn(65536-9999) + 9999)
 	data.Addresses.API = []string{strings.Join(parts, "/")}
 	bytes, err = json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
 	log.Info().Msg("data " + string(bytes))
 	ioutil.WriteFile(filepath.Join(commPath, "ipfs", "config"), bytes, 0755)
 
