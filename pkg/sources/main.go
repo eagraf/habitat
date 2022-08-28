@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 
+	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/sources/sources"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -103,6 +105,7 @@ func Execute() {
 }
 
 func main() {
-	rootCmd.PersistentFlags().String("path", "~/Desktop/sources", "The path where sources data is located")
+	rootCmd.PersistentFlags().String("path", path.Join(compass.HabitatPath(), "sources"), "The path where sources data is located")
+	rootCmd.MarkFlagRequired("path")
 	Execute()
 }
