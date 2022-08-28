@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 )
 
 /*
@@ -28,10 +28,10 @@ func NewJSONReader(path string) *JSONReader {
 	return &JSONReader{Path: path}
 }
 
-func (R *JSONReader) Read(req Source) (error, SourceData) {
+func (R *JSONReader) Read(req Source) (SourceData, error) {
 	path := getPath(R.Path, req)
 	bytes, err := os.ReadFile(path)
-	return err, SourceData(bytes)
+	return SourceData(bytes), err
 }
 
 // JSON source writer
@@ -47,10 +47,10 @@ func (W *JSONWriter) Write(source Source, data SourceData) error {
 	path := getPath(W.Path, source)
 	verrs, err := source.Schema.ValidateBytes(context.Background(), []byte(data))
 	if err != nil {
-		log.Error("Error validating schema bytes: ", err.Error())
+		log.Error().Msgf("Error validating schema bytes: %s", err.Error())
 	} else if len(verrs) > 0 {
 		for _, e := range verrs {
-			log.Error("KeyError when validating source data against schema: ", e.Error())
+			log.Error().Msgf("KeyError when validating source data against schema: %s", e.Error())
 		}
 		return errors.New("Unable to validate schema")
 	}

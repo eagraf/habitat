@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/eagraf/habitat/pkg/sources/sources"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -36,26 +36,26 @@ var readCmd = &cobra.Command{
 	Short: "read a source file",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
-			log.Error("Not enough arguments to read command, needs source name")
+			log.Error().Msg("Not enough arguments to read command, needs source name")
 			return
 		}
 
 		input, err := os.ReadFile(args[0])
 		if err != nil {
-			log.Error("Error reading input: ", err.Error())
+			log.Error().Msgf("Error reading input: %s", err.Error())
 			return
 		}
 		req := &sources.ReadRequest{}
 		err = json.Unmarshal(input, req)
 		if err != nil {
-			log.Error("Erroring unmarshaling json: ", err.Error())
+			log.Error().Msgf("Erroring unmarshaling json: %s", err.Error())
 			return
 		}
 		allowed, err, data := reader.Read(req)
 
 		fmt.Printf("Source Read Request from app %s for: %s\n", req.Requester, req.Source.Name)
 		if err != nil {
-			log.Error("Error reading source: ", err.Error())
+			log.Error().Msgf("Error reading source: %s", err.Error())
 		} else {
 			fmt.Printf("Allowed: %t, Data: %s\n", allowed, data)
 		}
@@ -67,26 +67,26 @@ var writeCmd = &cobra.Command{
 	Short: "write a source file",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
-			log.Error("Not enough arguments to read command, needs source name")
+			log.Error().Msg("Not enough arguments to read command, needs source name")
 			return
 		}
 
 		input, err := os.ReadFile(args[0])
 		if err != nil {
-			log.Error("Error reading input: ", err.Error())
+			log.Error().Msgf("Error reading input: %s", err.Error())
 			return
 		}
 		req := &sources.WriteRequest{}
 		err = json.Unmarshal(input, req)
 		if err != nil {
-			log.Error("Erroring unmarshaling json: ", err.Error())
+			log.Error().Msgf("Erroring unmarshaling json: %s", err.Error())
 			return
 		}
 		allowed, err := writer.Write(req)
 
 		fmt.Printf("Source Write Request from app %s for: %s\n", req.Requester, req.Source.Name)
 		if err != nil {
-			log.Error("Error reading source: ", err.Error())
+			log.Error().Msgf("Error reading source: %s", err.Error())
 		} else {
 			fmt.Printf("Allowed: %t, Data: %s\n", allowed, req.Data)
 		}

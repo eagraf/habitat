@@ -1,7 +1,7 @@
 package sources
 
 import (
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 )
 
 type ReadRequest struct {
@@ -10,7 +10,7 @@ type ReadRequest struct {
 }
 
 type SourceReader interface {
-	Read(Source) (error, SourceData) // return (error, data)
+	Read(Source) (SourceData, error) // return (error, data)
 }
 
 type Reader struct {
@@ -28,9 +28,9 @@ func (R *Reader) Read(r *ReadRequest) (bool, error, SourceData) {
 		return false, nil, ""
 	}
 
-	err, data := R.SourceReader.Read(r.Source)
+	data, err := R.SourceReader.Read(r.Source)
 	if err != nil {
-		log.Error("Error reading source: ", err.Error())
+		log.Error().Msgf("Error reading source: %s", err.Error())
 	}
 	return true, err, data
 }
