@@ -14,13 +14,11 @@ require (
 	github.com/libp2p/go-libp2p-core v0.14.0
 	github.com/multiformats/go-multiaddr v0.5.0
 	github.com/qri-io/jsonschema v0.2.1
-	github.com/rs/zerolog v1.26.1
-	github.com/spf13/cobra v1.4.0
 	github.com/rogpeppe/go-internal v1.8.0 // indirect
 	github.com/rs/zerolog v1.26.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/smartystreets/assertions v1.0.1 // indirect
-	github.com/spf13/cobra v1.2.1
+	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
 	github.com/stretchr/testify v1.7.0
@@ -154,8 +152,6 @@ require (
 	github.com/qri-io/jsonpointer v0.1.1 // indirect
 	github.com/raulk/clock v1.1.0 // indirect
 	github.com/raulk/go-watchdog v1.2.0 // indirect
-	github.com/rogpeppe/go-internal v1.8.0 // indirect
-	github.com/smartystreets/assertions v1.0.1 // indirect
 	github.com/spacemonkeygo/spacelog v0.0.0-20180420211403-2296661a0572 // indirect
 	github.com/spf13/afero v1.6.0 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
