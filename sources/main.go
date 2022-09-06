@@ -1,13 +1,15 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path"
 
 	"github.com/eagraf/habitat/pkg/compass"
-	"github.com/eagraf/habitat/pkg/sources/sources"
+	"github.com/eagraf/habitat/sources/sources"
+	"github.com/eagraf/habitat/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -21,12 +23,6 @@ var rootCmd = &cobra.Command{
 	Long:  `Sources allows reading and writinng to local data`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// Run at beginning
-		basePath, _ := cmd.Flags().GetString("path")
-		sreader := sources.NewJSONReader(basePath)
-		swriter := sources.NewJSONWriter(basePath)
-		pmanager := sources.NewBasicPermissionsManager()
-		reader = sources.NewReader(sreader, pmanager)
-		writer = sources.NewWriter(swriter, pmanager)
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -105,7 +101,27 @@ func Execute() {
 }
 
 func main() {
+	ctx := context.Background()
+
+	sourcesPath := utils.GetEnvDefault("SOURCES_PATH", "~/habitat/data/sources")
+	sourcesPort := utils.GetEnvDefault("PORT", ":8765")
+	schemaPort := ":8764"
+	sreader := sources.NewJSONReader(sourcesPath)
+	swriter := sources.NewJSONWriter(sourcesPath)
+	pmanager := sources.NewBasicPermissionsManager()
+	reader = sources.NewReader(sreader, pmanager)
+	writer = sources.NewWriter(swriter, pmanager)
+
 	rootCmd.PersistentFlags().String("path", path.Join(compass.HabitatPath(), "sources"), "The path where sources data is located")
 	rootCmd.MarkFlagRequired("path")
 	Execute()
+
+	testSchemaServer := sources.NewSchemaServer("schema")
+	go testSchemaServer.Start(ctx, schemaPort)
+
+	testDataServer := sources.NewDataServer("my-community", "localhost", "8766", writer, reader)
+	go testDataServer.Start(ctx)
+	// TODO: how do we get data server nodes?
+	sourcesServer := sources.NewSourcesServer(reader, writer, map[string]sources.DataServerNode{"my-community": *testDataServer.Node})
+	sourcesServer.Start(ctx, sourcesPort)
 }

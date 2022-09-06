@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	assert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 var geographyJSON = `{"latitude":45,"longitude":45}`
