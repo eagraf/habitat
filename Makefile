@@ -1,3 +1,5 @@
+SUBDIRS		=	cmd
+
 include ./common.mk
 
 install-community : 
