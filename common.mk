@@ -1,9 +1,44 @@
-MKFILE_PATH := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+MIN_MAKE_VERSION	=	4.0.0
+
+ifneq ($(MIN_MAKE_VERSION),$(firstword $(sort $(MAKE_VERSION) $(MIN_MAKE_VERSION))))
+$(error you must have a version of GNU make newer than v$(MIN_MAKE_VERSION) installed)
+endif
+
+export MAKECMDGOALS
+
+SHELL			:=	bash
+.SHELLFLAGS		:=	-eu -o pipefail -c
+
 
 # TODO reenable this without system specific tools
 # NPROCS = $(shell sysctl hw.ncpu  | grep -o '[0-9]\+')
 NPROCS = 8
-MAKEFLAGS += -j$(NPROCS)
+MAKEFLAGS		+=	--warn-undefined-variables	\
+				--no-builtin-rules 		\
+				-j$(NPROCS)		\
+
+CP			=	cp
+
+OS			=	$(shell uname)
+
+ARCH			=	unknown
+CURARCH			=	unknown
+
+ifeq ($(OS), Linux)
+ARCH			=	amd64 # sry arm
+CURARCH			=	amd64-linux
+endif
+
+ifeq ($(OS), Darwin)
+ARCH			=	amd64
+CURARCH			=	amd64-darwin
+endif
+
+# If TOPDIR isn't already defined, let's go with a default
+ifeq ($(origin TOPDIR), undefined)
+TOPDIR			:=	$(realpath $(patsubst %/,%, $(dir $(lastword $(MAKEFILE_LIST)))))
+endif
+
 
 export BIN_DIR := $(MKFILE_PATH)bin
 export DEV_DATA_DIR := $(MKFILE_PATH)data
