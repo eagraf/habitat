@@ -1,5 +1,8 @@
 MKFILE_PATH := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-NPROCS = $(shell sysctl hw.ncpu  | grep -o '[0-9]\+')
+
+# TODO reenable this without system specific tools
+# NPROCS = $(shell sysctl hw.ncpu  | grep -o '[0-9]\+')
+NPROCS = 8
 MAKEFLAGS += -j$(NPROCS)
 
 export BIN_DIR := $(MKFILE_PATH)bin
