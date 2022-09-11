@@ -11,6 +11,7 @@ Basic types about schema and sources, shared types.
 type Schema jsonschema.Schema // use library that supplies validator
 type SourceData string        // maybe this will evolve into a more fancy type in the future - for now json data stoed as bytes
 
+// eventually this will have types like "static", CRDT, relational etc.
 type Source struct {
 	// name and description are here just for easy access rather than getting it from Schema
 	Name        string            `json:"name"`
