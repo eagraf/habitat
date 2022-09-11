@@ -101,6 +101,7 @@ func Execute() {
 
 func main() {
 	sourcesPath := utils.GetEnvDefault("SOURCES_PATH", "~/habitat/data/sources")
+	sourcesPort := utils.GetEnvDefault("PORT", ":8765")
 	sreader := sources.NewJSONReader(sourcesPath)
 	swriter := sources.NewJSONWriter(sourcesPath)
 	pmanager := sources.NewBasicPermissionsManager()
@@ -113,5 +114,6 @@ func main() {
 
 	// TODO: how do we get data server nodes?
 	sourcesServer := sources.NewSourcesServer(reader, writer, map[string]sources.DataServerNode{})
-	sourcesServer.Start()
+	sourcesServer.Start(sourcesPort)
+
 }

@@ -7,6 +7,8 @@ import (
 	"net/http/httputil"
 	"net/url"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/gorilla/mux"
 )
 
@@ -90,8 +92,12 @@ func (s *SourcesServer) WriteHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (s *SourcesServer) Start() {
+func (s *SourcesServer) Start(port string) {
 	r := mux.NewRouter()
 	r.HandleFunc("/read", s.ReadHandler)
 	r.HandleFunc("/write", s.WriteHandler)
+	log.Info().Msgf("Starting source server on %s", port)
+	if err := http.ListenAndServe(port, r); err != nil {
+		log.Fatal().Err(err)
+	}
 }

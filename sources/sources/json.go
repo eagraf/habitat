@@ -54,6 +54,7 @@ func (W *JSONWriter) Write(source Source, data SourceData) error {
 		}
 		return errors.New("Unable to validate schema")
 	}
-	err = os.WriteFile(path, []byte(data), fs.FileMode(os.O_RDWR))
+	// TODO: is this the right permissions?
+	err = os.WriteFile(path, []byte(data), fs.FileMode(0644))
 	return err
 }
