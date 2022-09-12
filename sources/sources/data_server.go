@@ -1,11 +1,13 @@
 package sources
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/rs/zerolog/log"
 )
 
 type DataServer struct {
@@ -48,6 +50,7 @@ func (s *DataServer) ReadHandler(w http.ResponseWriter, r *http.Request) {
 	allowed, err, data := s.Reader.Read(readreq)
 	if err != nil {
 		w.Write([]byte(fmt.Sprintf("error: error reading from source %s", err.Error())))
+		return
 	}
 
 	if allowed {
@@ -72,7 +75,7 @@ func (s *DataServer) WriteHandler(w http.ResponseWriter, r *http.Request) {
 	allowed, err := s.Writer.Write(writereq)
 	if err != nil {
 		w.Write([]byte(fmt.Sprintf("error: error writing to source %s", err.Error())))
-
+		return
 	}
 
 	if allowed {
@@ -82,8 +85,14 @@ func (s *DataServer) WriteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *DataServer) Start() {
+func (s *DataServer) Start(ctx context.Context) {
 	r := mux.NewRouter()
 	r.HandleFunc("/read", s.ReadHandler)
 	r.HandleFunc("/write", s.WriteHandler)
+
+	addr := s.Node.Host + ":" + s.Node.Port
+	log.Info().Msgf("Starting data source server on %s", addr)
+	if err := http.ListenAndServe(addr, r); err != nil {
+		log.Fatal().Err(err)
+	}
 }

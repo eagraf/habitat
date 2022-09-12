@@ -1,6 +1,7 @@
 package sources
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -23,9 +24,11 @@ type SourcesServer struct {
 func NewSourcesServer(localReader *Reader, localWriter *Writer, dataNodes map[string]DataServerNode) *SourcesServer {
 	proxyNodes := make(map[string]*httputil.ReverseProxy)
 	for community, dataNode := range dataNodes {
-		proxyNodes[community] = httputil.NewSingleHostReverseProxy(&url.URL{
-			Host: dataNode.Host + dataNode.Port,
-		})
+		url, err := url.Parse("http://" + dataNode.Host + ":" + dataNode.Port)
+		if err != nil {
+			log.Error().Msgf("error parsing url %s for data node for community %s: %s", "http://"+dataNode.Host+":"+dataNode.Port, community, err.Error())
+		}
+		proxyNodes[community] = httputil.NewSingleHostReverseProxy(url)
 	}
 	return &SourcesServer{
 		localWriter: localWriter,
@@ -35,6 +38,18 @@ func NewSourcesServer(localReader *Reader, localWriter *Writer, dataNodes map[st
 }
 
 func (s *SourcesServer) ReadHandler(w http.ResponseWriter, r *http.Request) {
+
+	qry := r.URL.Query()
+	community := qry.Get("community")
+	if community != "" {
+		if proxy, ok := s.dataNodes[community]; ok {
+			proxy.ServeHTTP(w, r)
+		} else {
+			w.Write([]byte(fmt.Sprintf("error: could not locate data server for this community %s", community)))
+		}
+		return
+	}
+
 	readreq := &ReadRequest{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(readreq)
@@ -43,27 +58,29 @@ func (s *SourcesServer) ReadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if readreq.Community == "" {
-		allowed, err, data := s.localReader.Read(readreq)
-		if err != nil {
-			w.Write([]byte(fmt.Sprintf("error reading from local sources: %s", err.Error())))
-		} else if allowed {
-			w.Write([]byte(data))
-		} else {
-			w.Write([]byte("error: requester does not have permissions to read from this source"))
-		}
-		return
-	}
-
-	if proxy, ok := s.dataNodes[readreq.Community]; ok {
-		proxy.ServeHTTP(w, r)
+	allowed, err, data := s.localReader.Read(readreq)
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("error reading from local sources: %s", err.Error())))
+	} else if !allowed {
+		w.Write([]byte("error: requester does not have permissions to read from this source"))
 	} else {
-		w.Write([]byte(fmt.Sprintf("error: could not locate data server for this community %s", readreq.Community)))
+		w.Write([]byte(data))
 	}
 
 }
 
 func (s *SourcesServer) WriteHandler(w http.ResponseWriter, r *http.Request) {
+	qry := r.URL.Query()
+	community := qry.Get("community")
+	if community != "" {
+		if proxy, ok := s.dataNodes[community]; ok {
+			proxy.ServeHTTP(w, r)
+		} else {
+			w.Write([]byte(fmt.Sprintf("error: could not locate data server for this community %s", community)))
+		}
+		return
+	}
+
 	writereq := &WriteRequest{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(writereq)
@@ -72,27 +89,18 @@ func (s *SourcesServer) WriteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if writereq.Community == "" {
-		allowed, err := s.localWriter.Write(writereq)
-		if err != nil {
-			w.Write([]byte(fmt.Sprintf("error writing to local sources: %s", err.Error())))
-		} else if allowed {
-			w.Write([]byte("success!"))
-		} else {
-			w.Write([]byte("error: requester does not have permissions to write to this source"))
-		}
-		return
-	}
-
-	if proxy, ok := s.dataNodes[writereq.Community]; ok {
-		proxy.ServeHTTP(w, r)
+	allowed, err := s.localWriter.Write(writereq)
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("error reading from local sources: %s", err.Error())))
+	} else if !allowed {
+		w.Write([]byte("error: requester does not have permissions to write to this source"))
 	} else {
-		w.Write([]byte(fmt.Sprintf("error: could not locate data server for this community %s", writereq.Community)))
+		w.Write([]byte("success!"))
 	}
 
 }
 
-func (s *SourcesServer) Start(port string) {
+func (s *SourcesServer) Start(ctx context.Context, port string) {
 	r := mux.NewRouter()
 	r.HandleFunc("/read", s.ReadHandler)
 	r.HandleFunc("/write", s.WriteHandler)

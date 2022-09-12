@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -100,6 +101,8 @@ func Execute() {
 }
 
 func main() {
+	ctx := context.Background()
+
 	sourcesPath := utils.GetEnvDefault("SOURCES_PATH", "~/habitat/data/sources")
 	sourcesPort := utils.GetEnvDefault("PORT", ":8765")
 	sreader := sources.NewJSONReader(sourcesPath)
@@ -112,8 +115,10 @@ func main() {
 	rootCmd.MarkFlagRequired("path")
 	Execute()
 
+	testDataServer := sources.NewDataServer("my-community", "localhost", "8766", writer, reader)
+	go testDataServer.Start(ctx)
 	// TODO: how do we get data server nodes?
-	sourcesServer := sources.NewSourcesServer(reader, writer, map[string]sources.DataServerNode{})
-	sourcesServer.Start(sourcesPort)
+	sourcesServer := sources.NewSourcesServer(reader, writer, map[string]sources.DataServerNode{"my-community": *testDataServer.Node})
+	sourcesServer.Start(ctx, sourcesPort)
 
 }
