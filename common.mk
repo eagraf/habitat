@@ -9,7 +9,6 @@ export MAKECMDGOALS
 SHELL			:=	bash
 .SHELLFLAGS		:=	-eu -o pipefail -c
 
-
 # TODO reenable this without system specific tools
 # NPROCS = $(shell sysctl hw.ncpu  | grep -o '[0-9]\+')
 NPROCS = 8
@@ -39,13 +38,6 @@ ifeq ($(origin TOPDIR), undefined)
 TOPDIR			:=	$(patsubst %/,%, $(dir $(lastword $(MAKEFILE_LIST))))
 endif
 
-
-export BIN_DIR := $(MKFILE_PATH)bin
-export DEV_DATA_DIR := $(MKFILE_PATH)data
-export DEV_PROC_DIR := $(DEV_DATA_DIR)/procs
-export DEV_COMMUNITY_DIR := $(DEV_DATA_DIR)/communities
-export APPS_DIR := $(MKFILE_PATH)apps
-
 GO					=	go
 GOFMT				=	gofmt
 GOPATH				:=	$(shell $(GO) env GOPATH)
@@ -72,6 +64,13 @@ GO_BUILD_FLAGS_NATIVE	?=
 TARGETS			?=
 SUBDIRS			?=
 
+HABITAT_ROOT	=	$(TOPDIR)
+PREFIX			=	$(HABITAT_ROOT)/dist
+BINDIR			=	$(PREFIX)/bin
+APPDIR			=	$(PREFIX)/apps
+
+DEV_HABITAT_PATH = $(TOPDIR)/.habitat
+
 all:: $(TARGETS)
 
 clean::
@@ -82,6 +81,12 @@ all install clean test lint::
 
 $(SUBDIRS):
 	$(MAKE) -C $@
+
+.PHONY: all install clean distclean test lint $(SUBDIRS)
+
+.FORCE:
+
+.ONESHELL:
 
 bin/amd64-linux/%:
 	GOARCH=amd64 GOOS=linux $(GO_BUILD) -o $@ $(GO_BUILD_PACKAGE)
