@@ -11,3 +11,6 @@ data/ipfs
 !data/procs/apps.yml
 data/libp2p-priv.key
 data/libp2p-pub.key
+
+dist
+.habitat
