@@ -3,9 +3,9 @@ services:
     alice:
         working_dir: /habitat
         volumes:
-            - ./data/procs:/habitat/procs
-            - ./bin:/habitat/bin
-        command: /habitat/bin/amd64-linux/habitat --hostname localhost
+            - .habitat/procs:/habitat/procs
+            - ./dist/bin:/habitat/bin
+        command: /habitat/bin/habitat --hostname localhost
         environment:
             - HABITAT_PATH=/habitat
         image: ubuntu:latest
@@ -16,9 +16,9 @@ services:
     bob:
         working_dir: /habitat
         volumes:
-            - ./data/procs:/habitat/procs
-            - ./bin:/habitat/bin
-        command: /habitat/bin/amd64-linux/habitat --hostname localhost
+            - .habitat/procs:/habitat/procs
+            - ./dist/bin:/habitat/bin
+        command: /habitat/bin/habitat --hostname localhost
         environment:
             - HABITAT_PATH=/habitat
         image: ubuntu:latest
@@ -29,9 +29,9 @@ services:
     charlie:
         working_dir: /habitat
         volumes:
-            - ./data/procs:/habitat/procs
-            - ./bin:/habitat/bin
-        command: /habitat/bin/amd64-linux/habitat --hostname localhost
+            - .habitat/procs:/habitat/procs
+            - ./dist/bin:/habitat/bin
+        command: /habitat/bin/habitat --hostname localhost
         environment:
             - HABITAT_PATH=/habitat
         image: ubuntu:latest

@@ -8,6 +8,12 @@ if [ -z "${BASH_VERSION:=}" ] ; then
     exit 1
 fi
 
+TOOLSDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+TOPDIR="$(realpath $TOOLSDIR/..)"
+
+HABITAT_PATH="$(realpath $TOPDIR/dist/bin/habitat)"
+HABITATCTL_PATH="$(realpath $TOPDIR/dist/bin/habitatctl)"
+
 _ERR_FUNCS=()
 _err_cascade () {
     err_status=$1
