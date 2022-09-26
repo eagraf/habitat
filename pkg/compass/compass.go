@@ -58,6 +58,10 @@ func CommunitiesPath() string {
 	return filepath.Join(HabitatPath(), "communities")
 }
 
+func AppConfigPath() string {
+	return filepath.Join(ProcsPath(), "apps.yml")
+}
+
 // NodeID will return the value in the node_id file, creating it if it doesn't exist
 func NodeID() string {
 	nodeIDPath := filepath.Join(HabitatPath(), nodeIDRelativePath)

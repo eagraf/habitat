@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 
 	"github.com/eagraf/habitat/cmd/habitat/community"
 	"github.com/eagraf/habitat/cmd/habitat/p2p"
@@ -76,7 +75,7 @@ func initHabitatDirectory() *configuration.AppConfiguration {
 	}
 
 	// Read apps configuration in proc dir
-	appConfigs, err := configuration.ReadAppConfigs(filepath.Join(procsDir, "apps.yml"))
+	appConfigs, err := configuration.ReadAppConfigs(compass.AppConfigPath())
 	if err != nil {
 		log.Fatal().Msgf("unable to read apps.yml: %s", err)
 	}
