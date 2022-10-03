@@ -9,12 +9,8 @@ export MAKECMDGOALS
 SHELL			:=	bash
 .SHELLFLAGS		:=	-eu -o pipefail -c
 
-# TODO reenable this without system specific tools
-# NPROCS = $(shell sysctl hw.ncpu  | grep -o '[0-9]\+')
-NPROCS = 8
 MAKEFLAGS		+=	--warn-undefined-variables	\
 				--no-builtin-rules 		\
-				-j$(NPROCS)		\
 
 CP			=	cp
 
