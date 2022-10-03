@@ -1,4 +1,4 @@
-SUBDIRS		=	cmd
+SUBDIRS		=	cmd apps
 
 include ./common.mk
 
