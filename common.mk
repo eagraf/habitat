@@ -31,7 +31,7 @@ endif
 
 # If TOPDIR isn't already defined, let's go with a default
 ifeq ($(origin TOPDIR), undefined)
-TOPDIR			:=	$(patsubst %/,%, $(dir $(lastword $(MAKEFILE_LIST))))
+TOPDIR			:=	$(realpath $(patsubst %/,%, $(dir $(lastword $(MAKEFILE_LIST)))))
 endif
 
 GO					=	go
