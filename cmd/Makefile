@@ -11,3 +11,7 @@ install::
 
 clean::
 	rm -rf bin
+
+build: clean $(TARGETS) install
+
+.PHONY: build
