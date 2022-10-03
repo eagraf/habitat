@@ -4,14 +4,12 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 
 	"github.com/eagraf/habitat/cmd/habitat/community"
 	"github.com/eagraf/habitat/cmd/habitat/p2p"
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
 	"github.com/eagraf/habitat/pkg/compass"
-	"github.com/eagraf/habitat/structs/configuration"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -40,7 +38,7 @@ func main() {
 	procsDir := compass.ProcsPath()
 	communityDir := compass.CommunitiesPath()
 
-	appConfigs := initHabitatDirectory()
+	initHabitatDirectory()
 
 	p2pNode := p2p.NewNode(P2PPort)
 
@@ -49,7 +47,7 @@ func main() {
 	go reverseProxy.Start(fmt.Sprintf("%s:%s", ReverseProxyHost, ReverseProxyPort))
 
 	// Start process manager
-	ProcessManager = procs.NewManager(procsDir, reverseProxy.Rules, appConfigs)
+	ProcessManager = procs.NewManager(procsDir, reverseProxy.Rules)
 	go ProcessManager.ListenForErrors()
 	go handleInterupt(ProcessManager)
 
@@ -63,7 +61,7 @@ func main() {
 	listen()
 }
 
-func initHabitatDirectory() *configuration.AppConfiguration {
+func initHabitatDirectory() {
 	err := os.MkdirAll(compass.CommunitiesPath(), 0700)
 	if err != nil {
 		log.Fatal().Msgf("unable to create communities directory: %s", err)
@@ -74,14 +72,7 @@ func initHabitatDirectory() *configuration.AppConfiguration {
 	if err != nil {
 		log.Fatal().Msgf("invalid procs directory: %s", err)
 	}
-
-	// Read apps configuration in proc dir
-	appConfigs, err := configuration.ReadAppConfigs(filepath.Join(procsDir, "apps.yml"))
-	if err != nil {
-		log.Fatal().Msgf("unable to read apps.yml: %s", err)
-	}
-
-	return appConfigs
+	return
 }
 
 func handleInterupt(manager *procs.Manager) {

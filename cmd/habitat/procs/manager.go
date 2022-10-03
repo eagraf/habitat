@@ -3,7 +3,6 @@ package procs
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
@@ -16,18 +15,16 @@ type Manager struct {
 	ProcDir    string
 	Procs      map[string]*Proc
 	ProxyRules proxy.RuleSet
-	AppConfigs *configuration.AppConfiguration
 
 	errChan chan ProcError
 	lock    *sync.Mutex
 }
 
-func NewManager(procDir string, rules proxy.RuleSet, appConfigs *configuration.AppConfiguration) *Manager {
+func NewManager(procDir string, rules proxy.RuleSet) *Manager {
 	return &Manager{
 		ProcDir:    compass.ProcsPath(),
 		Procs:      make(map[string]*Proc),
 		ProxyRules: rules,
-		AppConfigs: appConfigs,
 
 		errChan: make(chan ProcError),
 		lock:    &sync.Mutex{},
@@ -43,19 +40,19 @@ func (m *Manager) StartProcess(app, communityID string, args, env, flags []strin
 		procID = fmt.Sprintf("%s-%s", app, communityID)
 	}
 
-	appConfig, ok := m.AppConfigs.Apps[app]
-	if !ok {
-		return "", fmt.Errorf("no app with name %s in app configurations", app)
+	appConfig, appPath, err := configuration.GetAppConfig(app)
+	if err != nil {
+		return "", err
 	}
+
+	binPath := filepath.Join(appPath, "bin", appConfig.Bin)
 
 	if _, ok := m.Procs[procID]; ok {
 		return "", fmt.Errorf("process with name %s already exists", procID)
 	}
 
-	cmdPath := filepath.Join(compass.BinPath(), appConfig.Bin)
-	dataPath := filepath.Join(compass.DataPath(), app)
-	proc := NewProc(procID, cmdPath, dataPath, m.errChan, env, flags, args)
-	err := proc.Start()
+	proc := NewProc(procID, binPath, m.errChan, env, flags, args, appConfig)
+	err = proc.Start()
 	if err != nil {
 		return "", err
 	}
@@ -106,20 +103,17 @@ func (m *Manager) StopProcess(procID string) error {
 	if _, ok := m.Procs[procID]; !ok {
 		return fmt.Errorf("process with name %s does not exist", procID)
 	}
-	err := m.Procs[procID].Stop()
+
+	proc := m.Procs[procID]
+
+	err := proc.Stop()
 	if err != nil {
 		return err
 	}
 	delete(m.Procs, procID)
 
-	name := strings.Split(procID, "-")[0]
-	appConfig, ok := m.AppConfigs.Apps[name]
-	if !ok {
-		return fmt.Errorf("no app with name %s in app configurations", name)
-	}
-
 	// Remove from proxy ruleset
-	for _, rule := range appConfig.ProxyRules {
+	for _, rule := range proc.config.ProxyRules {
 		m.ProxyRules.Remove(rule.Hash())
 	}
 
