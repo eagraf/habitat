@@ -10,25 +10,23 @@ import (
 )
 
 type Proc struct {
-	Name     string
-	CmdPath  string
-	DataPath string
-	Env      []string
-	Flags    []string
-	Args     []string
+	Name    string
+	CmdPath string
+	Env     []string
+	Flags   []string
+	Args    []string
 
 	cmd     *exec.Cmd
 	errChan chan ProcError
 }
 
-func NewProc(name, cmdPath, dataPath string, errChan chan ProcError, env []string, flags []string, args []string) *Proc {
+func NewProc(name, cmdPath string, errChan chan ProcError, env []string, flags []string, args []string) *Proc {
 	return &Proc{
-		Name:     name,
-		CmdPath:  cmdPath,
-		DataPath: dataPath,
-		Env:      env,
-		Flags:    flags,
-		Args:     args,
+		Name:    name,
+		CmdPath: cmdPath,
+		Env:     env,
+		Flags:   flags,
+		Args:    args,
 
 		errChan: errChan,
 	}

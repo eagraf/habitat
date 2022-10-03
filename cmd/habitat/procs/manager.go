@@ -43,19 +43,21 @@ func (m *Manager) StartProcess(app, communityID string, args, env, flags []strin
 		procID = fmt.Sprintf("%s-%s", app, communityID)
 	}
 
-	appConfig, ok := m.AppConfigs.Apps[app]
-	if !ok {
-		return "", fmt.Errorf("no app with name %s in app configurations", app)
+	appConfig, appPath, err := configuration.GetAppConfig(app)
+	if err != nil {
+		return "", err
 	}
+
+	binPath := filepath.Join(appPath, "bin", appConfig.Bin)
 
 	if _, ok := m.Procs[procID]; ok {
 		return "", fmt.Errorf("process with name %s already exists", procID)
 	}
 
-	cmdPath := filepath.Join(compass.BinPath(), appConfig.Bin)
-	dataPath := filepath.Join(compass.DataPath(), app)
-	proc := NewProc(procID, cmdPath, dataPath, m.errChan, env, flags, args)
-	err := proc.Start()
+	//cmdPath := filepath.Join(compass.BinPath(), appConfig.Bin)
+	//dataPath := filepath.Join(compass.DataPath(), app)
+	proc := NewProc(procID, binPath, m.errChan, env, flags, args)
+	err = proc.Start()
 	if err != nil {
 		return "", err
 	}
