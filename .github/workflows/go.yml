@@ -36,7 +36,7 @@ jobs:
         make lint
 
     - name: Build
-      run: make build
+      run: make && make install
 
     - name: Docker Build
       run: docker build .
