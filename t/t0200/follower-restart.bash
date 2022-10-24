@@ -40,7 +40,10 @@ TRANSITION3=$(base64 -w 0 <<EOF
 }]
 EOF
 )
+
 docker-compose -f docker-compose-raft.yml up -V 2> /dev/null &
+atexit "docker-compose -f docker-compose-raft.yml down"
+atexit "docker-compose rm -f"
 
 echo $(wrapTransition "initialize_counter" $TRANSITION1)
 
@@ -78,9 +81,6 @@ sleep 6
 COUNTER1=`$HABITATCTL_PATH -p 2000 community state -c $COMMUNITY_UUID | jq .counter`
 COUNTER2=`$HABITATCTL_PATH -p 2001 community state -c $COMMUNITY_UUID | jq .counter`
 COUNTER3=`$HABITATCTL_PATH -p 2002 community state -c $COMMUNITY_UUID | jq .counter`
-
-docker-compose -f docker-compose-raft.yml down 2> /dev/null
-docker-compose rm 2> /dev/null
 
 sleep 1
 
