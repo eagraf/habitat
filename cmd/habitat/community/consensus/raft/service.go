@@ -82,10 +82,11 @@ func (cs *ClusterService) CreateCluster(communityID string) (<-chan state.StateU
 	}
 	cs.instances[communityID] = raftInstance
 
-	/*communityStateMachine := state.NewCommunityStateMachine(raftFSM.JSONState(), &RaftDispatcher{
-		communityID:    communityID,
-		clusterService: cs,
-	})*/
+	// block until we receive leadership
+	leaderCh := ra.LeaderCh()
+	if !<-leaderCh {
+		return nil, errors.New("did not receive leadership")
+	}
 
 	return raftFSM.UpdateChan(), nil
 }
