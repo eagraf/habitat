@@ -170,6 +170,8 @@ func (cs *ClusterService) ProposeTransitions(communityID string, transitions []b
 	}
 
 	future := raftInstance.instance.Apply(transitions, RaftTimeout)
+
+	// future.Error() blocks until the cluster finishes processing this attempted entry
 	err := future.Error()
 	if err != nil {
 		return fmt.Errorf("error applying state transition to community %s: %s", communityID, err)

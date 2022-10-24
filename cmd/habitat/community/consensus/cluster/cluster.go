@@ -20,7 +20,7 @@ type ClusterService interface {
 
 	// these should not be the main way to access and update statem,
 	// these methods are useful for debugging and using the cli
-	ProposeTransitions(communityID string, transition []byte) error
+	ProposeTransitions(communityID string, transition []byte) error // Note that ProposeTransitions should be blocking
 	GetState(communityID string) ([]byte, error)
 
 	AddNode(communityID string, nodeID string, address string) error
