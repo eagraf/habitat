@@ -178,7 +178,7 @@ var communityAddMemberCmd = &cobra.Command{
 	},
 }
 
-var communityProposeTransitionCmd = &cobra.Command{
+var communityProposeTransitionsCmd = &cobra.Command{
 	Use:   "propose <json_patch_b64>",
 	Short: "propose a transition to this community's state",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -267,14 +267,14 @@ func init() {
 	communityAddMemberCmd.Flags().StringP("node", "n", "", "node id of node that is being added")
 	communityAddMemberCmd.Flags().StringP("token", "t", "", "token to add member to the community")
 
-	communityProposeTransitionCmd.Flags().StringP("community", "c", "", "id of community to be joined")
+	communityProposeTransitionsCmd.Flags().StringP("community", "c", "", "id of community to be joined")
 
 	communityStateCmd.Flags().StringP("community", "c", "", "id of community to be joined")
 
 	communityCmd.AddCommand(communityCreateCmd)
 	communityCmd.AddCommand(communityJoinCmd)
 	communityCmd.AddCommand(communityAddMemberCmd)
-	communityCmd.AddCommand(communityProposeTransitionCmd)
+	communityCmd.AddCommand(communityProposeTransitionsCmd)
 	communityCmd.AddCommand(communityStateCmd)
 	communityCmd.AddCommand(communityListCmd)
 

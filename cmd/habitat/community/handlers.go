@@ -150,7 +150,7 @@ func (m *Manager) CommunityProposeHandler(req *ctl.RequestWrapper) (*ctl.Respons
 		return nil, err
 	}
 
-	err = m.ProposeTransition(commReq.CommunityID, commReq.StateTransition)
+	err = m.ProposeTransitions(commReq.CommunityID, commReq.StateTransition)
 	if err != nil {
 		return nil, err
 	}

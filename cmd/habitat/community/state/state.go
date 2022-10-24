@@ -97,36 +97,57 @@ func (csm *CommunityStateMachine) StopListening() {
 	csm.doneChan <- true
 }
 
-func (csm *CommunityStateMachine) ProposeTransition(t CommunityStateTransition) error {
+func (csm *CommunityStateMachine) ProposeTransitions(transitions []CommunityStateTransition) error {
 	currentState, err := csm.State()
 	if err != nil {
 		return err
 	}
 
-	err = t.Validate(currentState)
-	if err != nil {
-		return fmt.Errorf("transition validation failed: %s", err)
+	wrappers := make([]*TransitionWrapper, 0)
+
+	for _, t := range transitions {
+
+		err = t.Validate(currentState)
+		if err != nil {
+			return fmt.Errorf("transition validation failed: %s", err)
+		}
+
+		patch, err := t.Patch(currentState)
+		if err != nil {
+			return err
+		}
+
+		newStateBytes, err := csm.jsonState.ValidatePatch(patch)
+		if err != nil {
+			return nil, err
+		}
+
+		var newState community.CommunityState
+		err = json.Unmarshal(newStateBytes, &newState)
+		if err != nil {
+			return err
+		}
+
+		wrapped, err := wrapTransition(t, currentState)
+		if err != nil {
+			return err
+		}
+
+		wrappers = append(wrappers, wrapped)
+
+		currentState = &newState
 	}
 
-	patch, err := t.Patch(currentState)
+	transitionsJSON, err := json.Marshal(wrappers)
 	if err != nil {
 		return err
 	}
 
-	err = csm.jsonState.ValidatePatch(patch)
+	err = csm.dispatcher.Dispatch(transitionsJSON)
 	if err != nil {
 		return err
 	}
 
-	transJSON, err := t.JSON(currentState)
-	if err != nil {
-		return err
-	}
-
-	err = csm.dispatcher.Dispatch(transJSON)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -184,9 +205,13 @@ func (s *JSONState) ApplyPatch(patchJSON []byte) error {
 	return nil
 }
 
-func (s *JSONState) ValidatePatch(patchJSON []byte) error {
-	_, err := s.applyImpl(patchJSON)
-	return err
+func (s *JSONState) ValidatePatch(patchJSON []byte) ([]byte, error) {
+	updated, err := s.applyImpl(patchJSON)
+	if err != nil {
+		return nil, err
+	}
+
+	return updated, err
 }
 
 func (s *JSONState) applyImpl(patchJSON []byte) ([]byte, error) {

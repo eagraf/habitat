@@ -47,20 +47,22 @@ func (sm *RaftFSMAdapter) Apply(entry *raft.Log) interface{} {
 		log.Error().Msgf("error decoding log entry data: %s", err)
 	}
 
-	var wrapper TransitionWrapper
-	err = json.Unmarshal(buf, &wrapper)
+	var wrappers []*TransitionWrapper
+	err = json.Unmarshal(buf, &wrappers)
 	if err != nil {
 		log.Error().Msgf("error unmarshaling transition wrapper: %s", err)
 	}
 
-	err = sm.jsonState.ApplyPatch(wrapper.Patch)
-	if err != nil {
-		log.Error().Msgf("error applying patch: %s", err)
-	}
+	for _, w := range wrappers {
+		err = sm.jsonState.ApplyPatch(w.Patch)
+		if err != nil {
+			log.Error().Msgf("error applying patch: %s", err)
+		}
 
-	sm.updateChan <- StateUpdate{
-		TransitionType: wrapper.Type,
-		NewState:       sm.jsonState.Bytes(),
+		sm.updateChan <- StateUpdate{
+			TransitionType: w.Type,
+			NewState:       sm.jsonState.Bytes(),
+		}
 	}
 
 	// TODO apply future stuff

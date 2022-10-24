@@ -9,5 +9,5 @@ type RaftDispatcher struct {
 
 func (d *RaftDispatcher) Dispatch(json []byte) error {
 	encoded := base64.StdEncoding.EncodeToString(json)
-	return d.clusterService.ProposeTransition(d.communityID, []byte(encoded))
+	return d.clusterService.ProposeTransitions(d.communityID, []byte(encoded))
 }

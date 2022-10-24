@@ -7,10 +7,10 @@ TESTDIR=$(realpath "$(dirname "$0")")
 
 function wrapTransition() {
 base64 -w 0 <<EOF
-{
+[{
     "type": "$1",
     "patch": "$2"
-}
+}]
 EOF
 }
 

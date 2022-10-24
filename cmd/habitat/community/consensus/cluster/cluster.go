@@ -6,6 +6,7 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/community/consensus/raft"
 	"github.com/eagraf/habitat/cmd/habitat/community/state"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
+	"github.com/eagraf/habitat/structs/community"
 	"github.com/libp2p/go-libp2p-core/host"
 )
 
@@ -19,7 +20,7 @@ type ClusterService interface {
 
 	// these should not be the main way to access and update statem,
 	// these methods are useful for debugging and using the cli
-	ProposeTransition(communityID string, transition []byte) error
+	ProposeTransitions(communityID string, transition []byte) error
 	GetState(communityID string) ([]byte, error)
 
 	AddNode(communityID string, nodeID string, address string) error
@@ -79,8 +80,8 @@ func (cm *ClusterManager) RestoreNode(communityID string) (<-chan state.StateUpd
 	return cm.raftClusterService.RestoreNode(communityID)
 }
 
-func (cm *ClusterManager) ProposeTransition(communityID string, transition []byte) error {
-	return cm.raftClusterService.ProposeTransition(communityID, transition)
+func (cm *ClusterManager) ProposeTransitions(communityID string, transitions []byte) error {
+	return cm.raftClusterService.ProposeTransitions(communityID, transitions)
 }
 
 func (cm *ClusterManager) GetState(communityID string) ([]byte, error) {

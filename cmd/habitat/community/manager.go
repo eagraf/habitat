@@ -155,7 +155,7 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Comm
 			IPFSConfig: ipfsConfig,
 		}
 
-		err = stateMachine.ProposeTransition(transition)
+		err = stateMachine.ProposeTransitions([]state.CommunityStateTransition{transition})
 		if err != nil {
 			return nil, err
 		}
@@ -192,12 +192,12 @@ func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, a
 	return stateMachine.State()
 }
 
-func (m *Manager) ProposeTransition(communityID string, transition []byte) error {
+func (m *Manager) ProposeTransitions(communityID string, transitions []byte) error {
 	if !m.checkCommunityExists(communityID) {
 		return fmt.Errorf("community %s does not exist in communities directory", communityID)
 	}
 
-	err := m.clusterManager.ProposeTransition(communityID, transition)
+	err := m.clusterManager.ProposeTransitions(communityID, transitions)
 	if err != nil {
 		return err
 	}
@@ -254,5 +254,5 @@ type ClusterDispatcher struct {
 
 func (d *ClusterDispatcher) Dispatch(json []byte) error {
 	encoded := base64.StdEncoding.EncodeToString(json)
-	return d.clusterManager.ProposeTransition(d.communityID, []byte(encoded))
+	return d.clusterManager.ProposeTransitions(d.communityID, []byte(encoded))
 }
