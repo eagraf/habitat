@@ -9,6 +9,7 @@ import (
 )
 
 const (
+	TransitionTypeInitializeCommunity = "initialize_community"
 	TransitionTypeInitializeCounter   = "initialize_counter"
 	TransitionTypeIncrementCounter    = "increment_counter"
 	TransitionTypeInitializeIPFSSwarm = "initialize_ipfs_swarm"
@@ -75,6 +76,29 @@ func (t *IncrementCounterTransition) Patch(oldState *community.CommunityState) (
 }
 
 func (t *IncrementCounterTransition) Validate(oldState *community.CommunityState) error {
+	return nil
+}
+
+type InitializeCommunityTransition struct {
+	CommunityID string
+}
+
+func (t *InitializeCommunityTransition) Type() string {
+	return TransitionTypeInitializeCommunity
+}
+
+func (t *InitializeCommunityTransition) Patch(oldState *community.CommunityState) ([]byte, error) {
+	return []byte(fmt.Sprintf(`[{
+		"op": "add",
+		"path": "/community_id",
+		"value": "%s"
+	}]`, t.CommunityID)), nil
+}
+
+func (t *InitializeCommunityTransition) Validate(oldState *community.CommunityState) error {
+	if oldState.CommunityID != "" {
+		return errors.New("community_id already initialized")
+	}
 	return nil
 }
 

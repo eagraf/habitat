@@ -144,7 +144,12 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Comm
 		return nil, err
 	}
 
-	transitions := []state.CommunityStateTransition{}
+	// The first state transition in a new community is alway initialize_community, which sets the community_id
+	transitions := []state.CommunityStateTransition{
+		&state.InitializeCommunityTransition{
+			CommunityID: communityID,
+		},
+	}
 
 	if createIpfs {
 		// After cluster is created, immediately add transition to initialize IPFS
