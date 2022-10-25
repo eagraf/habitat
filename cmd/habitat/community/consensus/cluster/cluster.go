@@ -12,7 +12,7 @@ import (
 type ClusterService interface {
 	Start() error
 
-	CreateCluster(communityID string, initState []byte) (<-chan state.StateUpdate, error)
+	CreateCluster(communityID string) (<-chan state.StateUpdate, error)
 	RemoveCluster(communityID string) error
 	JoinCluster(communityID string, address string) (<-chan state.StateUpdate, error)
 	RestoreNode(communityID string) (<-chan state.StateUpdate, error)
@@ -62,8 +62,8 @@ func (cm *ClusterManager) Start(proxyRules *proxy.RuleSet) error {
 	return nil
 }
 
-func (cm *ClusterManager) CreateCluster(communityID string, initState []byte) (<-chan state.StateUpdate, error) {
-	return cm.raftClusterService.CreateCluster(communityID, initState)
+func (cm *ClusterManager) CreateCluster(communityID string) (<-chan state.StateUpdate, error) {
+	return cm.raftClusterService.CreateCluster(communityID)
 }
 
 func (cm *ClusterManager) RemoveCluster(communityID string) error {

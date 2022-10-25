@@ -65,9 +65,7 @@ func NewManager(path string, procManager *procs.Manager, proxyRules *proxy.RuleS
 				log.Error().Err(err).Msgf("error restoring cluster for community %s", dir.Name())
 			}
 
-			initState := &community.CommunityState{
-				CommunityID: dir.Name(),
-			}
+			initState := community.NewCommunityState()
 			stateMachine, err := state.NewCommunityStateMachine(initState,
 				updateChan, &ClusterDispatcher{
 					communityID:    dir.Name(),
@@ -128,20 +126,12 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Comm
 		return nil, err
 	}
 
-	initState := &community.CommunityState{
-		CommunityID: communityID,
-	}
-	stateBuf, err := json.Marshal(initState)
+	updateChan, err := m.clusterManager.CreateCluster(communityID)
 	if err != nil {
 		return nil, err
 	}
 
-	updateChan, err := m.clusterManager.CreateCluster(communityID, stateBuf)
-	if err != nil {
-		return nil, err
-	}
-
-	stateMachine, err := state.NewCommunityStateMachine(initState, updateChan, &ClusterDispatcher{
+	stateMachine, err := state.NewCommunityStateMachine(community.NewCommunityState(), updateChan, &ClusterDispatcher{
 		communityID:    communityID,
 		clusterManager: m.clusterManager,
 	}, NewCommunityExecutor(&m.processManager))
@@ -186,10 +176,7 @@ func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, a
 		return nil, err
 	}
 
-	initState := &community.CommunityState{
-		CommunityID: communityID,
-	}
-	stateMachine, err := state.NewCommunityStateMachine(initState, updateChan, &ClusterDispatcher{
+	stateMachine, err := state.NewCommunityStateMachine(community.NewCommunityState(), updateChan, &ClusterDispatcher{
 		communityID:    communityID,
 		clusterManager: m.clusterManager,
 	}, NewCommunityExecutor(&m.processManager))
