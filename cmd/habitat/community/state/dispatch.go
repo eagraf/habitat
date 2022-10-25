@@ -1,7 +1,9 @@
 package state
 
+import "github.com/eagraf/habitat/structs/community"
+
 type Dispatcher interface {
-	Dispatch(patch []byte) error
+	Dispatch(patch []byte) (*community.CommunityState, error)
 }
 
 type LocalDispatcher struct {

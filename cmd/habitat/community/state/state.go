@@ -97,10 +97,10 @@ func (csm *CommunityStateMachine) StopListening() {
 	csm.doneChan <- true
 }
 
-func (csm *CommunityStateMachine) ProposeTransitions(transitions []CommunityStateTransition) error {
+func (csm *CommunityStateMachine) ProposeTransitions(transitions []CommunityStateTransition) (*community.CommunityState, error) {
 	currentState, err := csm.State()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	wrappers := make([]*TransitionWrapper, 0)
@@ -109,12 +109,12 @@ func (csm *CommunityStateMachine) ProposeTransitions(transitions []CommunityStat
 
 		err = t.Validate(currentState)
 		if err != nil {
-			return fmt.Errorf("transition validation failed: %s", err)
+			return nil, fmt.Errorf("transition validation failed: %s", err)
 		}
 
 		patch, err := t.Patch(currentState)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		newStateBytes, err := csm.jsonState.ValidatePatch(patch)
@@ -125,12 +125,12 @@ func (csm *CommunityStateMachine) ProposeTransitions(transitions []CommunityStat
 		var newState community.CommunityState
 		err = json.Unmarshal(newStateBytes, &newState)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		wrapped, err := wrapTransition(t, currentState)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		wrappers = append(wrappers, wrapped)
@@ -140,15 +140,15 @@ func (csm *CommunityStateMachine) ProposeTransitions(transitions []CommunityStat
 
 	transitionsJSON, err := json.Marshal(wrappers)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = csm.dispatcher.Dispatch(transitionsJSON)
+	state, err := csm.dispatcher.Dispatch(transitionsJSON)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return state, nil
 }
 
 func (csm *CommunityStateMachine) State() (*community.CommunityState, error) {

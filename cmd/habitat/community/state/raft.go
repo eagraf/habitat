@@ -65,8 +65,13 @@ func (sm *RaftFSMAdapter) Apply(entry *raft.Log) interface{} {
 		}
 	}
 
-	// TODO apply future stuff
-	return nil
+	var state community.CommunityState
+	err = json.Unmarshal(sm.jsonState.Bytes(), &state)
+	if err != nil {
+		log.Error().Msgf("error unmarshaling state after applying transitions: %s", err)
+	}
+
+	return &state
 }
 
 // Snapshot is used to support log compaction. This call should

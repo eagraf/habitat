@@ -18,9 +18,9 @@ type ClusterService interface {
 	JoinCluster(communityID string, address string) (<-chan state.StateUpdate, error)
 	RestoreNode(communityID string) (<-chan state.StateUpdate, error)
 
-	// these should not be the main way to access and update statem,
-	// these methods are useful for debugging and using the cli
-	ProposeTransitions(communityID string, transition []byte) error // Note that ProposeTransitions should be blocking
+	// These methods should not be called directly, but rather be accessed via the state machine API
+	// They remain exposed for debugging and using the cli
+	ProposeTransitions(communityID string, transition []byte) (*community.CommunityState, error) // Note that ProposeTransitions should be blocking
 	GetState(communityID string) ([]byte, error)
 
 	AddNode(communityID string, nodeID string, address string) error
@@ -80,7 +80,7 @@ func (cm *ClusterManager) RestoreNode(communityID string) (<-chan state.StateUpd
 	return cm.raftClusterService.RestoreNode(communityID)
 }
 
-func (cm *ClusterManager) ProposeTransitions(communityID string, transitions []byte) error {
+func (cm *ClusterManager) ProposeTransitions(communityID string, transitions []byte) (*community.CommunityState, error) {
 	return cm.raftClusterService.ProposeTransitions(communityID, transitions)
 }
 

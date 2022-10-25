@@ -144,6 +144,8 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Comm
 		return nil, err
 	}
 
+	transitions := []state.CommunityStateTransition{}
+
 	if createIpfs {
 		// After cluster is created, immediately add transition to initialize IPFS
 		ipfsConfig, err := newIPFSSwarm(communityID)
@@ -151,17 +153,17 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Comm
 			return nil, err
 		}
 
-		transition := &state.InitializeIPFSSwarmTransition{
+		transitions = append(transitions, &state.InitializeIPFSSwarmTransition{
 			IPFSConfig: ipfsConfig,
-		}
-
-		err = stateMachine.ProposeTransitions([]state.CommunityStateTransition{transition})
-		if err != nil {
-			return nil, err
-		}
+		})
 	}
 
-	return initState, nil
+	state, err := stateMachine.ProposeTransitions(transitions)
+	if err != nil {
+		return nil, err
+	}
+
+	return state, nil
 }
 
 // TODO don't return community state since that is retrieved asynchronously. Or we block
@@ -197,7 +199,7 @@ func (m *Manager) ProposeTransitions(communityID string, transitions []byte) err
 		return fmt.Errorf("community %s does not exist in communities directory", communityID)
 	}
 
-	err := m.clusterManager.ProposeTransitions(communityID, transitions)
+	_, err := m.clusterManager.ProposeTransitions(communityID, transitions)
 	if err != nil {
 		return err
 	}
@@ -252,7 +254,7 @@ type ClusterDispatcher struct {
 	clusterManager *cluster.ClusterManager
 }
 
-func (d *ClusterDispatcher) Dispatch(json []byte) error {
+func (d *ClusterDispatcher) Dispatch(json []byte) (*community.CommunityState, error) {
 	encoded := base64.StdEncoding.EncodeToString(json)
 	return d.clusterManager.ProposeTransitions(d.communityID, []byte(encoded))
 }
