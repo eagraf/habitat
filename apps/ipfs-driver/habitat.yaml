@@ -1,0 +1,4 @@
+name: ipfs-driver
+bin: ipfs-driver
+ports:
+proxy-rules:

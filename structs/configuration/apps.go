@@ -2,11 +2,8 @@ package configuration
 
 import "fmt"
 
-type AppConfiguration struct {
-	Apps map[string]*App `yaml:"apps"`
-}
-
 type App struct {
+	Name       string       `yaml:"name"`
 	Bin        string       `yaml:"bin"`
 	Ports      []int        `yaml:"ports"`
 	ProxyRules []*ProxyRule `yaml:"proxy_rules"`
