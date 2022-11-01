@@ -35,7 +35,7 @@ var communityCmd = &cobra.Command{
 	<community_id> propose <data>
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("%s is an invalid subcommand for community %s\n", args[1], args[0])
+		fmt.Println(cmd.Usage())
 	},
 }
 
