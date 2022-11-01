@@ -19,7 +19,7 @@ const (
 	osDarwin = "darwin"
 
 	habitatPathEnv         = "HABITAT_PATH"
-	defaultHabitatPathUnix = "~/.habitat"
+	habitatIdentityPathEnv = "HABITAT_IDENTITY_PATH"
 
 	nodeIDRelativePath = "node_id"
 
@@ -34,12 +34,26 @@ func HabitatPath() string {
 	case osDarwin:
 		habitatPathEnv := os.Getenv(habitatPathEnv)
 		if habitatPathEnv == "" {
-			return defaultHabitatPathUnix
+			userHome, err := os.UserHomeDir()
+			if err != nil {
+				panic("can't get user home directory")
+			}
+
+			return filepath.Join(userHome, ".habitat")
 		}
 		return habitatPathEnv
 	default:
 		panic(fmt.Sprintf("operating system %s not supported", runtime.GOOS))
 	}
+}
+
+func HabitatIdentityPath() string {
+	identityPathEnv := os.Getenv(habitatIdentityPathEnv)
+
+	if identityPathEnv == "" {
+		return filepath.Join(HabitatPath(), "identity")
+	}
+	return identityPathEnv
 }
 
 func ProcsPath() string {
