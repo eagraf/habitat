@@ -8,10 +8,10 @@ import (
 	"path"
 
 	"github.com/eagraf/habitat/pkg/compass"
-	"github.com/eagraf/habitat/sources/sources"
-	"github.com/eagraf/habitat/utils"
+	"github.com/eagraf/habitat/pkg/sources/sources"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var reader *sources.Reader
@@ -103,8 +103,9 @@ func Execute() {
 func main() {
 	ctx := context.Background()
 
-	sourcesPath := utils.GetEnvDefault("SOURCES_PATH", "~/habitat/data/sources")
-	sourcesPort := utils.GetEnvDefault("PORT", ":8765")
+	viper.AutomaticEnv()
+	sourcesPath := compass.LocalSourcesPath()
+
 	sreader := sources.NewJSONReader(sourcesPath)
 	swriter := sources.NewJSONWriter(sourcesPath)
 	pmanager := sources.NewBasicPermissionsManager()
@@ -115,10 +116,6 @@ func main() {
 	rootCmd.MarkFlagRequired("path")
 	Execute()
 
-	testDataServer := sources.NewDataServer("my-community", "localhost", "8766", writer, reader)
+	testDataServer := sources.NewJSONServer("my-community-id", "localhost", "8766", writer, reader)
 	go testDataServer.Start(ctx)
-	// TODO: how do we get data server nodes?
-	sourcesServer := sources.NewSourcesServer(reader, writer, map[string]sources.DataServerNode{"my-community": *testDataServer.Node})
-	sourcesServer.Start(ctx, sourcesPort)
-
 }

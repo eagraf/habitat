@@ -21,7 +21,7 @@ func setupReaderWriter() {
 }
 
 func setupSource(json string, path string) {
-	os.WriteFile(path, []byte(json), 0644)
+	os.WriteFile(path, []byte(json), 0600)
 }
 
 func teardownSource(path string) {

@@ -10,22 +10,16 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type DataServer struct {
-	// TODO: fill this in
-	Community string
-	Node      *DataServerNode
-	Writer    *Writer
-	Reader    *Reader
+type JSONServer struct {
+	CommunityID string
+	Node        *DataServerNode
+	Writer      *Writer
+	Reader      *Reader
 }
 
-type DataServerNode struct {
-	Host string
-	Port string
-}
-
-func NewDataServer(community string, host string, port string, w *Writer, r *Reader) *DataServer {
-	return &DataServer{
-		Community: community,
+func NewJSONServer(communityID string, host string, port string, w *Writer, r *Reader) *JSONServer {
+	return &JSONServer{
+		CommunityID: communityID,
 		Node: &DataServerNode{
 			Host: host,
 			Port: port,
@@ -35,20 +29,23 @@ func NewDataServer(community string, host string, port string, w *Writer, r *Rea
 	}
 }
 
-func (s *DataServer) ReadHandler(w http.ResponseWriter, r *http.Request) {
+func (s *JSONServer) ReadHandler(w http.ResponseWriter, r *http.Request) {
 	readreq := &ReadRequest{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(readreq)
 	if err != nil {
+		w.WriteHeader(400)
 		w.Write([]byte("error: bad JSON, can't decode"))
 	}
 
-	if readreq.Community != s.Community {
+	if readreq.Community != s.CommunityID {
+		w.WriteHeader(400)
 		w.Write([]byte("error: request community is not the same as this data server's community"))
 	}
 
 	allowed, err, data := s.Reader.Read(readreq)
 	if err != nil {
+		w.WriteHeader(500)
 		w.Write([]byte(fmt.Sprintf("error: error reading from source %s", err.Error())))
 		return
 	}
@@ -56,24 +53,28 @@ func (s *DataServer) ReadHandler(w http.ResponseWriter, r *http.Request) {
 	if allowed {
 		w.Write([]byte(data))
 	} else {
+		w.WriteHeader(403)
 		w.Write([]byte("error: requester does not have permissions to write to this source"))
 	}
 }
 
-func (s *DataServer) WriteHandler(w http.ResponseWriter, r *http.Request) {
+func (s *JSONServer) WriteHandler(w http.ResponseWriter, r *http.Request) {
 	writereq := &WriteRequest{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(writereq)
 	if err != nil {
+		w.WriteHeader(400)
 		w.Write([]byte("error: bad JSON, can't decode"))
 	}
 
-	if writereq.Community != s.Community {
+	if writereq.CommunityID != s.CommunityID {
+		w.WriteHeader(400)
 		w.Write([]byte("error: request community is not the same as this data server's community"))
 	}
 
 	allowed, err := s.Writer.Write(writereq)
 	if err != nil {
+		w.WriteHeader(500)
 		w.Write([]byte(fmt.Sprintf("error: error writing to source %s", err.Error())))
 		return
 	}
@@ -81,11 +82,12 @@ func (s *DataServer) WriteHandler(w http.ResponseWriter, r *http.Request) {
 	if allowed {
 		w.Write([]byte("success!"))
 	} else {
+		w.WriteHeader(403)
 		w.Write([]byte("error: requester does not have permissions to write to this source"))
 	}
 }
 
-func (s *DataServer) Start(ctx context.Context) {
+func (s *JSONServer) Start(ctx context.Context) {
 	r := mux.NewRouter()
 	r.HandleFunc("/read", s.ReadHandler)
 	r.HandleFunc("/write", s.WriteHandler)
