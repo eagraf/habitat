@@ -6,20 +6,21 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/community/consensus/raft"
 	"github.com/eagraf/habitat/cmd/habitat/community/state"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
+	"github.com/eagraf/habitat/structs/community"
 	"github.com/libp2p/go-libp2p-core/host"
 )
 
 type ClusterService interface {
 	Start() error
 
-	CreateCluster(communityID string, initState []byte) (<-chan state.StateUpdate, error)
+	CreateCluster(communityID string) (<-chan state.StateUpdate, error)
 	RemoveCluster(communityID string) error
 	JoinCluster(communityID string, address string) (<-chan state.StateUpdate, error)
 	RestoreNode(communityID string) (<-chan state.StateUpdate, error)
 
-	// these should not be the main way to access and update statem,
-	// these methods are useful for debugging and using the cli
-	ProposeTransition(communityID string, transition []byte) error
+	// These methods should not be called directly, but rather be accessed via the state machine API
+	// They remain exposed for debugging and using the cli
+	ProposeTransitions(communityID string, transition []byte) (*community.CommunityState, error) // Note that ProposeTransitions should be blocking
 	GetState(communityID string) ([]byte, error)
 
 	AddNode(communityID string, nodeID string, address string) error
@@ -62,8 +63,8 @@ func (cm *ClusterManager) Start(proxyRules *proxy.RuleSet) error {
 	return nil
 }
 
-func (cm *ClusterManager) CreateCluster(communityID string, initState []byte) (<-chan state.StateUpdate, error) {
-	return cm.raftClusterService.CreateCluster(communityID, initState)
+func (cm *ClusterManager) CreateCluster(communityID string) (<-chan state.StateUpdate, error) {
+	return cm.raftClusterService.CreateCluster(communityID)
 }
 
 func (cm *ClusterManager) RemoveCluster(communityID string) error {
@@ -79,8 +80,8 @@ func (cm *ClusterManager) RestoreNode(communityID string) (<-chan state.StateUpd
 	return cm.raftClusterService.RestoreNode(communityID)
 }
 
-func (cm *ClusterManager) ProposeTransition(communityID string, transition []byte) error {
-	return cm.raftClusterService.ProposeTransition(communityID, transition)
+func (cm *ClusterManager) ProposeTransitions(communityID string, transitions []byte) (*community.CommunityState, error) {
+	return cm.raftClusterService.ProposeTransitions(communityID, transitions)
 }
 
 func (cm *ClusterManager) GetState(communityID string) ([]byte, error) {

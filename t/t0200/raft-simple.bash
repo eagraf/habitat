@@ -7,10 +7,10 @@ TESTDIR=$(realpath "$(dirname "$0")")
 
 function wrapTransition() {
 base64 -w 0 <<EOF
-{
+[{
     "type": "$1",
     "patch": "$2"
-}
+}]
 EOF
 }
 
@@ -41,6 +41,8 @@ TRANSITION3=$(base64 -w 0 <<EOF
 EOF
 )
 docker-compose -f docker-compose-raft.yml up -V 2> /dev/null &
+atexit "docker-compose -f docker-compose-raft.yml down"
+atexit "docker-compose rm -f"
 
 echo $(wrapTransition "initialize_counter" $TRANSITION1)
 
@@ -75,9 +77,6 @@ sleep 1
 COUNTER1=`$HABITATCTL_PATH -p 2000 community state -c $COMMUNITY_UUID | jq .counter`
 COUNTER2=`$HABITATCTL_PATH -p 2001 community state -c $COMMUNITY_UUID | jq .counter`
 COUNTER3=`$HABITATCTL_PATH -p 2002 community state -c $COMMUNITY_UUID | jq .counter`
-
-docker-compose -f docker-compose-raft.yml down 2> /dev/null
-docker-compose rm -f 2> /dev/null
 
 [[ $COUNTER1 -eq 3 ]] || log::fatal "alice's counter should be 3, not $COUNTER1"
 [[ $COUNTER2 -eq 3 ]] || log::fatal "bob's counter should be 3, not $COUNTER2"

@@ -65,9 +65,7 @@ func NewManager(path string, procManager *procs.Manager, proxyRules *proxy.RuleS
 				log.Error().Err(err).Msgf("error restoring cluster for community %s", dir.Name())
 			}
 
-			initState := &community.CommunityState{
-				CommunityID: dir.Name(),
-			}
+			initState := community.NewCommunityState()
 			stateMachine, err := state.NewCommunityStateMachine(initState,
 				updateChan, &ClusterDispatcher{
 					communityID:    dir.Name(),
@@ -128,20 +126,12 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Comm
 		return nil, err
 	}
 
-	initState := &community.CommunityState{
-		CommunityID: communityID,
-	}
-	stateBuf, err := json.Marshal(initState)
+	updateChan, err := m.clusterManager.CreateCluster(communityID)
 	if err != nil {
 		return nil, err
 	}
 
-	updateChan, err := m.clusterManager.CreateCluster(communityID, stateBuf)
-	if err != nil {
-		return nil, err
-	}
-
-	stateMachine, err := state.NewCommunityStateMachine(initState, updateChan, &ClusterDispatcher{
+	stateMachine, err := state.NewCommunityStateMachine(community.NewCommunityState(), updateChan, &ClusterDispatcher{
 		communityID:    communityID,
 		clusterManager: m.clusterManager,
 	}, NewCommunityExecutor(&m.processManager))
@@ -154,6 +144,13 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Comm
 		return nil, err
 	}
 
+	// The first state transition in a new community is alway initialize_community, which sets the community_id
+	transitions := []state.CommunityStateTransition{
+		&state.InitializeCommunityTransition{
+			CommunityID: communityID,
+		},
+	}
+
 	if createIpfs {
 		// After cluster is created, immediately add transition to initialize IPFS
 		ipfsConfig, err := newIPFSSwarm(communityID)
@@ -161,17 +158,17 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Comm
 			return nil, err
 		}
 
-		transition := &state.InitializeIPFSSwarmTransition{
+		transitions = append(transitions, &state.InitializeIPFSSwarmTransition{
 			IPFSConfig: ipfsConfig,
-		}
-
-		err = stateMachine.ProposeTransition(transition)
-		if err != nil {
-			return nil, err
-		}
+		})
 	}
 
-	return initState, nil
+	state, err := stateMachine.ProposeTransitions(transitions)
+	if err != nil {
+		return nil, err
+	}
+
+	return state, nil
 }
 
 // TODO don't return community state since that is retrieved asynchronously. Or we block
@@ -186,10 +183,7 @@ func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, a
 		return nil, err
 	}
 
-	initState := &community.CommunityState{
-		CommunityID: communityID,
-	}
-	stateMachine, err := state.NewCommunityStateMachine(initState, updateChan, &ClusterDispatcher{
+	stateMachine, err := state.NewCommunityStateMachine(community.NewCommunityState(), updateChan, &ClusterDispatcher{
 		communityID:    communityID,
 		clusterManager: m.clusterManager,
 	}, NewCommunityExecutor(&m.processManager))
@@ -205,12 +199,12 @@ func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, a
 	return stateMachine.State()
 }
 
-func (m *Manager) ProposeTransition(communityID string, transition []byte) error {
+func (m *Manager) ProposeTransitions(communityID string, transitions []byte) error {
 	if !m.checkCommunityExists(communityID) {
 		return fmt.Errorf("community %s does not exist in communities directory", communityID)
 	}
 
-	err := m.clusterManager.ProposeTransition(communityID, transition)
+	_, err := m.clusterManager.ProposeTransitions(communityID, transitions)
 	if err != nil {
 		return err
 	}
@@ -265,7 +259,7 @@ type ClusterDispatcher struct {
 	clusterManager *cluster.ClusterManager
 }
 
-func (d *ClusterDispatcher) Dispatch(json []byte) error {
+func (d *ClusterDispatcher) Dispatch(json []byte) (*community.CommunityState, error) {
 	encoded := base64.StdEncoding.EncodeToString(json)
-	return d.clusterManager.ProposeTransition(d.communityID, []byte(encoded))
+	return d.clusterManager.ProposeTransitions(d.communityID, []byte(encoded))
 }

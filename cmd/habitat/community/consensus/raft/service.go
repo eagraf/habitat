@@ -10,6 +10,7 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/community/state"
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/raft/transport"
+	"github.com/eagraf/habitat/structs/community"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/libp2p/go-libp2p-core/host"
@@ -57,12 +58,12 @@ func (cs *ClusterService) Start() error {
 }
 
 // CreateCluster initializes a new Raft cluster, and bootstraps it with this nodes address
-func (cs *ClusterService) CreateCluster(communityID string, initState []byte) (<-chan state.StateUpdate, error) {
+func (cs *ClusterService) CreateCluster(communityID string) (<-chan state.StateUpdate, error) {
 	if _, ok := cs.instances[communityID]; ok {
 		return nil, fmt.Errorf("raft instance for community %s already initialized", communityID)
 	}
 
-	raftFSM, err := state.NewRaftFSMAdapter(initState)
+	raftFSM, err := state.NewRaftFSMAdapter(community.NewCommunityStateBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -81,10 +82,11 @@ func (cs *ClusterService) CreateCluster(communityID string, initState []byte) (<
 	}
 	cs.instances[communityID] = raftInstance
 
-	/*communityStateMachine := state.NewCommunityStateMachine(raftFSM.JSONState(), &RaftDispatcher{
-		communityID:    communityID,
-		clusterService: cs,
-	})*/
+	// block until we receive leadership
+	leaderCh := ra.LeaderCh()
+	if !<-leaderCh {
+		return nil, errors.New("did not receive leadership")
+	}
 
 	return raftFSM.UpdateChan(), nil
 }
@@ -157,25 +159,35 @@ func (cs *ClusterService) RestoreNode(communityID string) (<-chan state.StateUpd
 	return raftFSM.UpdateChan(), nil
 }
 
-// ProposeTransition takes a proposed update to community state in the form of a JSON patch,
+// ProposeTransitions takes a proposed update to community state in the form of a JSON patch,
 // and attempts to get other nodes to agree to apply the transition to the state machine.
 // If succesfully commited, the updated state should be available via the GetState() call.
-// TODO if this node is a follower, forward transition to leader
-func (cs *ClusterService) ProposeTransition(communityID string, transition []byte) error {
+func (cs *ClusterService) ProposeTransitions(communityID string, transitions []byte) (*community.CommunityState, error) {
 	log.Info().Msgf("applying transition to %s", communityID)
 
 	raftInstance, ok := cs.instances[communityID]
 	if !ok {
-		return fmt.Errorf("community %s raft instance does not exist", communityID)
+		return nil, fmt.Errorf("community %s raft instance does not exist", communityID)
 	}
 
-	future := raftInstance.instance.Apply(transition, RaftTimeout)
+	future := raftInstance.instance.Apply(transitions, RaftTimeout)
+
+	// future.Error() blocks until the cluster finishes processing this attempted entry
 	err := future.Error()
 	if err != nil {
-		return fmt.Errorf("error applying state transition to community %s: %s", communityID, err)
+		return nil, fmt.Errorf("error applying state transition to community %s: %s", communityID, err)
 	}
 
-	return nil
+	state := future.Response()
+	if state == nil {
+		return nil, errors.New("got nil state back from Raft apply future")
+	}
+
+	if _, ok := state.(*community.CommunityState); !ok {
+		return nil, errors.New("state returned by Raft apply future is not *community.CommunityState")
+	}
+
+	return state.(*community.CommunityState), nil
 }
 
 // GetState returns the state tracked by the Raft instance's state machine. It returns

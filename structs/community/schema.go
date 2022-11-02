@@ -1,5 +1,7 @@
 package community
 
+import "encoding/json"
+
 var CommunityStateSchema = []byte(`{
 	"title": "community state schema",
 	"type": "object",
@@ -41,4 +43,17 @@ type CommunityState struct {
 type IPFSConfig struct {
 	SwarmKey           string   `json:"swarm_key"`
 	BootstrapAddresses []string `json:"bootstrap_addresses"`
+}
+
+func NewCommunityState() *CommunityState {
+	return &CommunityState{}
+}
+
+func NewCommunityStateBytes() []byte {
+	state := NewCommunityState()
+	res, err := json.Marshal(state)
+	if err != nil {
+		panic("this panic should be unreachable")
+	}
+	return res
 }

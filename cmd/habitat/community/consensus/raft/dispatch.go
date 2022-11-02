@@ -1,13 +1,17 @@
 package raft
 
-import "encoding/base64"
+import (
+	"encoding/base64"
+
+	"github.com/eagraf/habitat/structs/community"
+)
 
 type RaftDispatcher struct {
 	communityID    string
 	clusterService *ClusterService
 }
 
-func (d *RaftDispatcher) Dispatch(json []byte) error {
+func (d *RaftDispatcher) Dispatch(json []byte) (*community.CommunityState, error) {
 	encoded := base64.StdEncoding.EncodeToString(json)
-	return d.clusterService.ProposeTransition(d.communityID, []byte(encoded))
+	return d.clusterService.ProposeTransitions(d.communityID, []byte(encoded))
 }
