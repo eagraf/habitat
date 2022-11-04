@@ -115,7 +115,7 @@ func (m *Manager) checkCommunityExists(communityID string) bool {
 
 }
 
-func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.CommunityState, error) {
+func (m *Manager) CreateCommunity(name string, createIpfs bool, member *community.Member, node *community.Node) (*community.CommunityState, error) {
 	// Generate UUID for now
 	communityID := uuid.New().String()
 
@@ -148,6 +148,12 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Comm
 	transitions := []state.CommunityStateTransition{
 		&state.InitializeCommunityTransition{
 			CommunityID: communityID,
+		},
+		&state.AddMemberTransition{
+			Member: member,
+		},
+		&state.AddNodeTransition{
+			Node: node,
 		},
 	}
 
