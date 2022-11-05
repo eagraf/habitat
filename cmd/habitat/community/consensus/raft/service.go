@@ -104,9 +104,7 @@ func (cs *ClusterService) JoinCluster(communityID string, address string) (<-cha
 		return nil, fmt.Errorf("raft instance for community %s already initialized", communityID)
 	}
 
-	raftFSM, err := state.NewRaftFSMAdapter([]byte(fmt.Sprintf(`{
-		"community_id": "%s"
-	}`, communityID)))
+	raftFSM, err := state.NewRaftFSMAdapter(community.NewCommunityStateBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -135,9 +133,7 @@ func (cs *ClusterService) RestoreNode(communityID string) (<-chan state.StateUpd
 		log.Error().Msgf("raft instance for community %s already initialized", communityID)
 	}
 
-	raftFSM, err := state.NewRaftFSMAdapter([]byte(fmt.Sprintf(`{
-		"community_id": "%s"
-	}`, communityID)))
+	raftFSM, err := state.NewRaftFSMAdapter(community.NewCommunityStateBytes())
 	if err != nil {
 		return nil, err
 	}
