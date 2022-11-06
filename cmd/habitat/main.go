@@ -53,7 +53,7 @@ func main() {
 	viper.SetDefault("SOURCES_PORT", ":8765")
 	sourcesPort := viper.Get("SOURCES_PORT").(string)
 	dataProxy := dataproxy.NewDataProxy(map[string]sources.DataServerNode{})
-	dataProxy.Start(context.Background(), sourcesPort)
+	go dataProxy.Start(context.Background(), sourcesPort)
 
 	// Start process manager
 	ProcessManager = procs.NewManager(procsDir, reverseProxy.Rules)
