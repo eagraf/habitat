@@ -105,7 +105,7 @@ func main() {
 
 	sourcesPath := utils.GetEnvDefault("SOURCES_PATH", "~/habitat/data/sources")
 	sourcesPort := utils.GetEnvDefault("PORT", ":8765")
-	schemaPort := ":8764"
+	// schemaPort := ":8764"
 	sreader := sources.NewJSONReader(sourcesPath)
 	swriter := sources.NewJSONWriter(sourcesPath)
 	pmanager := sources.NewBasicPermissionsManager()
@@ -116,8 +116,8 @@ func main() {
 	rootCmd.MarkFlagRequired("path")
 	Execute()
 
-	testSchemaServer := sources.NewSchemaServer("schema")
-	go testSchemaServer.Start(ctx, schemaPort)
+	// testSchemaServer := sources.NewSchemaServer("schema")
+	//go testSchemaServer.Start(ctx, schemaPort)
 
 	testDataServer := sources.NewDataServer("my-community", "localhost", "8766", writer, reader)
 	go testDataServer.Start(ctx)

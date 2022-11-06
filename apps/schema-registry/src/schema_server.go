@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/eagraf/habitat/pkg/sources"
 	"github.com/gorilla/mux"
 	"github.com/qri-io/jsonschema"
 	"github.com/rs/zerolog/log"
@@ -102,7 +103,7 @@ func (s *SchemaServer) StoreHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("error: can't read request body: " + err.Error()))
 		return
 	}
-	hash := hashBytes(bytes)
+	hash := sources.HashBytes(bytes)
 	p := s.path(hash)
 
 	if _, err := os.Stat(p); errors.Is(err, os.ErrNotExist) {

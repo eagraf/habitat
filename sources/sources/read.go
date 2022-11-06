@@ -1,17 +1,18 @@
 package sources
 
 import (
+	"github.com/eagraf/habitat/pkg/sources"
 	"github.com/rs/zerolog/log"
 )
 
 type ReadRequest struct {
-	Requester string `json:"requester"` // for ex: name of app
-	Community string `json:"community"` // eventually should be community id
-	Source    Source `json:"source"`    // request by schema for v0
+	Requester string         `json:"requester"` // for ex: name of app
+	Community string         `json:"community"` // eventually should be community id
+	Source    sources.Source `json:"source"`    // request by schema for v0
 }
 
 type SourceReader interface {
-	Read(Source) (SourceData, error) // return (error, data)
+	Read(sources.Source) (sources.SourceData, error) // return (error, data)
 }
 
 type Reader struct {
@@ -24,7 +25,7 @@ func NewReader(S SourceReader, P PermissionsManager) *Reader {
 }
 
 // return (allowed, error, data)
-func (R *Reader) Read(r *ReadRequest) (bool, error, SourceData) {
+func (R *Reader) Read(r *ReadRequest) (bool, error, sources.SourceData) {
 	if !R.PermissionsManager.CheckCanRead(r) {
 		return false, nil, ""
 	}

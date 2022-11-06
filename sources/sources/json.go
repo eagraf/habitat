@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/eagraf/habitat/pkg/sources"
 	"github.com/rs/zerolog/log"
 )
 
@@ -15,7 +16,7 @@ import (
 */
 
 // Shared functions
-func getPath(basePath string, source Source) string {
+func getPath(basePath string, source sources.Source) string {
 	return filepath.Join(basePath, source.Name+".json")
 }
 
@@ -28,10 +29,10 @@ func NewJSONReader(path string) *JSONReader {
 	return &JSONReader{Path: path}
 }
 
-func (R *JSONReader) Read(req Source) (SourceData, error) {
+func (R *JSONReader) Read(req sources.Source) (sources.SourceData, error) {
 	path := getPath(R.Path, req)
 	bytes, err := os.ReadFile(path)
-	return SourceData(bytes), err
+	return sources.SourceData(bytes), err
 }
 
 // JSON source writer
@@ -43,7 +44,7 @@ func NewJSONWriter(path string) *JSONWriter {
 	return &JSONWriter{Path: path}
 }
 
-func (W *JSONWriter) Write(source Source, data SourceData) error {
+func (W *JSONWriter) Write(source sources.Source, data sources.SourceData) error {
 	path := getPath(W.Path, source)
 	verrs, err := source.Schema.ValidateBytes(context.Background(), []byte(data))
 	if err != nil {

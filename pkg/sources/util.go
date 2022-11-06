@@ -5,7 +5,7 @@ import (
 	"hash/maphash"
 )
 
-func hashBytes(b []byte) string {
+func HashBytes(b []byte) string {
 	var h maphash.Hash
 	h.Write(b)
 	str := fmt.Sprintf("%#x", h.Sum64())

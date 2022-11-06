@@ -1,14 +1,16 @@
 package sources
 
+import "github.com/eagraf/habitat/pkg/sources"
+
 type WriteRequest struct {
-	Requester string     `json:"requester"` // for ex: name of app
-	Source    Source     `json:"source"`    // request by name and hash/version
-	Community string     `json:"community"`
-	Data      SourceData `json:"data"`
+	Requester string             `json:"requester"` // for ex: name of app
+	Source    sources.Source     `json:"source"`    // request by name and hash/version
+	Community string             `json:"community"`
+	Data      sources.SourceData `json:"data"`
 }
 
 type SourceWriter interface {
-	Write(Source, SourceData) error // take in write request, return (allowed, error)
+	Write(sources.Source, sources.SourceData) error // take in write request, return (allowed, error)
 }
 
 type Writer struct {

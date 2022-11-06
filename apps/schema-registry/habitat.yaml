@@ -1,0 +1,4 @@
+name: schema-registry
+bin: schema-registry
+ports:
+proxy-rules:
