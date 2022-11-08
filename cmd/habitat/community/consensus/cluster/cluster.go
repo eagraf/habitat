@@ -7,7 +7,7 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/community/state"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
 	"github.com/eagraf/habitat/structs/community"
-	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p/core/host"
 )
 
 type ClusterService interface {

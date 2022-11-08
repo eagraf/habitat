@@ -9,11 +9,11 @@ import (
 
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/libp2p/go-libp2p"
-	crypto "github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-core/peerstore"
+	crypto "github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/rs/zerolog/log"
 )

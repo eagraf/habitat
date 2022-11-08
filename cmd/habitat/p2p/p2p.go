@@ -5,7 +5,7 @@ import (
 
 	"github.com/eagraf/habitat/pkg/compass"
 	libp2p "github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p/core/host"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
