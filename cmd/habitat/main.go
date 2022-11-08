@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"os/signal"
 
@@ -57,6 +58,15 @@ func main() {
 	if err != nil {
 		log.Fatal().Msgf("unable to start community manager: %s", err)
 	}
+
+	apiURL, err := url.Parse("http://0.0.0.0:2040")
+	if err != nil {
+		log.Fatal().Msgf("unable to get url for Habitat API: %s", err)
+	}
+	reverseProxy.Rules.Add("habitat-api", &proxy.RedirectRule{
+		Matcher:         "/habitat",
+		ForwardLocation: apiURL,
+	})
 
 	router := getRouter(ProcessManager, CommunityManager)
 
