@@ -19,7 +19,7 @@ import (
 	"github.com/eagraf/habitat/pkg/ipfs"
 	"github.com/eagraf/habitat/structs/community"
 	"github.com/google/uuid"
-	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/rs/zerolog/log"
 )
 

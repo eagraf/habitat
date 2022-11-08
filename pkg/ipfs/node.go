@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	config "github.com/ipfs/go-ipfs-config"
+	"github.com/ipfs/kubo/config"
 	"github.com/rs/zerolog/log"
 )
 
