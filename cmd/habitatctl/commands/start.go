@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -72,21 +71,15 @@ var startCmd = &cobra.Command{
 			args = append(reqArgs, commName)
 		}
 
-		resWrapper := sendRequest(&ctl.StartRequest{
+		req := &ctl.StartRequest{
 			App:   args[0],
 			Args:  reqArgs,
 			Flags: flags,
 			Env:   nonflags,
-		})
-		if resWrapper.Error != "" {
-			printError(errors.New(resWrapper.Error))
 		}
 
 		var res ctl.StartResponse
-		err := resWrapper.Deserialize(&res)
-		if err != nil {
-			printError(err)
-		}
+		postRequest(ctl.CommandStart, req, &res)
 
 		fmt.Println(res.ProcID)
 	},
