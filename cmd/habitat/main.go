@@ -58,7 +58,9 @@ func main() {
 		log.Fatal().Msgf("unable to start community manager: %s", err)
 	}
 
-	listen()
+	router := getRouter(ProcessManager, CommunityManager)
+
+	serveHabitatAPI(router)
 }
 
 func initHabitatDirectory() {

@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/eagraf/habitat/structs/ctl"
@@ -18,12 +17,11 @@ var stopCmd = &cobra.Command{
 		if len(args) != 1 {
 			fmt.Println("expects a process id as the only arg")
 		}
-		resWrapper := sendRequest(&ctl.StopRequest{
+		req := &ctl.StopRequest{
 			ProcID: args[0],
-		})
-		if resWrapper.Error != "" {
-			printError(errors.New(resWrapper.Error))
 		}
+		var res ctl.StopResponse
+		postRequest(ctl.CommandStop, req, &res)
 	},
 }
 

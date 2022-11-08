@@ -18,7 +18,6 @@ package commands
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/eagraf/habitat/structs/ctl"
@@ -57,16 +56,8 @@ var communityCreateCmd = &cobra.Command{
 			CommunityName:     name.Value.String(),
 			CreateIPFSCluster: ipfs,
 		}
-		resWrapper := sendRequest(req)
-		if resWrapper.Error != "" {
-			printError(errors.New(resWrapper.Error))
-		}
-
 		var res ctl.CommunityCreateResponse
-		err := resWrapper.Deserialize(&res)
-		if err != nil {
-			printError(err)
-		}
+		postRequest(ctl.CommandCommunityCreate, req, &res)
 
 		fmt.Println(res.CommunityID)
 		fmt.Println(res.JoinToken)
@@ -111,16 +102,8 @@ var communityJoinCmd = &cobra.Command{
 			req.CommunityID = joinInfo.CommunityID
 		}
 
-		resWrapper := sendRequest(req)
-		if resWrapper.Error != "" {
-			printError(errors.New(resWrapper.Error))
-		}
-
 		var res ctl.CommunityJoinResponse
-		err = resWrapper.Deserialize(&res)
-		if err != nil {
-			printError(err)
-		}
+		postRequest(ctl.CommandCommunityJoin, req, &res)
 
 		fmt.Println(res.AddMemberToken)
 	},
@@ -171,10 +154,7 @@ var communityAddMemberCmd = &cobra.Command{
 			req.NodeID = addInfo.NodeID
 		}
 
-		resWrapper := sendRequest(req)
-		if resWrapper.Error != "" {
-			printError(errors.New(resWrapper.Error))
-		}
+		postRequest(ctl.CommandCommunityAddMember, req, &ctl.CommunityAddMemberResponse{})
 	},
 }
 
@@ -198,10 +178,7 @@ var communityProposeTransitionsCmd = &cobra.Command{
 			CommunityID:     communityID.Value.String(),
 			StateTransition: []byte(b64Patch),
 		}
-		resWrapper := sendRequest(req)
-		if resWrapper.Error != "" {
-			printError(errors.New(resWrapper.Error))
-		}
+		postRequest(ctl.CommandCommunityPropose, req, &ctl.CommunityProposeResponse{})
 	},
 }
 
@@ -215,18 +192,12 @@ var communityStateCmd = &cobra.Command{
 			return
 		}
 
-		resWrapper := sendRequest(&ctl.CommunityStateRequest{
+		req := &ctl.CommunityStateRequest{
 			CommunityID: communityID.Value.String(),
-		})
-		if resWrapper.Error != "" {
-			printError(errors.New(resWrapper.Error))
 		}
 
 		var res ctl.CommunityStateResponse
-		err := resWrapper.Deserialize(&res)
-		if err != nil {
-			printError(err)
-		}
+		postRequest(ctl.CommandCommunityState, req, &res)
 
 		fmt.Println(string(res.State))
 	},
@@ -236,16 +207,11 @@ var communityListCmd = &cobra.Command{
 	Use:   "ls",
 	Short: "list the communities that this node is a part of",
 	Run: func(cmd *cobra.Command, args []string) {
-		resWrapper := sendRequest(&ctl.CommunityListRequest{})
-		if resWrapper.Error != "" {
-			printError(errors.New(resWrapper.Error))
-		}
-
+		req := &ctl.CommunityListRequest{}
 		var res ctl.CommunityListResponse
-		err := resWrapper.Deserialize(&res)
-		if err != nil {
-			printError(errors.New(resWrapper.Error))
-		}
+
+		postRequest(ctl.CommandCommunityList, req, &res)
+
 		fmt.Printf("node id: %s\n", res.NodeID)
 		for _, c := range res.Communities {
 			fmt.Println(c)

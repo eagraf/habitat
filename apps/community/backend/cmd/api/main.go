@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -34,14 +33,13 @@ func CreateCommunity(name string, id string, path string, createIpfs bool) error
 		CommunityName:     name,
 		CreateIPFSCluster: createIpfs,
 	}
-	res, err := client.SendRequest(createCommunityReq) // need to get address from somewhere
+
 	var comm community.Community
+	err, apiErr := client.PostRequest(createCommunityReq, &comm, ctl.GetRoute(ctl.CommandCommunityCreate)) // need to get address from somewhere
 	if err != nil {
-		log.Err(err).Msg("Unable to send request to habitatctl client")
-	}
-	err = json.Unmarshal([]byte(res.Serialized), &comm)
-	if err != nil {
-		log.Err(err).Msg(fmt.Sprintf("unable to get community id %s", name))
+		log.Error().Err(err).Msg("Unable to send request to habitatctl client")
+	} else if apiErr != nil {
+		log.Error().Err(err).Msg("api error")
 	}
 
 	return nil
@@ -88,15 +86,13 @@ func JoinCommunity(name string, path string, key string, btstpaddr string, rafta
 		SwarmKey:          key,
 		BootstrapPeers:    []string{btstpaddr}, // This should include the entire list
 	}
-	res, err := client.SendRequest(joinCommunityReq) // need to get address from somewhere
-	if err != nil {
-		return err
-	}
 
 	var joinCommunityRes ctl.CommunityJoinResponse
-	err = json.Unmarshal([]byte(res.Serialized), &joinCommunityRes)
+	err, apiErr := client.PostRequest(joinCommunityReq, &joinCommunityRes, ctl.GetRoute(ctl.CommandCommunityJoin)) // need to get address from somewhere
 	if err != nil {
-		return err
+		log.Error().Err(err).Msg("Unable to send request to habitatctl client")
+	} else if apiErr != nil {
+		log.Error().Err(err).Msg("api error")
 	}
 
 	return nil
@@ -152,14 +148,15 @@ func AddMemberHandler(w http.ResponseWriter, r *http.Request) {
 		NodeID:             node,
 		JoiningNodeAddress: addr,
 	}
-	res, err := client.SendRequest(addMemberReq) // need to get address from somewhere
+	var addRes ctl.CommunityAddMemberResponse
+	err, apiErr := client.PostRequest(*addMemberReq, &addRes, ctl.GetRoute(ctl.CommandCommunityAddMember)) // need to get address from somewhere
 	if err != nil {
 		log.Error().Err(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		return
 	}
-	if res.Status == ctl.StatusOK {
+	if apiErr != nil {
 		bytes, err := json.Marshal( // TODO unify this response type with the ctl structs
 			&AddMemberResponse{
 				MemberId: node,
@@ -174,9 +171,9 @@ func AddMemberHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Write(bytes)
 	} else {
-		log.Error().Err(errors.New(res.Error)).Msgf("error adding member to community")
+		log.Error().Err(err).Msgf("error adding member to community")
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(res.Error))
+		w.Write([]byte(err.Error()))
 	}
 }
 

@@ -1,13 +1,14 @@
 package main
 
 import (
-	"bufio"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"net"
+	"net/http"
+	"time"
 
+	"github.com/eagraf/habitat/cmd/habitat/community"
+	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/structs/ctl"
+	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
 )
 
@@ -16,108 +17,31 @@ const (
 	HabitatCTLPort = "2040"
 )
 
-func listen() {
-	// TODO make port number configurable
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", HabitatCTLHost, HabitatCTLPort))
-	if err != nil {
-		log.Fatal().Msgf("habitat service listener failed to start: %s", err)
-	}
-	defer listener.Close()
+func getRouter(pm *procs.Manager, cm *community.Manager) *mux.Router {
+	router := mux.NewRouter()
+	router.HandleFunc(ctl.GetRoute(ctl.CommandListProcesses), pm.ListProcessesHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandStart), pm.StartProcessHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandStop), pm.StopProcessHandler)
 
-	log.Info().Msgf("habitat service listening on %s:%s", HabitatCTLHost, HabitatCTLPort)
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			log.Error().Msgf("error accepting message: %s", err)
-		}
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityCreate), cm.CommunityCreateHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityJoin), cm.CommunityJoinHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityAddMember), cm.CommunityAddMemberHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityPropose), cm.CommunityProposeHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityState), cm.CommunityStateHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityList), cm.CommunityListHandler)
 
-		go handleRequest(conn)
-	}
+	return router
 }
 
-func handleRequest(conn net.Conn) error {
-	buf, err := bufio.NewReader(conn).ReadBytes('\n')
-	if err != nil {
-		return err
+func serveHabitatAPI(router *mux.Router) {
+	srv := &http.Server{
+		Handler:      router,
+		Addr:         fmt.Sprintf("%s:%s", HabitatCTLHost, HabitatCTLPort),
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
 	}
 
-	req, err := decodeRequest(buf)
-	if err != nil {
-		return writeResponse(conn, &ctl.ResponseWrapper{
-			Type:   req.Type,
-			Status: ctl.StatusBadRequest,
-			Error:  err.Error(),
-		})
-	}
-
-	res, err := requestRouter(req)
-	if err != nil {
-		return writeResponse(conn, &ctl.ResponseWrapper{
-			Type:   req.Type,
-			Status: ctl.StatusInternalServerError,
-			Error:  err.Error(),
-		})
-	}
-
-	return writeResponse(conn, res)
-}
-
-func writeResponse(conn net.Conn, res *ctl.ResponseWrapper) error {
-	msg, err := res.Encode()
-	if err != nil {
-		return err
-	}
-
-	_, err = conn.Write(msg)
-	if err != nil {
-		return err
-	}
-
-	conn.Close()
-	return nil
-}
-
-func decodeRequest(buf []byte) (*ctl.RequestWrapper, error) {
-	decoded, err := base64.StdEncoding.DecodeString(string(buf))
-	if err != nil {
-		return nil, err
-	}
-
-	var req ctl.RequestWrapper
-	err = json.Unmarshal(decoded, &req)
-	if err != nil {
-		return nil, err
-	}
-
-	return &req, nil
-}
-
-func requestRouter(req *ctl.RequestWrapper) (*ctl.ResponseWrapper, error) {
-
-	switch req.Type {
-	case ctl.CommandStart:
-		return ProcessManager.StartProcessHandler(req)
-	case ctl.CommandStop:
-		return ProcessManager.StopProcessHandler(req)
-	case ctl.CommandListProcesses:
-		return ProcessManager.ListProcessesHandler(req)
-	case ctl.CommandCommunityCreate:
-		return CommunityManager.CommunityCreateHandler(req)
-	case ctl.CommandCommunityJoin:
-		return CommunityManager.CommunityJoinHandler(req)
-	case ctl.CommandCommunityAddMember:
-		return CommunityManager.CommunityAddMemberHandler(req)
-	case ctl.CommandCommunityPropose:
-		return CommunityManager.CommunityProposeHandler(req)
-	case ctl.CommandCommunityState:
-		return CommunityManager.CommunityStateHandler(req)
-	case ctl.CommandCommunityList:
-		return CommunityManager.CommunityListHandler(req)
-	default:
-		return &ctl.ResponseWrapper{
-			Type:   req.Type,
-			Status: ctl.StatusBadRequest,
-			Error:  fmt.Sprintf("command %s does not exist", req.Type),
-		}, nil
-	}
+	log.Info().Msgf("starting Habitat API listening on %s", srv.Addr)
+	err := srv.ListenAndServe()
+	log.Fatal().Err(err)
 }
