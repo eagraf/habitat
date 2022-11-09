@@ -9,11 +9,11 @@ import (
 
 	"github.com/eagraf/habitat/cmd/habitat/community"
 	dataproxy "github.com/eagraf/habitat/cmd/habitat/data_proxy"
-	"github.com/eagraf/habitat/cmd/habitat/p2p"
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
 	"github.com/eagraf/habitat/cmd/sources"
 	"github.com/eagraf/habitat/pkg/compass"
+	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
