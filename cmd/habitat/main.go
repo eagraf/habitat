@@ -53,8 +53,15 @@ func main() {
 	}
 
 	// Start reverse proxy
+	proxyAddr := fmt.Sprintf("%s:%s", ReverseProxyHost, ReverseProxyPort)
 	reverseProxy := proxy.NewServer()
-	go reverseProxy.Start(fmt.Sprintf("%s:%s", ReverseProxyHost, ReverseProxyPort))
+	go reverseProxy.Start(proxyAddr)
+
+	redirectURL, err := url.Parse("http://" + proxyAddr + "/habitat")
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+	go proxy.LibP2PHTTPProxy(p2pNode.Host(), redirectURL)
 
 	// Start data proxy
 	viper.SetDefault("SOURCES_PORT", ":8765")
