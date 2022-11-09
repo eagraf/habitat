@@ -5,8 +5,10 @@ import (
 
 	"github.com/eagraf/habitat/pkg/compass"
 	libp2p "github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/rs/zerolog/log"
 )
 
 type Node struct {
@@ -14,9 +16,7 @@ type Node struct {
 	host       host.Host
 }
 
-func NewNode(port string) *Node {
-	priv, _ := compass.GetPeerIDKeyPair()
-
+func NewNode(port string, priv crypto.PrivKey) *Node {
 	ip, err := compass.LocalIPv4()
 	if err != nil {
 		panic(err)
@@ -32,6 +32,8 @@ func NewNode(port string) *Node {
 		listenAddr: listen,
 		host:       h,
 	}
+
+	log.Info().Msgf("starting libp2p node listening at %v, with peer identity %s", h.Addrs(), h.ID().Pretty())
 
 	return node
 }
