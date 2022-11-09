@@ -40,8 +40,9 @@ func main() {
 	communityDir := compass.CommunitiesPath()
 
 	initHabitatDirectory()
+	priv, _ := compass.GetPeerIDKeyPair()
 
-	p2pNode := p2p.NewNode(P2PPort)
+	p2pNode := p2p.NewNode(P2PPort, priv)
 
 	// Start reverse proxy
 	reverseProxy := proxy.NewServer()
