@@ -7,10 +7,10 @@ import (
 	"os/signal"
 
 	"github.com/eagraf/habitat/cmd/habitat/community"
-	"github.com/eagraf/habitat/cmd/habitat/p2p"
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
 	"github.com/eagraf/habitat/pkg/compass"
+	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -42,7 +42,12 @@ func main() {
 	initHabitatDirectory()
 	priv, _ := compass.GetPeerIDKeyPair()
 
-	p2pNode := p2p.NewNode(P2PPort, priv)
+	p2pNode, err := p2p.NewNode(P2PPort, priv)
+	if err != nil {
+		log.Fatal().Msgf("error starting LibP2P node")
+	} else {
+		log.Info().Msgf("starting LibP2P node with peer ID %s listening at port %s", p2pNode.Host().ID().Pretty(), P2PPort)
+	}
 
 	// Start reverse proxy
 	reverseProxy := proxy.NewServer()
@@ -54,7 +59,6 @@ func main() {
 	go handleInterupt(ProcessManager)
 
 	// Create community manager
-	var err error
 	CommunityManager, err = community.NewManager(communityDir, ProcessManager, &reverseProxy.Rules, p2pNode.Host())
 	if err != nil {
 		log.Fatal().Msgf("unable to start community manager: %s", err)
