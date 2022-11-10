@@ -1,5 +1,12 @@
 package ctl
 
+type InspectRequest struct{}
+
+type InspectResponse struct {
+	LibP2PPeerID         string `json:"libp2p_peer_id"`
+	LibP2PProxyMultiaddr string `json:"libp2p_proxy_multiaddr"`
+}
+
 type StartRequest struct {
 	App         string   `json:"app"`
 	CommunityID string   `json:"community_id"`

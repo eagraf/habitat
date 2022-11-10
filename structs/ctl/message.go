@@ -7,6 +7,7 @@ import (
 )
 
 const (
+	CommandInspect            = "inspect"
 	CommandStart              = "start"
 	CommandStop               = "stop"
 	CommandListProcesses      = "ps"
