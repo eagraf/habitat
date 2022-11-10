@@ -3,16 +3,20 @@ package client
 import (
 	"bufio"
 	"bytes"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 
+	"github.com/eagraf/habitat/pkg/identity"
 	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/eagraf/habitat/structs/ctl"
+	"github.com/gorilla/websocket"
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -113,6 +117,17 @@ func PostRequestToAddress(address string, req, res interface{}) (error, error) {
 	return nil, nil
 }
 
+func GetWebsocketConn(route string) (*websocket.Conn, error) {
+	wsURL := fmt.Sprintf("ws://%s%s", HabitatServiceAddr, route)
+
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return conn, nil
+}
+
 func PostLibP2PRequestToAddress(addr ma.Multiaddr, route string, peerID peer.ID, req, res interface{}) (error, error) {
 
 	reqBody, err := json.Marshal(req)
@@ -146,4 +161,44 @@ func PostLibP2PRequestToAddress(addr ma.Multiaddr, route string, peerID peer.ID,
 	}
 
 	return nil, nil
+}
+
+func WebsocketKeySigningExchange(conn *websocket.Conn, userIdentity *identity.UserIdentity) error {
+	var pubKeyMsg ctl.SigningPublicKeyMsg
+	err := conn.ReadJSON(&pubKeyMsg)
+	if err != nil {
+		return err
+	}
+	if werr := pubKeyMsg.GetError(); werr != nil {
+		return werr
+	}
+
+	pubKey, err := x509.ParsePKCS1PublicKey(pubKeyMsg.PublicKey)
+	if err != nil {
+		return err
+	}
+
+	// TODO propogate proper node IDs through
+	cert, err := identity.GenerateMemberNodeCertificate("abc", userIdentity, pubKey)
+	if err != nil {
+		return err
+	}
+
+	// PEM encode the cert
+	certPEM := new(bytes.Buffer)
+	pem.Encode(certPEM, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert,
+	})
+
+	certMsg := &ctl.SigningCertMsg{
+		UserCertificate: userIdentity.CertBytes,
+		NodeCertificate: certPEM.Bytes(),
+	}
+
+	err = conn.WriteJSON(certMsg)
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -41,6 +41,8 @@ type CommunityCreateRequest struct {
 type CommunityCreateResponse struct {
 	CommunityID string `json:"community_id"`
 	JoinToken   string `json:"join_code"`
+
+	WebsocketControl
 }
 
 type CommunityJoinRequest struct {
@@ -97,4 +99,19 @@ type AddMemberInfo struct {
 	CommunityID string `json:"community_id"`
 	Address     string `json:"address"`
 	NodeID      string `json:"node_id"`
+}
+
+// Sent by server back to client
+type SigningPublicKeyMsg struct {
+	PublicKey []byte `json:"public_key"`
+
+	WebsocketControl
+}
+
+// Sent by client back to server
+type SigningCertMsg struct {
+	UserCertificate []byte `json:"user_certificate"`
+	NodeCertificate []byte `json:"node_certificate"`
+
+	WebsocketControl
 }

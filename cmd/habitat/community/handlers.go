@@ -10,10 +10,72 @@ import (
 
 	"github.com/eagraf/habitat/cmd/habitat/api"
 	"github.com/eagraf/habitat/pkg/compass"
+	"github.com/eagraf/habitat/pkg/identity"
+	"github.com/eagraf/habitat/structs/community"
 	"github.com/eagraf/habitat/structs/ctl"
+	"github.com/gorilla/websocket"
+	"github.com/rs/zerolog/log"
 )
 
-type CTLHandler func(w http.ResponseWriter, r *http.Request)
+func signKeyExchange(conn *websocket.Conn, finalMsg ctl.WebsocketMessage) (*community.Member, *community.Node, error) {
+	pubMsg := &ctl.SigningPublicKeyMsg{}
+
+	// Generate the private key first
+	pub, _, err := identity.GenerateMemberNodeKeypair()
+	if err != nil {
+		api.WriteWebsocketError(conn, err, pubMsg)
+		return nil, nil, err
+	}
+
+	// Send public key to client to be signed by user private key
+	pubMsg.PublicKey = pub
+
+	err = conn.WriteJSON(pubMsg)
+	if err != nil {
+		api.WriteWebsocketError(conn, err, pubMsg)
+		return nil, nil, err
+	}
+
+	// Wait for client response with signed cert
+	var certMsg ctl.SigningCertMsg
+	err = conn.ReadJSON(&certMsg)
+	if err != nil {
+		api.WriteWebsocketError(conn, err, finalMsg)
+		return nil, nil, err
+	}
+
+	cert, err := identity.GetCertFromPEM(certMsg.NodeCertificate)
+	if err != nil {
+		api.WriteWebsocketError(conn, err, finalMsg)
+		return nil, nil, err
+	}
+
+	userID, err := identity.GetUIDFromName(&cert.Issuer)
+	if err != nil {
+		api.WriteWebsocketError(conn, err, finalMsg)
+		return nil, nil, err
+	}
+
+	nodeID, err := identity.GetUIDFromName(&cert.Subject)
+	if err != nil {
+		api.WriteWebsocketError(conn, err, finalMsg)
+		return nil, nil, err
+	}
+
+	member := &community.Member{
+		ID:          userID,
+		Username:    cert.Issuer.CommonName,
+		Certificate: certMsg.UserCertificate,
+	}
+
+	node := &community.Node{
+		ID:          nodeID,
+		MemberID:    userID,
+		Certificate: certMsg.NodeCertificate,
+	}
+
+	return member, node, nil
+}
 
 // TODO: make request args a map
 // for now: always send [name, address]

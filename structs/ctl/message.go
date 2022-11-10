@@ -3,6 +3,7 @@ package ctl
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -124,4 +125,26 @@ func (r *ResponseWrapper) Encode() ([]byte, error) {
 	msg := append([]byte(encoded), '\n')
 
 	return msg, nil
+}
+
+type WebsocketMessage interface {
+	GetError() error
+	SetError(err error)
+}
+
+// WebsocketControl is embedded in messages that are meant to be sent over websockets
+// it implements WebsocketMessage
+type WebsocketControl struct {
+	Error string `json:"error"`
+}
+
+func (w *WebsocketControl) GetError() error {
+	if w.Error == "" {
+		return nil
+	}
+	return errors.New(w.Error)
+}
+
+func (w *WebsocketControl) SetError(err error) {
+	w.Error = err.Error()
 }
