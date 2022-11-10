@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -100,16 +99,6 @@ var idCreateCmd = &cobra.Command{
 			os.Exit(1)
 		}
 	},
-}
-
-func checkIdentityPath() string {
-	idPath := compass.HabitatIdentityPath()
-	_, err := os.Stat(idPath)
-	if errors.Is(err, os.ErrNotExist) {
-		fmt.Println("Habitat identity management not initialized, run `habitatctl id init` to initialize.")
-		os.Exit(1)
-	}
-	return idPath
 }
 
 func init() {
