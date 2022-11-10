@@ -80,7 +80,13 @@ func main() {
 		ForwardLocation: apiURL,
 	})
 
-	router := getRouter(ProcessManager, CommunityManager)
+	instance := &Instance{
+		ProcessManager:   ProcessManager,
+		CommunityManager: CommunityManager,
+		P2PNode:          p2pNode,
+	}
+
+	router := getRouter(instance)
 
 	serveHabitatAPI(router)
 }
