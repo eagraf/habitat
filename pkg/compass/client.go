@@ -15,6 +15,14 @@ func CustomHabitatAPIAddr(host string, port string) string {
 	return fmt.Sprintf("http://%s:%s", host, port)
 }
 
+func DefaultHabitatAPIAddrWebsocket() string {
+	return CustomHabitatAPIAddrWebsocket("localhost", apiPort)
+}
+
+func CustomHabitatAPIAddrWebsocket(host, port string) string {
+	return fmt.Sprintf("ws://%s:%s", host, port)
+}
+
 func LibP2PHabitatAPIAddr(proxyMultiaddr string) (peer.ID, ma.Multiaddr, error) {
 	remoteMA, err := ma.NewMultiaddr(proxyMultiaddr)
 	if err != nil {

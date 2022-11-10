@@ -9,6 +9,7 @@ import (
 	client "github.com/eagraf/habitat/pkg/habitat_client"
 	"github.com/eagraf/habitat/pkg/identity"
 	"github.com/eagraf/habitat/structs/ctl"
+	"github.com/gorilla/websocket"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -84,4 +85,8 @@ func addUserFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP("username", "u", "", "username for the identity you wish to run this command with")
 	cmd.Flags().String("password", "", "password for the identity you wish to run this command with")
 	cmd.MarkFlagsRequiredTogether("username", "password")
+}
+
+func getWebsocketConn(reqType string) (*websocket.Conn, error) {
+	return client.GetWebsocketConn(compass.CustomHabitatAPIAddrWebsocket("localhost", viper.GetString("port")), ctl.GetRoute(reqType))
 }

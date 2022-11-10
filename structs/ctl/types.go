@@ -1,5 +1,7 @@
 package ctl
 
+import "github.com/eagraf/habitat/structs/community"
+
 type InspectRequest struct{}
 
 type InspectResponse struct {
@@ -41,6 +43,8 @@ type CommunityCreateRequest struct {
 type CommunityCreateResponse struct {
 	CommunityID string `json:"community_id"`
 	JoinToken   string `json:"join_code"`
+
+	WebsocketControl
 }
 
 type CommunityJoinRequest struct {
@@ -56,9 +60,11 @@ type CommunityJoinResponse struct {
 }
 
 type CommunityAddMemberRequest struct {
-	CommunityID        string `json:"community_id"`
-	NodeID             string `json:"peer_id"`
-	JoiningNodeAddress string `json:"joining_node_address"`
+	CommunityID        string            `json:"community_id"`
+	NodeID             string            `json:"peer_id"`
+	JoiningNodeAddress string            `json:"joining_node_address"`
+	Member             *community.Member `json:"member"`
+	Node               *community.Node   `json:"node"`
 }
 
 type CommunityAddMemberResponse struct {
@@ -97,4 +103,20 @@ type AddMemberInfo struct {
 	CommunityID string `json:"community_id"`
 	Address     string `json:"address"`
 	NodeID      string `json:"node_id"`
+}
+
+// Sent by server back to client
+type SigningPublicKeyMsg struct {
+	NodeID    string `json:"node_id"`
+	PublicKey []byte `json:"public_key"`
+
+	WebsocketControl
+}
+
+// Sent by client back to server
+type SigningCertMsg struct {
+	UserCertificate []byte `json:"user_certificate"`
+	NodeCertificate []byte `json:"node_certificate"`
+
+	WebsocketControl
 }

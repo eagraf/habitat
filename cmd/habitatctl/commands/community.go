@@ -18,8 +18,10 @@ package commands
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 
+	client "github.com/eagraf/habitat/pkg/habitat_client"
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/spf13/cobra"
 )
@@ -44,20 +46,47 @@ var communityCreateCmd = &cobra.Command{
 	Short: "create a new community",
 	Run: func(cmd *cobra.Command, args []string) {
 
+		userIdentity, err := loadUserIdentity(cmd)
+		if err != nil {
+			printError(fmt.Errorf("error loading user identity: %s", err))
+		}
+
 		name := cmd.Flags().Lookup("name")
 		if name == nil {
-			fmt.Println("name flag needs to be set")
-			return
+			printError(errors.New("name flag needs to be set"))
 		}
 
 		ipfs, _ := cmd.Flags().GetBool("ipfs")
+
+		conn, err := getWebsocketConn(ctl.CommandCommunityCreate)
+		if err != nil {
+			printError(fmt.Errorf("error establishing websocket connection: %s", err))
+		}
+		defer conn.Close()
+
+		err = client.WebsocketKeySigningExchange(conn, userIdentity)
+		if err != nil {
+			printError(fmt.Errorf("error signing new node's certificate: %s", err))
+		}
 
 		req := &ctl.CommunityCreateRequest{
 			CommunityName:     name.Value.String(),
 			CreateIPFSCluster: ipfs,
 		}
+
+		err = conn.WriteJSON(req)
+		if err != nil {
+			printError(err)
+		}
+
 		var res ctl.CommunityCreateResponse
-		postRequest(ctl.CommandCommunityCreate, req, &res)
+		err = conn.ReadJSON(&res)
+		if err != nil {
+			printError(err)
+		}
+		if werr := res.GetError(); werr != nil {
+			printError(werr)
+		}
 
 		fmt.Println(res.CommunityID)
 		fmt.Println(res.JoinToken)
@@ -223,6 +252,7 @@ func init() {
 	communityCreateCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
 	communityCreateCmd.Flags().StringP("name", "n", "", "name of the community being created")
 	communityCreateCmd.Flags().Bool("ipfs", false, "create a new IPFS swarm for the community")
+	addUserFlags(communityCreateCmd)
 
 	communityJoinCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
 	communityJoinCmd.Flags().StringP("community", "c", "", "id of community to be joined")
