@@ -131,8 +131,35 @@ var communityJoinCmd = &cobra.Command{
 			req.CommunityID = joinInfo.CommunityID
 		}
 
+		userIdentity, err := loadUserIdentity(cmd)
+		if err != nil {
+			printError(fmt.Errorf("error loading user identity: %s", err))
+		}
+
+		conn, err := getWebsocketConn(ctl.CommandCommunityJoin)
+		if err != nil {
+			printError(fmt.Errorf("error establishing websocket connection: %s", err))
+		}
+		defer conn.Close()
+
+		err = client.WebsocketKeySigningExchange(conn, userIdentity)
+		if err != nil {
+			printError(fmt.Errorf("error signing new node's certificate: %s", err))
+		}
+
+		err = conn.WriteJSON(req)
+		if err != nil {
+			printError(err)
+		}
+
 		var res ctl.CommunityJoinResponse
-		postRequest(ctl.CommandCommunityJoin, req, &res)
+		err = conn.ReadJSON(&res)
+		if err != nil {
+			printError(err)
+		}
+		if werr := res.GetError(); werr != nil {
+			printError(werr)
+		}
 
 		fmt.Println(res.AddMemberToken)
 	},
@@ -257,6 +284,7 @@ func init() {
 	communityJoinCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
 	communityJoinCmd.Flags().StringP("community", "c", "", "id of community to be joined")
 	communityJoinCmd.Flags().StringP("token", "t", "", "token to join the community")
+	addUserFlags(communityJoinCmd)
 
 	communityAddMemberCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
 	communityAddMemberCmd.Flags().StringP("community", "c", "", "id of community to be joined")

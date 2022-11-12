@@ -57,6 +57,8 @@ type CommunityJoinRequest struct {
 
 type CommunityJoinResponse struct {
 	AddMemberToken string `json:"add_member_code"`
+
+	WebsocketControl
 }
 
 type CommunityAddMemberRequest struct {
