@@ -140,22 +140,37 @@ func (m *Manager) CommunityCreateHandler(w http.ResponseWriter, r *http.Request)
 // TODO: make request args a map
 // for now: always send [name, swarmkey, bootstrap peer (one only), address, communityid]
 func (m *Manager) CommunityJoinHandler(w http.ResponseWriter, r *http.Request) {
-	var commReq ctl.CommunityJoinRequest
-	err := api.BindPostRequest(r, &commReq)
+
+	upgrader := websocket.Upgrader{}
+	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		api.WriteError(w, http.StatusInternalServerError, err)
+	}
+	defer api.WriteWebsocketClose(conn)
+
+	var commRes ctl.CommunityJoinResponse
+	_, _, err = signKeyExchange(conn, &commRes)
+	if err != nil {
+		// signKeyExchange should have already sent an error back
+		return
+	}
+
+	var commReq ctl.CommunityJoinRequest
+	conn.ReadJSON(&commReq)
+	if err != nil {
+		api.WriteWebsocketError(conn, err, &commRes)
 		return
 	}
 
 	community, err := m.JoinCommunity(commReq.CommunityName, commReq.SwarmKey, commReq.BootstrapPeers, commReq.AcceptingNodeAddr, commReq.CommunityID)
 	if err != nil {
-		api.WriteError(w, http.StatusInternalServerError, err)
+		api.WriteWebsocketError(conn, err, &commRes)
 		return
 	}
 
 	publicMa, err := compass.PublicRaftMultiaddr()
 	if err != nil {
-		api.WriteError(w, http.StatusInternalServerError, err)
+		api.WriteWebsocketError(conn, err, &commRes)
 		return
 	}
 
@@ -167,17 +182,20 @@ func (m *Manager) CommunityJoinHandler(w http.ResponseWriter, r *http.Request) {
 
 	marshaled, err := json.Marshal(addInfo)
 	if err != nil {
-		api.WriteError(w, http.StatusInternalServerError, err)
+		api.WriteWebsocketError(conn, err, &commRes)
 		return
 	}
 
 	encoded := base64.StdEncoding.EncodeToString([]byte(marshaled))
 
-	commRes := &ctl.CommunityJoinResponse{
-		AddMemberToken: encoded,
-	}
+	commRes.AddMemberToken = encoded
 
-	api.WriteResponse(w, commRes)
+	err = conn.WriteJSON(&commRes)
+	if err != nil {
+		// Client is not expecting any more messages, so we just close the connection
+		log.Error().Msgf("error writing final community join response to websocket: %s", err)
+		return
+	}
 }
 
 func (m *Manager) CommunityStateHandler(w http.ResponseWriter, r *http.Request) {
