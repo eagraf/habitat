@@ -290,10 +290,13 @@ func init() {
 	communityAddMemberCmd.Flags().StringP("community", "c", "", "id of community to be joined")
 	communityAddMemberCmd.Flags().StringP("node", "n", "", "node id of node that is being added")
 	communityAddMemberCmd.Flags().StringP("token", "t", "", "token to add member to the community")
+	addUserFlags(communityAddMemberCmd)
 
 	communityProposeTransitionsCmd.Flags().StringP("community", "c", "", "id of community to be joined")
+	addUserFlags(communityProposeTransitionsCmd)
 
 	communityStateCmd.Flags().StringP("community", "c", "", "id of community to be joined")
+	addUserFlags(communityStateCmd)
 
 	communityCmd.AddCommand(communityCreateCmd)
 	communityCmd.AddCommand(communityJoinCmd)
