@@ -117,17 +117,6 @@ func PostRequestToAddress(address string, req, res interface{}) (error, error) {
 	return nil, nil
 }
 
-func GetWebsocketConn(route string) (*websocket.Conn, error) {
-	wsURL := fmt.Sprintf("ws://%s%s", HabitatServiceAddr, route)
-
-	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return conn, nil
-}
-
 func PostLibP2PRequestToAddress(addr ma.Multiaddr, route string, peerID peer.ID, req, res interface{}) (error, error) {
 
 	reqBody, err := json.Marshal(req)
@@ -161,6 +150,15 @@ func PostLibP2PRequestToAddress(addr ma.Multiaddr, route string, peerID peer.ID,
 	}
 
 	return nil, nil
+}
+
+func GetWebsocketConn(address string) (*websocket.Conn, error) {
+	conn, _, err := websocket.DefaultDialer.Dial(address, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return conn, nil
 }
 
 func WebsocketKeySigningExchange(conn *websocket.Conn, userIdentity *identity.UserIdentity) error {
