@@ -1,4 +1,4 @@
-package main
+package sources
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	"os"
 	"path"
 
+	"github.com/eagraf/habitat/cmd/sources"
 	"github.com/eagraf/habitat/pkg/compass"
-	"github.com/eagraf/habitat/pkg/sources/sources"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

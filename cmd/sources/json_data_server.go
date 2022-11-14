@@ -34,18 +34,18 @@ func (s *JSONServer) ReadHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(readreq)
 	if err != nil {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("error: bad JSON, can't decode"))
 	}
 
 	if readreq.Community != s.CommunityID {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("error: request community is not the same as this data server's community"))
 	}
 
 	allowed, err, data := s.Reader.Read(readreq)
 	if err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf("error: error reading from source %s", err.Error())))
 		return
 	}
@@ -53,7 +53,7 @@ func (s *JSONServer) ReadHandler(w http.ResponseWriter, r *http.Request) {
 	if allowed {
 		w.Write([]byte(data))
 	} else {
-		w.WriteHeader(403)
+		w.WriteHeader(http.StatusForbidden)
 		w.Write([]byte("error: requester does not have permissions to write to this source"))
 	}
 }
@@ -63,18 +63,18 @@ func (s *JSONServer) WriteHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(writereq)
 	if err != nil {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("error: bad JSON, can't decode"))
 	}
 
 	if writereq.CommunityID != s.CommunityID {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("error: request community is not the same as this data server's community"))
 	}
 
 	allowed, err := s.Writer.Write(writereq)
 	if err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf("error: error writing to source %s", err.Error())))
 		return
 	}
@@ -82,7 +82,7 @@ func (s *JSONServer) WriteHandler(w http.ResponseWriter, r *http.Request) {
 	if allowed {
 		w.Write([]byte("success!"))
 	} else {
-		w.WriteHeader(403)
+		w.WriteHeader(http.StatusForbidden)
 		w.Write([]byte("error: requester does not have permissions to write to this source"))
 	}
 }

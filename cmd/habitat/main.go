@@ -11,8 +11,8 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/p2p"
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
+	"github.com/eagraf/habitat/cmd/sources"
 	"github.com/eagraf/habitat/pkg/compass"
-	"github.com/eagraf/habitat/pkg/sources/sources"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -52,7 +52,7 @@ func main() {
 	// Start data proxy
 	viper.SetDefault("SOURCES_PORT", ":8765")
 	sourcesPort := viper.Get("SOURCES_PORT").(string)
-	dataProxy := dataproxy.NewDataProxy(map[string]sources.DataServerNode{})
+	dataProxy := dataproxy.NewDataProxy(map[string]*sources.DataServerNode{})
 	go dataProxy.Start(context.Background(), sourcesPort)
 
 	// Start process manager

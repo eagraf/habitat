@@ -7,7 +7,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 
-	"github.com/eagraf/habitat/pkg/sources/sources"
+	"github.com/eagraf/habitat/cmd/sources"
 	"github.com/rs/zerolog/log"
 
 	"github.com/gorilla/mux"
@@ -18,10 +18,10 @@ type DataProxy struct {
 	dataNodes map[string]*httputil.ReverseProxy
 }
 
-func NewDataProxy(dataNodes map[string]sources.DataServerNode) *DataProxy {
+func NewDataProxy(dataNodes map[string]*sources.DataServerNode) *DataProxy {
 	proxyNodes := make(map[string]*httputil.ReverseProxy)
 	for community, dataNode := range dataNodes {
-		url, err := url.Parse("http://" + dataNode.Host + ":" + dataNode.Port)
+		url, err := dataNode.GetUrl()
 		if err != nil {
 			log.Error().Msgf("error parsing url %s for data node for community %s: %s", "http://"+dataNode.Host+":"+dataNode.Port, community, err.Error())
 		}
@@ -40,7 +40,7 @@ func (s *DataProxy) ReadHandler(w http.ResponseWriter, r *http.Request) {
 		if proxy, ok := s.dataNodes[community]; ok {
 			proxy.ServeHTTP(w, r)
 		} else {
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(fmt.Sprintf("error: could not locate data server for this community %s", community)))
 		}
 		return
