@@ -11,14 +11,9 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/eagraf/habitat/structs/ctl"
-	"github.com/libp2p/go-libp2p/core/peer"
-	ma "github.com/multiformats/go-multiaddr"
-)
-
-const (
-	HabitatServiceAddr = "localhost:2040"
 )
 
 type Client struct {
@@ -78,7 +73,7 @@ func (c *Client) ReadResponse() (*ctl.ResponseWrapper, error) {
 }
 
 func PostRequest(req, res interface{}, route string) (error, error) {
-	return PostRequestToAddress(fmt.Sprintf("http://%s/%s", HabitatServiceAddr, route), req, res)
+	return PostRequestToAddress(fmt.Sprintf("%s/%s", compass.DefaultHabitatAPIAddr(), route), req, res)
 }
 
 // PostRequestToAddress posts to the Habitat API. The first error returned is
@@ -113,7 +108,12 @@ func PostRequestToAddress(address string, req, res interface{}) (error, error) {
 	return nil, nil
 }
 
-func PostLibP2PRequestToAddress(addr ma.Multiaddr, route string, peerID peer.ID, req, res interface{}) (error, error) {
+func PostLibP2PRequestToAddress(proxyAddr string, route string, req, res interface{}) (error, error) {
+
+	peerID, addr, err := compass.LibP2PHabitatAPIAddr(proxyAddr)
+	if err != nil {
+		return err, nil
+	}
 
 	reqBody, err := json.Marshal(req)
 	if err != nil {
