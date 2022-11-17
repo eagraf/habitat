@@ -9,6 +9,7 @@ import (
 	"io"
 	"sync"
 
+	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -16,7 +17,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/peerstore"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	"github.com/multiformats/go-multiaddr"
 )
 
 var (
@@ -156,12 +156,12 @@ func (t *LibP2PTransport) genericRPC(id raft.ServerID, target raft.ServerAddress
 		return err
 	}
 
-	ma, err := multiaddr.NewMultiaddr(string(target))
+	_, addr, err := compass.DecomposeNodeMultiaddr(string(target))
 	if err != nil {
 		return err
 	}
 
-	t.host.Peerstore().AddAddr(peerID, ma, peerstore.PermanentAddrTTL)
+	t.host.Peerstore().AddAddr(peerID, addr, peerstore.PermanentAddrTTL)
 
 	stream, err := t.host.NewStream(context.Background(), peerID, t.protocol)
 	if err != nil {

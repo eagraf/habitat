@@ -161,7 +161,7 @@ func PublicRaftMultiaddr() (multiaddr.Multiaddr, error) {
 	if ip.To4() == nil {
 		ipVersion = "ip6"
 	}
-	addr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/%s/%s/tcp/%s", ipVersion, ip.String(), p2pPort))
+	addr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/%s/%s/tcp/%s/p2p/%s", ipVersion, ip.String(), p2pPort, PeerID().String()))
 	if err != nil {
 		return nil, err
 	}
