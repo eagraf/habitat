@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	assert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 var geographyJSON = `{"latitude":45,"longitude":45}`
@@ -21,7 +21,7 @@ func setupReaderWriter() {
 }
 
 func setupSource(json string, path string) {
-	os.WriteFile(path, []byte(json), 0644)
+	os.WriteFile(path, []byte(json), 0600)
 }
 
 func teardownSource(path string) {

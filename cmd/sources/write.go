@@ -1,9 +1,10 @@
 package sources
 
 type WriteRequest struct {
-	Requester string     `json:"requester"` // for ex: name of app
-	Source    Source     `json:"source"`    // request by name and hash/version
-	Data      SourceData `json:"data"`
+	Requester   string     `json:"requester"` // for ex: name of app
+	Source      Source     `json:"source"`    // request by name and hash/version
+	CommunityID string     `json:"communityId"`
+	Data        SourceData `json:"data"`
 }
 
 type SourceWriter interface {

@@ -1,15 +1,17 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path"
 
+	"github.com/eagraf/habitat/cmd/sources"
 	"github.com/eagraf/habitat/pkg/compass"
-	"github.com/eagraf/habitat/pkg/sources/sources"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var reader *sources.Reader
@@ -21,12 +23,6 @@ var rootCmd = &cobra.Command{
 	Long:  `Sources allows reading and writinng to local data`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// Run at beginning
-		basePath, _ := cmd.Flags().GetString("path")
-		sreader := sources.NewJSONReader(basePath)
-		swriter := sources.NewJSONWriter(basePath)
-		pmanager := sources.NewBasicPermissionsManager()
-		reader = sources.NewReader(sreader, pmanager)
-		writer = sources.NewWriter(swriter, pmanager)
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -105,7 +101,21 @@ func Execute() {
 }
 
 func main() {
+	ctx := context.Background()
+
+	viper.AutomaticEnv()
+	sourcesPath := compass.LocalSourcesPath()
+
+	sreader := sources.NewJSONReader(sourcesPath)
+	swriter := sources.NewJSONWriter(sourcesPath)
+	pmanager := sources.NewBasicPermissionsManager()
+	reader = sources.NewReader(sreader, pmanager)
+	writer = sources.NewWriter(swriter, pmanager)
+
 	rootCmd.PersistentFlags().String("path", path.Join(compass.HabitatPath(), "sources"), "The path where sources data is located")
 	rootCmd.MarkFlagRequired("path")
 	Execute()
+
+	testDataServer := sources.NewJSONServer("my-community-id", "localhost", "8766", writer, reader)
+	go testDataServer.Start(ctx)
 }

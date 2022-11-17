@@ -6,6 +6,7 @@ import (
 
 type ReadRequest struct {
 	Requester string `json:"requester"` // for ex: name of app
+	Community string `json:"community"` // eventually should be community id
 	Source    Source `json:"source"`    // request by schema for v0
 }
 

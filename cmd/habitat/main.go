@@ -1,14 +1,17 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
 
 	"github.com/eagraf/habitat/cmd/habitat/community"
+	dataproxy "github.com/eagraf/habitat/cmd/habitat/data_proxy"
 	"github.com/eagraf/habitat/cmd/habitat/p2p"
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
+	"github.com/eagraf/habitat/cmd/sources"
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/pflag"
@@ -45,6 +48,12 @@ func main() {
 	// Start reverse proxy
 	reverseProxy := proxy.NewServer()
 	go reverseProxy.Start(fmt.Sprintf("%s:%s", ReverseProxyHost, ReverseProxyPort))
+
+	// Start data proxy
+	viper.SetDefault("SOURCES_PORT", ":8765")
+	sourcesPort := viper.Get("SOURCES_PORT").(string)
+	dataProxy := dataproxy.NewDataProxy(map[string]*sources.DataServerNode{})
+	go dataProxy.Start(context.Background(), sourcesPort)
 
 	// Start process manager
 	ProcessManager = procs.NewManager(procsDir, reverseProxy.Rules)
