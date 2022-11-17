@@ -4,12 +4,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 
 	"github.com/eagraf/habitat/cmd/habitat/api"
 	"github.com/eagraf/habitat/pkg/compass"
+	client "github.com/eagraf/habitat/pkg/habitat_client"
 	"github.com/eagraf/habitat/pkg/identity"
 	"github.com/eagraf/habitat/structs/community"
 	"github.com/eagraf/habitat/structs/ctl"
@@ -29,6 +31,7 @@ func signKeyExchange(conn *websocket.Conn, finalMsg ctl.WebsocketMessage, nodeID
 
 	// Send public key to client to be signed by user private key
 	pubMsg.PublicKey = pub
+	pubMsg.NodeID = nodeID
 
 	err = conn.WriteJSON(pubMsg)
 	if err != nil {
@@ -56,9 +59,15 @@ func signKeyExchange(conn *websocket.Conn, finalMsg ctl.WebsocketMessage, nodeID
 		return nil, nil, err
 	}
 
-	nodeID, err := identity.GetUIDFromName(&cert.Subject)
+	returnedNodeID, err := identity.GetUIDFromName(&cert.Subject)
 	if err != nil {
 		api.WriteWebsocketError(conn, err, finalMsg)
+		return nil, nil, err
+	}
+
+	// sanity check that the nodeID we generated is now encoded in the certificate
+	if returnedNodeID != nodeID {
+		api.WriteWebsocketError(conn, fmt.Errorf("node ID in returned certificate does not match one generated: %s, %s", returnedNodeID, nodeID), finalMsg)
 		return nil, nil, err
 	}
 
@@ -149,7 +158,7 @@ func (m *Manager) CommunityJoinHandler(w http.ResponseWriter, r *http.Request) {
 	defer api.WriteWebsocketClose(conn)
 
 	var commRes ctl.CommunityJoinResponse
-	_, _, err = signKeyExchange(conn, &commRes, compass.NodeID())
+	newMember, newNode, err := signKeyExchange(conn, &commRes, compass.NodeID())
 	if err != nil {
 		// signKeyExchange should have already sent an error back
 		return
@@ -183,6 +192,23 @@ func (m *Manager) CommunityJoinHandler(w http.ResponseWriter, r *http.Request) {
 	marshaled, err := json.Marshal(addInfo)
 	if err != nil {
 		api.WriteWebsocketError(conn, err, &commRes)
+		return
+	}
+
+	addMemberReq := &ctl.CommunityAddMemberRequest{
+		CommunityID:        commReq.CommunityID,
+		NodeID:             compass.PeerID().String(),
+		JoiningNodeAddress: publicMa.String(),
+		Member:             newMember,
+		Node:               newNode,
+	}
+	var addMemberRes ctl.CommunityAddMemberResponse
+	err, apiErr := client.PostLibP2PRequestToAddress(m.p2pNode, commReq.AcceptingNodeAddr, ctl.GetRoute(ctl.CommandCommunityAddMember), addMemberReq, &addMemberRes)
+	if err != nil {
+		api.WriteWebsocketError(conn, err, &commRes)
+		return
+	} else if apiErr != nil {
+		api.WriteWebsocketError(conn, fmt.Errorf("accepting node could not add new member node: %s", apiErr), &commRes)
 		return
 	}
 
@@ -237,6 +263,13 @@ func (m *Manager) CommunityAddMemberHandler(w http.ResponseWriter, r *http.Reque
 		api.WriteError(w, http.StatusInternalServerError, err)
 		return
 	}
+
+	_, err = m.AddMemberNode(communityID, commReq.Member, commReq.Node)
+	if err != nil {
+		api.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
 	commRes := &ctl.CommunityAddMemberResponse{}
 	api.WriteResponse(w, commRes)
 }

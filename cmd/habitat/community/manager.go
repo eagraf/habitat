@@ -205,6 +205,28 @@ func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, a
 	return stateMachine.State()
 }
 
+func (m *Manager) AddMemberNode(communityID string, member *community.Member, node *community.Node) (*community.CommunityState, error) {
+	stateMachine, ok := m.communities[communityID]
+	if !ok {
+		return nil, fmt.Errorf("community %s is not on this instance", communityID)
+	}
+
+	transitions := []state.CommunityStateTransition{
+		&state.AddMemberTransition{
+			Member: member,
+		},
+		&state.AddNodeTransition{
+			Node: node,
+		},
+	}
+	state, err := stateMachine.ProposeTransitions(transitions)
+	if err != nil {
+		return nil, err
+	}
+
+	return state, nil
+}
+
 func (m *Manager) ProposeTransitions(communityID string, transitions []byte) error {
 	if !m.checkCommunityExists(communityID) {
 		return fmt.Errorf("community %s does not exist in communities directory", communityID)

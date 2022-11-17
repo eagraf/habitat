@@ -116,7 +116,7 @@ func PostLibP2PRequestToAddress(node *p2p.Node, proxyAddr string, route string, 
 
 	peerID, addr, err := compass.LibP2PHabitatAPIAddr(proxyAddr)
 	if err != nil {
-		return err, nil
+		return fmt.Errorf("error decomposing multiaddr: %s", err), nil
 	}
 
 	reqBody, err := json.Marshal(req)
