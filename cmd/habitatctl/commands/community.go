@@ -88,8 +88,11 @@ var communityCreateCmd = &cobra.Command{
 			printError(werr)
 		}
 
-		fmt.Println(res.CommunityID)
-		fmt.Println(res.JoinToken)
+		pretty, err := json.MarshalIndent(res, "", "    ")
+		if err != nil {
+			printError(err)
+		}
+		fmt.Println(string(pretty))
 	},
 }
 
