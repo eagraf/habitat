@@ -17,16 +17,16 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/ipfs"
+	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/eagraf/habitat/structs/community"
 	"github.com/google/uuid"
-	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/rs/zerolog/log"
 )
 
 type Manager struct {
 	Path           string
 	config         *ipfs.IPFSConfig
-	p2pHost        host.Host
+	p2pNode        *p2p.Node
 	processManager procs.Manager
 
 	clusterManager  *cluster.ClusterManager
@@ -34,8 +34,8 @@ type Manager struct {
 	communitiesLock *sync.Mutex
 }
 
-func NewManager(path string, procManager *procs.Manager, proxyRules *proxy.RuleSet, host host.Host) (*Manager, error) {
-	clusterManager := cluster.NewClusterManager(host)
+func NewManager(path string, procManager *procs.Manager, proxyRules *proxy.RuleSet, node *p2p.Node) (*Manager, error) {
+	clusterManager := cluster.NewClusterManager(node.Host())
 
 	err := clusterManager.Start(proxyRules)
 	if err != nil {
@@ -49,7 +49,7 @@ func NewManager(path string, procManager *procs.Manager, proxyRules *proxy.RuleS
 			// TODO: @arushibandi remove this usage of compass
 			StartCmd: filepath.Join(compass.ProcsPath(), "bin", "amd64-darwin", "start-ipfs"),
 		},
-		p2pHost:         host,
+		p2pNode:         node,
 		processManager:  *procManager,
 		clusterManager:  clusterManager,
 		communities:     make(map[string]*state.CommunityStateMachine),
