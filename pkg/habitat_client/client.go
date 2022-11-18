@@ -112,7 +112,7 @@ func PostRequestToAddress(address string, req, res interface{}) (error, error) {
 	return nil, nil
 }
 
-func PostLibP2PRequestToAddress(proxyAddr string, route string, req, res interface{}) (error, error) {
+func PostLibP2PRequestToAddress(node *p2p.Node, proxyAddr string, route string, req, res interface{}) (error, error) {
 
 	peerID, addr, err := compass.LibP2PHabitatAPIAddr(proxyAddr)
 	if err != nil {
@@ -129,9 +129,19 @@ func PostLibP2PRequestToAddress(proxyAddr string, route string, req, res interfa
 		return fmt.Errorf("error constructing HTTP request: %s", err), nil
 	}
 
-	p2pRes, err := p2p.LibP2PHTTPRequestWithRandomClient(addr, route, peerID, p2pReq)
-	if err != nil {
-		return err, nil
+	var p2pRes *http.Response
+	if node == nil {
+		randRes, err := p2p.LibP2PHTTPRequestWithRandomClient(addr, route, peerID, p2pReq)
+		if err != nil {
+			return err, nil
+		}
+		p2pRes = randRes
+	} else {
+		nodeRes, err := node.PostHTTPRequest(addr, route, peerID, p2pReq)
+		if err != nil {
+			return err, nil
+		}
+		p2pRes = nodeRes
 	}
 
 	resBody, err := io.ReadAll(p2pRes.Body)

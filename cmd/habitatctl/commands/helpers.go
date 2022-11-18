@@ -23,7 +23,7 @@ func postRequest(reqType string, req, res interface{}) {
 	if viper.IsSet("libp2p-proxy") {
 		proxyAddr := viper.GetString("libp2p-proxy")
 
-		err, apiErr := client.PostLibP2PRequestToAddress(proxyAddr, ctl.GetRoute(reqType), req, res)
+		err, apiErr := client.PostLibP2PRequestToAddress(nil, proxyAddr, ctl.GetRoute(reqType), req, res)
 		if err != nil {
 			printError(fmt.Errorf("error submitting request: %s", err))
 		} else if apiErr != nil {
