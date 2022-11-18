@@ -163,57 +163,6 @@ var communityJoinCmd = &cobra.Command{
 		if werr := res.GetError(); werr != nil {
 			printError(werr)
 		}
-
-		fmt.Println(res.AddMemberToken)
-	},
-}
-
-var communityAddMemberCmd = &cobra.Command{
-	Use:   "add",
-	Short: "add a member to the community",
-	Run: func(cmd *cobra.Command, args []string) {
-		req := &ctl.CommunityAddMemberRequest{}
-		token, err := cmd.Flags().GetString("token")
-		if err != nil {
-			printError(err)
-		}
-		if token == "" {
-			address := cmd.Flags().Lookup("address")
-			if address == nil {
-				fmt.Println("address flag needs to be set")
-				return
-			}
-
-			communityID := cmd.Flags().Lookup("community")
-			if communityID == nil {
-				fmt.Println("community flag needs to be set")
-				return
-			}
-
-			nodeID := cmd.Flags().Lookup("node")
-			if communityID == nil {
-				fmt.Println("node flag needs to be set")
-				return
-			}
-			req.JoiningNodeAddress = address.Value.String()
-			req.CommunityID = communityID.Value.String()
-			req.NodeID = nodeID.Value.String()
-		} else {
-			decoded, err := base64.StdEncoding.DecodeString(token)
-			if err != nil {
-				printError(err)
-			}
-			var addInfo ctl.AddMemberInfo
-			err = json.Unmarshal(decoded, &addInfo)
-			if err != nil {
-				printError(err)
-			}
-			req.JoiningNodeAddress = addInfo.Address
-			req.CommunityID = addInfo.CommunityID
-			req.NodeID = addInfo.NodeID
-		}
-
-		postRequest(ctl.CommandCommunityAddMember, req, &ctl.CommunityAddMemberResponse{})
 	},
 }
 
@@ -289,12 +238,6 @@ func init() {
 	communityJoinCmd.Flags().StringP("token", "t", "", "token to join the community")
 	addUserFlags(communityJoinCmd)
 
-	communityAddMemberCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
-	communityAddMemberCmd.Flags().StringP("community", "c", "", "id of community to be joined")
-	communityAddMemberCmd.Flags().StringP("node", "n", "", "node id of node that is being added")
-	communityAddMemberCmd.Flags().StringP("token", "t", "", "token to add member to the community")
-	addUserFlags(communityAddMemberCmd)
-
 	communityProposeTransitionsCmd.Flags().StringP("community", "c", "", "id of community to be joined")
 	addUserFlags(communityProposeTransitionsCmd)
 
@@ -303,7 +246,6 @@ func init() {
 
 	communityCmd.AddCommand(communityCreateCmd)
 	communityCmd.AddCommand(communityJoinCmd)
-	communityCmd.AddCommand(communityAddMemberCmd)
 	communityCmd.AddCommand(communityProposeTransitionsCmd)
 	communityCmd.AddCommand(communityStateCmd)
 	communityCmd.AddCommand(communityListCmd)

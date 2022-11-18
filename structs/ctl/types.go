@@ -56,8 +56,6 @@ type CommunityJoinRequest struct {
 }
 
 type CommunityJoinResponse struct {
-	AddMemberToken string `json:"add_member_code"`
-
 	WebsocketControl
 }
 
@@ -99,12 +97,6 @@ type CommunityListResponse struct {
 type JoinInfo struct {
 	CommunityID string `json:"community_id"`
 	Address     string `json:"address"`
-}
-
-type AddMemberInfo struct {
-	CommunityID string `json:"community_id"`
-	Address     string `json:"address"`
-	NodeID      string `json:"node_id"`
 }
 
 // Sent by server back to client

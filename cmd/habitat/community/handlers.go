@@ -171,25 +171,13 @@ func (m *Manager) CommunityJoinHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	community, err := m.JoinCommunity(commReq.CommunityName, commReq.SwarmKey, commReq.BootstrapPeers, commReq.AcceptingNodeAddr, commReq.CommunityID)
+	_, err = m.JoinCommunity(commReq.CommunityName, commReq.SwarmKey, commReq.BootstrapPeers, commReq.AcceptingNodeAddr, commReq.CommunityID)
 	if err != nil {
 		api.WriteWebsocketError(conn, err, &commRes)
 		return
 	}
 
 	publicMa, err := compass.PublicRaftMultiaddr()
-	if err != nil {
-		api.WriteWebsocketError(conn, err, &commRes)
-		return
-	}
-
-	addInfo := &ctl.AddMemberInfo{
-		CommunityID: community.CommunityID,
-		Address:     publicMa.String(),
-		NodeID:      compass.PeerID().Pretty(),
-	}
-
-	marshaled, err := json.Marshal(addInfo)
 	if err != nil {
 		api.WriteWebsocketError(conn, err, &commRes)
 		return
@@ -211,10 +199,6 @@ func (m *Manager) CommunityJoinHandler(w http.ResponseWriter, r *http.Request) {
 		api.WriteWebsocketError(conn, fmt.Errorf("accepting node could not add new member node: %s", apiErr), &commRes)
 		return
 	}
-
-	encoded := base64.StdEncoding.EncodeToString([]byte(marshaled))
-
-	commRes.AddMemberToken = encoded
 
 	err = conn.WriteJSON(&commRes)
 	if err != nil {
