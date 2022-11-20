@@ -23,6 +23,7 @@ const (
 
 	nodeIDRelativePath = "node_id"
 
+	apiPort = "2040"
 	p2pPort = "6000"
 )
 

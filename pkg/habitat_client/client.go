@@ -2,16 +2,18 @@ package client
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 
+	"github.com/eagraf/habitat/pkg/compass"
+	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/eagraf/habitat/structs/ctl"
-)
-
-const (
-	HabitatServiceAddr = "localhost:2040"
 )
 
 type Client struct {
@@ -70,31 +72,78 @@ func (c *Client) ReadResponse() (*ctl.ResponseWrapper, error) {
 	return &res, nil
 }
 
-// SendRequest sends a request to the default address of the habitat service
-func SendRequest(req interface{}) (*ctl.ResponseWrapper, error) {
-	return SendRequestToAddress(HabitatServiceAddr, req)
+func PostRequest(req, res interface{}, route string) (error, error) {
+	return PostRequestToAddress(fmt.Sprintf("%s/%s", compass.DefaultHabitatAPIAddr(), route), req, res)
 }
 
-func SendRequestToAddress(addr string, req interface{}) (*ctl.ResponseWrapper, error) {
-	client, err := NewClient(addr)
+// PostRequestToAddress posts to the Habitat API. The first error returned is
+// for when the client is somehow unable to successfully make the request.
+// The second error is if the request is successfully made, but the server responds
+// with an error.
+func PostRequestToAddress(address string, req, res interface{}) (error, error) {
+	reqBody, err := json.Marshal(req)
 	if err != nil {
-		fmt.Println("Error: couldn't connect to habitat service")
-		return nil, err
+		return fmt.Errorf("error marshaling POST request body: %s", err), nil
 	}
 
-	reqWrapper, err := ctl.NewRequestWrapper(req)
+	r, err := http.Post(address, "application/json", bytes.NewReader(reqBody))
 	if err != nil {
-		return nil, err
+		return err, nil
 	}
 
-	err = client.WriteRequest(reqWrapper)
+	resBody, err := io.ReadAll(r.Body)
 	if err != nil {
-		fmt.Printf("Error creating request to habitat service: %s", err)
+		return fmt.Errorf("error reading response body: %s", err), nil
+	}
+	// The request was fine, but we got an error back from server
+	if r.StatusCode != http.StatusOK {
+		return nil, errors.New(string(resBody))
 	}
 
-	res, err := client.ReadResponse()
+	err = json.Unmarshal(resBody, res)
 	if err != nil {
-		fmt.Printf("Error: couldn't read response from habitat service: %s\n", err)
+		return fmt.Errorf("error unmarshaling response body into result struct: %s", err), nil
 	}
-	return res, err
+
+	return nil, nil
+}
+
+func PostLibP2PRequestToAddress(proxyAddr string, route string, req, res interface{}) (error, error) {
+
+	peerID, addr, err := compass.LibP2PHabitatAPIAddr(proxyAddr)
+	if err != nil {
+		return err, nil
+	}
+
+	reqBody, err := json.Marshal(req)
+	if err != nil {
+		return fmt.Errorf("error marshaling POST request body: %s", err), nil
+	}
+
+	p2pReq, err := http.NewRequest("POST", "", bytes.NewReader(reqBody))
+	if err != nil {
+		return fmt.Errorf("error constructing HTTP request: %s", err), nil
+	}
+
+	p2pRes, err := p2p.LibP2PHTTPRequestWithRandomClient(addr, route, peerID, p2pReq)
+	if err != nil {
+		return err, nil
+	}
+
+	resBody, err := io.ReadAll(p2pRes.Body)
+	if err != nil {
+		return fmt.Errorf("error reading response body: %s", err), nil
+	}
+
+	// The request was fine, but we got an error back from server
+	if p2pRes.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%s: %s", p2pRes.Status, string(resBody))
+	}
+
+	err = json.Unmarshal(resBody, res)
+	if err != nil {
+		return fmt.Errorf("error unmarshaling response body into result struct: %s", err), nil
+	}
+
+	return nil, nil
 }

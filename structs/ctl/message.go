@@ -7,6 +7,7 @@ import (
 )
 
 const (
+	CommandInspect            = "inspect"
 	CommandStart              = "start"
 	CommandStop               = "stop"
 	CommandListProcesses      = "ps"
@@ -21,6 +22,14 @@ const (
 	StatusBadRequest          = 1
 	StatusInternalServerError = 2
 )
+
+func GetRoute(reqType string) string {
+	// This is a placeholder for now
+	// TODO @eagraf make this RESTful
+	// TODO @eagraf validate that the req type is valid
+	return "/" + reqType
+
+}
 
 func requestType(req interface{}) (string, error) {
 	switch req.(type) {

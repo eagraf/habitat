@@ -28,8 +28,13 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.habitatctl.yaml)")
+
 	rootCmd.PersistentFlags().StringP("port", "p", "2040", "port to reach habitat service at")
 	viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port"))
+
+	rootCmd.PersistentFlags().StringP("libp2p-proxy", "l", "", "send Habitat API requests to a LibP2P proxy at the specified multiaddress. (Multiaddress must include IP address and peer ID)")
+	viper.BindPFlag("libp2p-proxy", rootCmd.PersistentFlags().Lookup("libp2p-proxy"))
+
 }
 
 // initConfig reads in config file and ENV variables if set.

@@ -1,61 +1,57 @@
 package procs
 
-import "github.com/eagraf/habitat/structs/ctl"
+import (
+	"net/http"
 
-func (m *Manager) StartProcessHandler(req *ctl.RequestWrapper) (*ctl.ResponseWrapper, error) {
+	"github.com/eagraf/habitat/cmd/habitat/api"
+	"github.com/eagraf/habitat/structs/ctl"
+)
+
+func (m *Manager) StartProcessHandler(w http.ResponseWriter, r *http.Request) {
 	var startReq ctl.StartRequest
-	err := req.Deserialize(&startReq)
+	err := api.BindPostRequest(r, &startReq)
 	if err != nil {
-		return nil, err
+		api.WriteError(w, http.StatusInternalServerError, err)
+		return
 	}
 
 	procID, err := m.StartProcess(startReq.App, startReq.CommunityID, startReq.Args, startReq.Env, startReq.Flags)
 	if err != nil {
-		return nil, err
+		api.WriteError(w, http.StatusInternalServerError, err)
+		return
 	}
 
 	startRes := &ctl.StartResponse{
 		ProcID: procID,
 	}
-	res, err := ctl.NewResponseWrapper(startRes, ctl.StatusOK, "")
-	if err != nil {
-		return nil, err
-	}
 
-	return res, nil
+	api.WriteResponse(w, startRes)
 }
 
-func (m *Manager) StopProcessHandler(req *ctl.RequestWrapper) (*ctl.ResponseWrapper, error) {
+func (m *Manager) StopProcessHandler(w http.ResponseWriter, r *http.Request) {
 	var stopReq ctl.StopRequest
-	err := req.Deserialize(&stopReq)
+	err := api.BindPostRequest(r, &stopReq)
 	if err != nil {
-		return nil, err
+		api.WriteError(w, http.StatusInternalServerError, err)
+		return
 	}
 
 	err = m.StopProcess(stopReq.ProcID)
 	if err != nil {
-		return nil, err
+		api.WriteError(w, http.StatusInternalServerError, err)
+		return
 	}
 
 	stopRes := &ctl.StopResponse{}
-	res, err := ctl.NewResponseWrapper(stopRes, ctl.StatusOK, "")
-	if err != nil {
-		return nil, err
-	}
 
-	return res, nil
+	api.WriteResponse(w, stopRes)
 }
 
-func (m *Manager) ListProcessesHandler(req *ctl.RequestWrapper) (*ctl.ResponseWrapper, error) {
-	var psReq ctl.PSRequest
-	err := req.Deserialize(&psReq)
-	if err != nil {
-		return nil, err
-	}
-
+func (m *Manager) ListProcessesHandler(w http.ResponseWriter, r *http.Request) {
 	procs, err := m.listProcesses()
 	if err != nil {
-		return nil, err
+		api.WriteError(w, http.StatusInternalServerError, err)
+		return
 	}
 
 	psRes := &ctl.PSResponse{
@@ -64,10 +60,6 @@ func (m *Manager) ListProcessesHandler(req *ctl.RequestWrapper) (*ctl.ResponseWr
 	for _, p := range procs {
 		psRes.ProcIDs = append(psRes.ProcIDs, p.Name)
 	}
-	res, err := ctl.NewResponseWrapper(psRes, ctl.StatusOK, "")
-	if err != nil {
-		return nil, err
-	}
 
-	return res, nil
+	api.WriteResponse(w, psRes)
 }

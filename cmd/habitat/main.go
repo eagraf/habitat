@@ -3,16 +3,17 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"os/signal"
 
 	"github.com/eagraf/habitat/cmd/habitat/community"
 	dataproxy "github.com/eagraf/habitat/cmd/habitat/data_proxy"
-	"github.com/eagraf/habitat/cmd/habitat/p2p"
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
 	"github.com/eagraf/habitat/cmd/sources"
 	"github.com/eagraf/habitat/pkg/compass"
+	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -42,12 +43,25 @@ func main() {
 	communityDir := compass.CommunitiesPath()
 
 	initHabitatDirectory()
+	priv, _ := compass.GetPeerIDKeyPair()
 
-	p2pNode := p2p.NewNode(P2PPort)
+	p2pNode, err := p2p.NewNode(P2PPort, priv)
+	if err != nil {
+		log.Fatal().Msgf("error starting LibP2P node")
+	} else {
+		log.Info().Msgf("starting LibP2P node with peer ID %s listening at port %s", p2pNode.Host().ID().Pretty(), P2PPort)
+	}
 
 	// Start reverse proxy
+	proxyAddr := fmt.Sprintf("%s:%s", ReverseProxyHost, ReverseProxyPort)
 	reverseProxy := proxy.NewServer()
-	go reverseProxy.Start(fmt.Sprintf("%s:%s", ReverseProxyHost, ReverseProxyPort))
+	go reverseProxy.Start(proxyAddr)
+
+	redirectURL, err := url.Parse("http://" + proxyAddr + "/habitat")
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+	go proxy.LibP2PHTTPProxy(p2pNode.Host(), redirectURL)
 
 	// Start data proxy
 	viper.SetDefault("SOURCES_PORT", ":8765")
@@ -61,13 +75,29 @@ func main() {
 	go handleInterupt(ProcessManager)
 
 	// Create community manager
-	var err error
 	CommunityManager, err = community.NewManager(communityDir, ProcessManager, &reverseProxy.Rules, p2pNode.Host())
 	if err != nil {
 		log.Fatal().Msgf("unable to start community manager: %s", err)
 	}
 
-	listen()
+	apiURL, err := url.Parse("http://0.0.0.0:2040")
+	if err != nil {
+		log.Fatal().Msgf("unable to get url for Habitat API: %s", err)
+	}
+	reverseProxy.Rules.Add("habitat-api", &proxy.RedirectRule{
+		Matcher:         "/habitat",
+		ForwardLocation: apiURL,
+	})
+
+	instance := &Instance{
+		ProcessManager:   ProcessManager,
+		CommunityManager: CommunityManager,
+		P2PNode:          p2pNode,
+	}
+
+	router := getRouter(instance)
+
+	serveHabitatAPI(router)
 }
 
 func initHabitatDirectory() {

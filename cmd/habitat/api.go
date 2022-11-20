@@ -1,13 +1,18 @@
 package main
 
 import (
-	"bufio"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"net"
+	"net/http"
+	"time"
 
+	ma "github.com/multiformats/go-multiaddr"
+
+	"github.com/eagraf/habitat/cmd/habitat/api"
+	"github.com/eagraf/habitat/cmd/habitat/community"
+	"github.com/eagraf/habitat/cmd/habitat/procs"
+	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/eagraf/habitat/structs/ctl"
+	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
 )
 
@@ -16,108 +21,53 @@ const (
 	HabitatCTLPort = "2040"
 )
 
-func listen() {
-	// TODO make port number configurable
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", HabitatCTLHost, HabitatCTLPort))
-	if err != nil {
-		log.Fatal().Msgf("habitat service listener failed to start: %s", err)
-	}
-	defer listener.Close()
+func getRouter(i *Instance) *mux.Router {
+	router := mux.NewRouter()
+	router.HandleFunc(ctl.GetRoute(ctl.CommandInspect), i.inspectHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandListProcesses), i.ProcessManager.ListProcessesHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandStart), i.ProcessManager.StartProcessHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandStop), i.ProcessManager.StopProcessHandler)
 
-	log.Info().Msgf("habitat service listening on %s:%s", HabitatCTLHost, HabitatCTLPort)
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			log.Error().Msgf("error accepting message: %s", err)
-		}
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityCreate), i.CommunityManager.CommunityCreateHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityJoin), i.CommunityManager.CommunityJoinHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityAddMember), i.CommunityManager.CommunityAddMemberHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityPropose), i.CommunityManager.CommunityProposeHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityState), i.CommunityManager.CommunityStateHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityList), i.CommunityManager.CommunityListHandler)
 
-		go handleRequest(conn)
-	}
+	return router
 }
 
-func handleRequest(conn net.Conn) error {
-	buf, err := bufio.NewReader(conn).ReadBytes('\n')
-	if err != nil {
-		return err
+func serveHabitatAPI(router *mux.Router) {
+	srv := &http.Server{
+		Handler:      router,
+		Addr:         fmt.Sprintf("%s:%s", HabitatCTLHost, HabitatCTLPort),
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
 	}
 
-	req, err := decodeRequest(buf)
-	if err != nil {
-		return writeResponse(conn, &ctl.ResponseWrapper{
-			Type:   req.Type,
-			Status: ctl.StatusBadRequest,
-			Error:  err.Error(),
-		})
-	}
-
-	res, err := requestRouter(req)
-	if err != nil {
-		return writeResponse(conn, &ctl.ResponseWrapper{
-			Type:   req.Type,
-			Status: ctl.StatusInternalServerError,
-			Error:  err.Error(),
-		})
-	}
-
-	return writeResponse(conn, res)
+	log.Info().Msgf("starting Habitat API listening on %s", srv.Addr)
+	err := srv.ListenAndServe()
+	log.Fatal().Err(err)
 }
 
-func writeResponse(conn net.Conn, res *ctl.ResponseWrapper) error {
-	msg, err := res.Encode()
-	if err != nil {
-		return err
-	}
-
-	_, err = conn.Write(msg)
-	if err != nil {
-		return err
-	}
-
-	conn.Close()
-	return nil
+type Instance struct {
+	CommunityManager *community.Manager
+	ProcessManager   *procs.Manager
+	P2PNode          *p2p.Node
 }
 
-func decodeRequest(buf []byte) (*ctl.RequestWrapper, error) {
-	decoded, err := base64.StdEncoding.DecodeString(string(buf))
+func (i *Instance) inspectHandler(w http.ResponseWriter, r *http.Request) {
+	libp2pProxyMultiaddr, err := ma.NewMultiaddr(i.P2PNode.Host().Addrs()[0].String() + "/p2p/" + i.P2PNode.Host().ID().String())
 	if err != nil {
-		return nil, err
+		api.WriteError(w, http.StatusInternalServerError, err)
+		return
 	}
 
-	var req ctl.RequestWrapper
-	err = json.Unmarshal(decoded, &req)
-	if err != nil {
-		return nil, err
+	res := &ctl.InspectResponse{
+		LibP2PProxyMultiaddr: libp2pProxyMultiaddr.String(),
+		LibP2PPeerID:         i.P2PNode.Host().ID().String(),
 	}
 
-	return &req, nil
-}
-
-func requestRouter(req *ctl.RequestWrapper) (*ctl.ResponseWrapper, error) {
-
-	switch req.Type {
-	case ctl.CommandStart:
-		return ProcessManager.StartProcessHandler(req)
-	case ctl.CommandStop:
-		return ProcessManager.StopProcessHandler(req)
-	case ctl.CommandListProcesses:
-		return ProcessManager.ListProcessesHandler(req)
-	case ctl.CommandCommunityCreate:
-		return CommunityManager.CommunityCreateHandler(req)
-	case ctl.CommandCommunityJoin:
-		return CommunityManager.CommunityJoinHandler(req)
-	case ctl.CommandCommunityAddMember:
-		return CommunityManager.CommunityAddMemberHandler(req)
-	case ctl.CommandCommunityPropose:
-		return CommunityManager.CommunityProposeHandler(req)
-	case ctl.CommandCommunityState:
-		return CommunityManager.CommunityStateHandler(req)
-	case ctl.CommandCommunityList:
-		return CommunityManager.CommunityListHandler(req)
-	default:
-		return &ctl.ResponseWrapper{
-			Type:   req.Type,
-			Status: ctl.StatusBadRequest,
-			Error:  fmt.Sprintf("command %s does not exist", req.Type),
-		}, nil
-	}
+	api.WriteResponse(w, res)
 }
