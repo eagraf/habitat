@@ -1,14 +1,15 @@
 package sources
 
+import "encoding/json"
+
 type WriteRequest struct {
-	Requester   string     `json:"requester"` // for ex: name of app
-	Source      Source     `json:"source"`    // request by name and hash/version
-	CommunityID string     `json:"communityId"`
-	Data        SourceData `json:"data"`
+	// Token      []byte     `json:"token"`     // token for permissions
+	SourceName SourceName      `json:"id"` // eventually this should be a unique source id
+	Data       json.RawMessage `json:"data"`
 }
 
 type SourceWriter interface {
-	Write(Source, SourceData) error // take in write request, return (allowed, error)
+	Write(SourceName, []byte) error // take in write request, return (allowed, error)
 }
 
 type Writer struct {
@@ -26,5 +27,5 @@ func (W *Writer) Write(w *WriteRequest) (bool, error) {
 		return false, nil
 	}
 
-	return true, W.SourceWriter.Write(w.Source, w.Data)
+	return true, W.SourceWriter.Write(w.SourceName, w.Data)
 }

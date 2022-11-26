@@ -67,11 +67,6 @@ func (s *JSONServer) WriteHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("error: bad JSON, can't decode"))
 	}
 
-	if writereq.CommunityID != s.CommunityID {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("error: request community is not the same as this data server's community"))
-	}
-
 	allowed, err := s.Writer.Write(writereq)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

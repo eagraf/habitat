@@ -1,17 +1,20 @@
 package sources
 
 import (
+	"encoding/json"
+
 	"github.com/rs/zerolog/log"
 )
 
 type ReadRequest struct {
 	Requester string `json:"requester"` // for ex: name of app
 	Community string `json:"community"` // eventually should be community id
-	Source    Source `json:"source"`    // request by schema for v0
+	// Token      []byte     `json:"token"`     // token for permissions
+	SourceName SourceName `json:"id"` // eventually this should be a unique source id
 }
 
 type SourceReader interface {
-	Read(Source) (SourceData, error) // return (error, data)
+	Read(SourceName) ([]byte, error) // return (error, data)
 }
 
 type Reader struct {
@@ -24,12 +27,12 @@ func NewReader(S SourceReader, P PermissionsManager) *Reader {
 }
 
 // return (allowed, error, data)
-func (R *Reader) Read(r *ReadRequest) (bool, error, SourceData) {
+func (R *Reader) Read(r *ReadRequest) (bool, error, json.RawMessage) {
 	if !R.PermissionsManager.CheckCanRead(r) {
-		return false, nil, ""
+		return false, nil, nil
 	}
 
-	data, err := R.SourceReader.Read(r.Source)
+	data, err := R.SourceReader.Read(r.SourceName)
 	if err != nil {
 		log.Error().Msgf("Error reading source: %s", err.Error())
 	}
