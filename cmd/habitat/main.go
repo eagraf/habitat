@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/url"
 	"os"
 
@@ -29,6 +30,11 @@ func main() {
 	}
 
 	go node.Start()
+	// Start data proxy
+	viper.SetDefault("SOURCES_PORT", ":8765")
+	sourcesPort := viper.Get("SOURCES_PORT").(string)
+	dataProxy := dataproxy.NewDataProxy(map[string]*dataproxy.DataServerNode{})
+	go dataProxy.Start(context.Background(), sourcesPort)
 
 	// Create community manager
 	communityDir := compass.CommunitiesPath()
