@@ -1,6 +1,11 @@
 package sources
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+
 	"github.com/qri-io/jsonschema"
 )
 
@@ -8,20 +13,29 @@ import (
 Basic types about schema and sources, shared types.
 */
 
-type Schema jsonschema.Schema // use library that supplies validator
-type SourceData string        // maybe this will evolve into a more fancy type in the future - for now json data stoed as bytes
-
-// eventually this will have types like "static", CRDT, relational etc.
-type Source struct {
-	// name and description are here just for easy access rather than getting it from Schema
-	Name        string            `json:"name"`
+type SourceName string
+type SourceFile struct {
+	ID          SourceName        `json:"name"`
 	Description string            `json:"description"`
 	Schema      jsonschema.Schema `json:"schema"`
+	Data        json.RawMessage   `json:"data"`
 }
 
 // unused right now, use later for token
 type RequestToken struct {
 	Token string `json:"token"`
+}
+
+func (s *SourceFile) ValidateDataAgainstSchema(ctx context.Context, data []byte) error {
+	kerr, err := s.Schema.ValidateBytes(ctx, data)
+	es := make([]string, len(kerr))
+	for i, e := range kerr {
+		es[i] = e.Error()
+	}
+	if len(kerr) > 0 {
+		return fmt.Errorf("key errors: %s", strings.Join(es, ","))
+	}
+	return err
 }
 
 // TODO: NewSchema()

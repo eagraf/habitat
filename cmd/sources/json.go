@@ -2,7 +2,8 @@ package sources
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -15,45 +16,72 @@ import (
 */
 
 // Shared functions
-func getPath(basePath string, source Source) string {
-	return filepath.Join(basePath, source.Name+".json")
+func getPath(basePath string, name SourceName) string {
+	p := filepath.Join(basePath, string(name)+".json")
+	return p
 }
 
 // JSON source reader
 type JSONReader struct {
+	ctx  context.Context
 	Path string // base path to the files
 }
 
-func NewJSONReader(path string) *JSONReader {
+func NewJSONReader(ctx context.Context, path string) *JSONReader {
+	err := os.MkdirAll(path, os.ModePerm)
+	if err != nil {
+		log.Error().Msgf("error creating sources path: %s", err.Error())
+	}
 	return &JSONReader{Path: path}
 }
 
-func (R *JSONReader) Read(req Source) (SourceData, error) {
-	path := getPath(R.Path, req)
+func (R *JSONReader) Read(name SourceName) ([]byte, error) {
+	path := getPath(R.Path, name)
 	bytes, err := os.ReadFile(path)
-	return SourceData(bytes), err
+	if err != nil {
+		return nil, err
+	}
+
+	var source SourceFile
+	if err = json.Unmarshal(bytes, &source); err != nil {
+		return nil, err
+	}
+
+	return source.Data, err
 }
 
 // JSON source writer
 type JSONWriter struct {
+	ctx  context.Context
 	Path string // base path to the files
 }
 
-func NewJSONWriter(path string) *JSONWriter {
+func NewJSONWriter(ctx context.Context, path string) *JSONWriter {
+	err := os.MkdirAll(path, os.ModePerm)
+	if err != nil {
+		log.Error().Msgf("error creating sources path: %s", err.Error())
+	}
 	return &JSONWriter{Path: path}
 }
 
-func (W *JSONWriter) Write(source Source, data SourceData) error {
-	path := getPath(W.Path, source)
-	verrs, err := source.Schema.ValidateBytes(context.Background(), []byte(data))
-	if err != nil {
-		log.Error().Msgf("Error validating schema bytes: %s", err.Error())
-	} else if len(verrs) > 0 {
-		for _, e := range verrs {
-			log.Error().Msgf("KeyError when validating source data against schema: %s", e.Error())
-		}
-		return errors.New("Unable to validate schema")
+func (W *JSONWriter) Write(name SourceName, data []byte) error {
+	path := getPath(W.Path, name)
+	bytes, err := os.ReadFile(path)
+
+	var source SourceFile
+	if err = json.Unmarshal(bytes, &source); err != nil {
+		return fmt.Errorf("unable to read source file: %s", err.Error())
 	}
-	err = os.WriteFile(path, []byte(data), fs.FileMode(0600))
+
+	if err = source.ValidateDataAgainstSchema(W.ctx, data); err != nil {
+		return fmt.Errorf("validation err: %s", err.Error())
+	}
+
+	source.Data = json.RawMessage(string(data))
+	if bytes, err = json.Marshal(source); err != nil {
+		return fmt.Errorf("error writing to source file: %s", err.Error())
+	}
+
+	err = os.WriteFile(path, bytes, fs.FileMode(os.O_RDWR))
 	return err
 }
