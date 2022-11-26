@@ -2,29 +2,13 @@ package sources
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
-
-	"github.com/qri-io/jsonschema"
 )
 
 /*
-Basic types about schema and sources, shared types.
+Basic types about schema, shared types.
 */
-
-type SourceName string
-type SourceFile struct {
-	ID          SourceName        `json:"name"`
-	Description string            `json:"description"`
-	Schema      jsonschema.Schema `json:"schema"`
-	Data        json.RawMessage   `json:"data"`
-}
-
-// unused right now, use later for token
-type RequestToken struct {
-	Token string `json:"token"`
-}
 
 func (s *SourceFile) ValidateDataAgainstSchema(ctx context.Context, data []byte) error {
 	kerr, err := s.Schema.ValidateBytes(ctx, data)

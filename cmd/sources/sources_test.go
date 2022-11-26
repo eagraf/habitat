@@ -13,6 +13,7 @@ import (
 var geoData = json.RawMessage(`{"latitude":45,"longitude":45}`)
 var geoSource = &SourceFile{
 	ID:          "test-geo",
+	Name:        "geography",
 	Description: "test json schema",
 	Schema: *jsonschema.Must(`
 	{
@@ -38,15 +39,12 @@ var geoSource = &SourceFile{
 	Data: json.RawMessage(geoData),
 }
 
-var reader *Reader
-var writer *Writer
+var reader *JSONReader
+var writer *JSONWriter
 
 func setupReaderWriter() {
-	sreader := NewJSONReader(context.Background(), ".")
-	swriter := NewJSONWriter(context.Background(), ".")
-	pmanager := NewBasicPermissionsManager()
-	reader = NewReader(sreader, pmanager)
-	writer = NewWriter(swriter, pmanager)
+	reader = NewJSONReader(context.Background(), ".")
+	writer = NewJSONWriter(context.Background(), ".")
 }
 
 func setupSource(json string, path string) {
@@ -69,42 +67,23 @@ func TestBasicReadWrite(t *testing.T) {
 	setupSource(string(bytes), sourcePath)
 	defer teardownSource(sourcePath)
 
-	assert.Equal(t, getSourceRaw(sourcePath), `{"name":"test-geo","description":"test json schema","schema":{"$id":"https://example.com/geographical-location.schema.json","$schema":"https://json-schema.org/draft/2020-12/schema","description":"A geographical coordinate.","properties":{"latitude":{"maximum":90,"minimum":-90,"type":"number"},"longitude":{"maximum":180,"minimum":-180,"type":"number"}},"required":["latitude","longitude"],"title":"Longitude and Latitude Values","type":"object"},"data":{"latitude":45,"longitude":45}}`)
+	assert.Equal(t, getSourceRaw(sourcePath), `{"id":"test-geo","name":"geography","description":"test json schema","schema":{"$id":"https://example.com/geographical-location.schema.json","$schema":"https://json-schema.org/draft/2020-12/schema","description":"A geographical coordinate.","properties":{"latitude":{"maximum":90,"minimum":-90,"type":"number"},"longitude":{"maximum":180,"minimum":-180,"type":"number"}},"required":["latitude","longitude"],"title":"Longitude and Latitude Values","type":"object"},"data":{"latitude":45,"longitude":45}}`)
 
-	readReq := []byte(`{
-		  "id": "test-geo"
-	  }
-	  `)
-	rreq := &ReadRequest{}
-	json.Unmarshal(readReq, rreq)
-
-	allowed, err, data := reader.Read(rreq)
-	assert.True(t, allowed)
+	data, err := reader.Read("test-geo")
 	assert.Nil(t, err)
 	geoDataBytes, err := json.Marshal(geoData)
 	assert.Nil(t, err)
 	assert.Equal(t, string(data), string(geoDataBytes))
 
-	writeReq := []byte(`{"id": "test-geo", "data": {"latitude":9,"longitude":90}}`)
-
-	var wreq WriteRequest
-	err = json.Unmarshal(writeReq, &wreq)
-
-	allowed, err = writer.Write(&wreq)
-	assert.True(t, allowed)
+	err = writer.Write("test-geo", []byte(`{"latitude":9,"longitude":90}`))
 	assert.Nil(t, err)
 
-	assert.Equal(t, getSourceRaw(sourcePath), `{"name":"test-geo","description":"test json schema","schema":{"$id":"https://example.com/geographical-location.schema.json","$schema":"https://json-schema.org/draft/2020-12/schema","description":"A geographical coordinate.","properties":{"latitude":{"maximum":90,"minimum":-90,"type":"number"},"longitude":{"maximum":180,"minimum":-180,"type":"number"}},"required":["latitude","longitude"],"title":"Longitude and Latitude Values","type":"object"},"data":{"latitude":9,"longitude":90}}`)
+	assert.Equal(t, getSourceRaw(sourcePath), `{"id":"test-geo","name":"geography","description":"test json schema","schema":{"$id":"https://example.com/geographical-location.schema.json","$schema":"https://json-schema.org/draft/2020-12/schema","description":"A geographical coordinate.","properties":{"latitude":{"maximum":90,"minimum":-90,"type":"number"},"longitude":{"maximum":180,"minimum":-180,"type":"number"}},"required":["latitude","longitude"],"title":"Longitude and Latitude Values","type":"object"},"data":{"latitude":9,"longitude":90}}`)
 
-	writeReq2 := []byte(`{"id": "test-geo", "data": {"latitude":-100,"longitude":90}}`)
-
-	err = json.Unmarshal(writeReq2, &wreq)
-
-	allowed, err = writer.Write(&wreq)
-	assert.True(t, allowed)
+	err = writer.Write("test-geo", []byte(`{"latitude":-100,"longitude":90}`))
 	assert.NotNil(t, err)
 
 	// same as before
-	assert.Equal(t, getSourceRaw(sourcePath), `{"name":"test-geo","description":"test json schema","schema":{"$id":"https://example.com/geographical-location.schema.json","$schema":"https://json-schema.org/draft/2020-12/schema","description":"A geographical coordinate.","properties":{"latitude":{"maximum":90,"minimum":-90,"type":"number"},"longitude":{"maximum":180,"minimum":-180,"type":"number"}},"required":["latitude","longitude"],"title":"Longitude and Latitude Values","type":"object"},"data":{"latitude":9,"longitude":90}}`)
+	assert.Equal(t, getSourceRaw(sourcePath), `{"id":"test-geo","name":"geography","description":"test json schema","schema":{"$id":"https://example.com/geographical-location.schema.json","$schema":"https://json-schema.org/draft/2020-12/schema","description":"A geographical coordinate.","properties":{"latitude":{"maximum":90,"minimum":-90,"type":"number"},"longitude":{"maximum":180,"minimum":-180,"type":"number"}},"required":["latitude","longitude"],"title":"Longitude and Latitude Values","type":"object"},"data":{"latitude":9,"longitude":90}}`)
 
 }

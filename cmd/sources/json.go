@@ -16,8 +16,8 @@ import (
 */
 
 // Shared functions
-func getPath(basePath string, name SourceName) string {
-	p := filepath.Join(basePath, string(name)+".json")
+func getPath(basePath string, id SourceID) string {
+	p := filepath.Join(basePath, string(id)+".json")
 	return p
 }
 
@@ -35,8 +35,8 @@ func NewJSONReader(ctx context.Context, path string) *JSONReader {
 	return &JSONReader{Path: path}
 }
 
-func (R *JSONReader) Read(name SourceName) ([]byte, error) {
-	path := getPath(R.Path, name)
+func (R *JSONReader) Read(id SourceID) ([]byte, error) {
+	path := getPath(R.Path, id)
 	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -64,8 +64,8 @@ func NewJSONWriter(ctx context.Context, path string) *JSONWriter {
 	return &JSONWriter{Path: path}
 }
 
-func (W *JSONWriter) Write(name SourceName, data []byte) error {
-	path := getPath(W.Path, name)
+func (W *JSONWriter) Write(id SourceID, data []byte) error {
+	path := getPath(W.Path, id)
 	bytes, err := os.ReadFile(path)
 
 	var source SourceFile
