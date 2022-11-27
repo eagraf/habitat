@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/qri-io/jsonschema"
 	"github.com/rs/zerolog/log"
 )
 
@@ -22,66 +23,46 @@ func getPath(basePath string, id SourceID) string {
 }
 
 // JSON source reader
-type JSONReader struct {
+type JSONReaderWriter struct {
 	ctx  context.Context
 	Path string // base path to the files
 }
 
-func NewJSONReader(ctx context.Context, path string) *JSONReader {
-	err := os.MkdirAll(path, os.ModePerm)
+func NewJSONReaderWriter(ctx context.Context, path string) *JSONReaderWriter {
+	err := os.MkdirAll(path, fs.ModeDir)
 	if err != nil {
 		log.Error().Msgf("error creating sources path: %s", err.Error())
 	}
-	return &JSONReader{Path: path}
+	return &JSONReaderWriter{ctx: ctx, Path: path}
 }
 
-func (R *JSONReader) Read(id SourceID) ([]byte, error) {
+func (R *JSONReaderWriter) Read(id SourceID) ([]byte, error) {
 	path := getPath(R.Path, id)
-	bytes, err := os.ReadFile(path)
-	if err != nil {
+	source, err := ReadSource(path)
+	if source == nil {
 		return nil, err
 	}
-
-	var source SourceFile
-	if err = json.Unmarshal(bytes, &source); err != nil {
-		return nil, err
-	}
-
 	return source.Data, err
 }
 
-// JSON source writer
-type JSONWriter struct {
-	ctx  context.Context
-	Path string // base path to the files
-}
-
-func NewJSONWriter(ctx context.Context, path string) *JSONWriter {
-	err := os.MkdirAll(path, os.ModePerm)
-	if err != nil {
-		log.Error().Msgf("error creating sources path: %s", err.Error())
-	}
-	return &JSONWriter{Path: path}
-}
-
-func (W *JSONWriter) Write(id SourceID, data []byte) error {
+func (W *JSONReaderWriter) Write(id SourceID, sch *jsonschema.Schema, data []byte) error {
 	path := getPath(W.Path, id)
-	bytes, err := os.ReadFile(path)
+	source, err := ReadSource(path)
 
-	var source SourceFile
-	if err = json.Unmarshal(bytes, &source); err != nil {
-		return fmt.Errorf("unable to read source file: %s", err.Error())
+	if source == nil {
+		source = &SourceFile{}
 	}
 
-	if err = source.ValidateDataAgainstSchema(W.ctx, data); err != nil {
+	if err = ValidateSchemaBytes(W.ctx, sch, data); err != nil {
 		return fmt.Errorf("validation err: %s", err.Error())
 	}
 
-	source.Data = json.RawMessage(string(data))
-	if bytes, err = json.Marshal(source); err != nil {
+	source.Data = data
+	bytes, err := json.Marshal(source)
+	if err != nil {
 		return fmt.Errorf("error writing to source file: %s", err.Error())
 	}
 
-	err = os.WriteFile(path, bytes, fs.FileMode(os.O_RDWR))
+	err = os.WriteFile(path, bytes, os.ModePerm)
 	return err
 }

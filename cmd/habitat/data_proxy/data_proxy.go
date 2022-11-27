@@ -10,8 +10,8 @@ import (
 	"net/url"
 
 	"github.com/eagraf/habitat/cmd/sources"
-	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/permissions"
+	"github.com/qri-io/jsonschema"
 	"github.com/rs/zerolog/log"
 
 	"github.com/gorilla/mux"
@@ -24,24 +24,49 @@ const (
 )
 
 type ReadRequest struct {
-	t           dataType        `json:"dataType"`
-	communityID string          `json:"communityID"`
-	token       string          `json:"token"`
-	body        json.RawMessage `json:"body"`
+	T           dataType        `json:"dataType"`
+	CommunityID string          `json:"communityID"`
+	Token       string          `json:"token"`
+	Body        json.RawMessage `json:"body"`
 }
 
 type WriteRequest struct {
-	t           dataType        `json:"dataType"`
-	communityID string          `json:"communityID"`
-	token       string          `json:"token"`
-	body        json.RawMessage `json:"body"`
-	data        []byte          `json:"data"`
+	T           dataType        `json:"dataType"`
+	CommunityID string          `json:"communityID"`
+	Token       string          `json:"token"`
+	Body        json.RawMessage `json:"body"`
+	Data        []byte          `json:"data"`
+}
+
+type LocalSchemaCache struct {
+	ctx           context.Context
+	cacheRegistry *jsonschema.SchemaRegistry
+}
+
+func (c *LocalSchemaCache) Get(id string) (*jsonschema.Schema, error) {
+
+	if sch := c.cacheRegistry.GetLocal(id); sch != nil {
+		// locally cached schema
+		return sch, nil
+	}
+
+	// Resolves url address in id to fetch schema
+	sch := c.cacheRegistry.Get(c.ctx, id)
+	if sch == nil {
+		return nil, fmt.Errorf("schema not found at given uri")
+	}
+
+	c.cacheRegistry.RegisterLocal(sch)
+	return sch, nil
 }
 
 type DataProxy struct {
-	localSchemaRegistryAddr string
-	sourcesPermissions      permissions.SourcesPermissionsManager
+	// for sources
+	schemaRegistry      LocalSchemaCache
+	localSourcesHandler *sources.JSONReaderWriter
+	sourcesPermissions  permissions.SourcesPermissionsManager
 
+	// for app permissions
 	appPermissions permissions.AppPermissionsManager
 	communityId    string
 	// TODO: need localDb / filesystem if this node serves it
@@ -85,32 +110,39 @@ func (s *DataProxy) ReadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.communityID != s.communityId {
-		if proxy, ok := s.dataNodes[req.communityID]; ok {
+	if req.CommunityID != s.communityId {
+		if proxy, ok := s.dataNodes[req.CommunityID]; ok {
 			proxy.ServeHTTP(w, r)
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("error: could not locate data server for this community %s", req.communityID)))
+			w.Write([]byte(fmt.Sprintf("error: could not locate data server for this community %s", req.CommunityID)))
 		}
 		return
 	}
 
-	switch req.t {
+	switch req.T {
 	case sourcesRequest:
-		var sreq SourcesRequest
-		if err = json.Unmarshal(req.body, &sreq); err != nil {
+		// TODO: handle sources that are not stored locally
+		var sreq sources.SourceRequest
+		if err = json.Unmarshal(req.Body, &sreq); err != nil {
 			writeHeaderAndBytes(w, http.StatusBadRequest, fmt.Sprintf("unable to unmarshal json of sources request: %s", err.Error()))
 			return
 		}
 
-		s.sourcesPermissions.CheckCanRead(req.token, sreq.sourceID)
-		// TODO: pull from a pool of json readers; also need to manage concurrent requests
-		reader := sources.NewJSONReader(r.Context(), compass.LocalSourcesPath())
+		s.sourcesPermissions.CheckCanRead(req.Token, sreq.SourceID)
 
-		reader.Read(sources.SourceID(sreq.sourceID))
+		bytes, err := s.localSourcesHandler.Read(sources.SourceID(sreq.SourceID))
+
+		if err != nil {
+			writeHeaderAndBytes(w, http.StatusInternalServerError, fmt.Sprintf("error reading source: %s", err.Error()))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write(bytes)
+		return
 	}
 
-	writeHeaderAndBytes(w, http.StatusBadRequest, fmt.Sprintf("unrecognized data type: %s", req.t))
+	writeHeaderAndBytes(w, http.StatusBadRequest, fmt.Sprintf("unrecognized data type: %s", req.T))
 }
 
 func (s *DataProxy) WriteHandler(w http.ResponseWriter, r *http.Request) {
@@ -127,29 +159,31 @@ func (s *DataProxy) WriteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.communityID != s.communityId {
-		if proxy, ok := s.dataNodes[req.communityID]; ok {
+	if req.CommunityID != s.communityId {
+		if proxy, ok := s.dataNodes[req.CommunityID]; ok {
 			proxy.ServeHTTP(w, r)
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("error: could not locate data server for this community %s", req.communityID)))
+			w.Write([]byte(fmt.Sprintf("error: could not locate data server for this community %s", req.CommunityID)))
 		}
 		return
 	}
 
-	switch req.t {
+	switch req.T {
 	case sourcesRequest:
-		var sreq SourcesRequest
-		if err = json.Unmarshal(req.body, &sreq); err != nil {
+		// TODO: handle sources that are not stored locally
+		var sreq sources.SourceRequest
+		if err = json.Unmarshal(req.Body, &sreq); err != nil {
 			writeHeaderAndBytes(w, http.StatusBadRequest, fmt.Sprintf("unable to unmarshal json of sources request: %s", err.Error()))
 			return
 		}
 
-		s.sourcesPermissions.CheckCanWrite(req.token, sreq.sourceID)
-		// TODO: pull from a pool of json readers; also need to manage concurrent requests
-		writer := sources.NewJSONWriter(r.Context(), compass.LocalSourcesPath())
-
-		writer.Write(sources.SourceID(sreq.sourceID), req.data)
+		s.sourcesPermissions.CheckCanWrite(req.Token, sreq.SourceID)
+		sch, err := s.schemaRegistry.Get(sreq.SourceID)
+		if err != nil {
+			writeHeaderAndBytes(w, http.StatusBadRequest, fmt.Sprintf("unable to find schema with matching sourceID"))
+		}
+		s.localSourcesHandler.Write(sources.SourceID(sreq.SourceID), sch, req.Data)
 	}
 }
 
