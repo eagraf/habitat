@@ -9,7 +9,7 @@ require (
 	github.com/hashicorp/go-hclog v0.9.1
 	github.com/hashicorp/raft v1.3.6
 	github.com/hashicorp/raft-boltdb v0.0.0-20210422161416-485fa74b0b01
-	github.com/libp2p/go-libp2p v0.23.2
+	github.com/libp2p/go-libp2p v0.23.4
 	github.com/multiformats/go-multiaddr v0.7.0
 	github.com/qri-io/jsonschema v0.2.1
 	github.com/rogpeppe/go-internal v1.8.0 // indirect

@@ -60,7 +60,11 @@ func CommunitiesPath() string {
 }
 
 func LocalSourcesPath() string {
-	return filepath.Join(DataPath(), "sources")
+	return filepath.Join(HabitatPath(), "sources")
+}
+
+func LocalSchemaPath() string {
+	return filepath.Join(HabitatPath(), "schema")
 }
 
 // NodeID will return the value in the node_id file, creating it if it doesn't exist

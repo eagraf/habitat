@@ -1,14 +1,19 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 
 	"github.com/eagraf/habitat/cmd/sources"
 	"github.com/eagraf/habitat/pkg/compass"
+	"github.com/qri-io/jsonschema"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
+
+var rw *sources.JSONReaderWriter
+var sr *sources.SchemaRegistry
 
 // communityCmd represents the community command
 var sourcesCmd = &cobra.Command{
@@ -18,7 +23,9 @@ var sourcesCmd = &cobra.Command{
 	read <source_file>
 	join <source_file>
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		rw = sources.NewJSONReaderWriter(cmd.Context(), cmd.Flags().Lookup("sources_path").Value.String())
+		sr = sources.NewSchemaRegistry(cmd.Flags().Lookup("schema_path").Value.String())
 	},
 }
 
@@ -28,22 +35,15 @@ var sourcesReadCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		id := cmd.Flags().Lookup("id").Value.String()
-		path := cmd.Flags().Lookup("path").Value.String()
 
 		fmt.Printf("Source Read Request for %s\n", id)
 
-		req := &sources.ReadRequest{
-			SourceName: sources.SourceName(id),
-		}
-
-		reader := sources.NewReader(sources.NewJSONReader(cmd.Context(), path), sources.NewBasicPermissionsManager())
-
-		allowed, err, data := reader.Read(req)
+		data, err := rw.Read(sources.SourceID(id))
 
 		if err != nil {
 			log.Error().Msgf("Error reading source: %s", err.Error())
 		} else {
-			fmt.Printf("Allowed: %t, Data: %s\n", allowed, data)
+			fmt.Printf("Data: %s\n", data)
 		}
 	},
 }
@@ -54,66 +54,70 @@ var sourcesWriteCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		id := cmd.Flags().Lookup("id").Value.String()
-		path := cmd.Flags().Lookup("path").Value.String()
 		data := cmd.Flags().Lookup("data").Value.String()
 
 		fmt.Printf("Source Write Request for %s, %s\n", id, data)
 
-		req := &sources.WriteRequest{
-			SourceName: sources.SourceName(id),
-			Data:       json.RawMessage(data),
+		sch, err := sr.Lookup(id)
+		if err != nil || sch == nil {
+			fmt.Printf("Did not find schema in registry: %s", err)
+			return
 		}
 
-		writer := sources.NewWriter(sources.NewJSONWriter(cmd.Context(), path), sources.NewBasicPermissionsManager())
-
-		allowed, err := writer.Write(req)
-
+		err = rw.Write(sources.SourceID(id), sch, []byte(data))
 		if err != nil {
-			log.Error().Msgf("Error reading source: %s", err.Error())
+			log.Error().Msgf("Error writing source: %s", err.Error())
 		} else {
-			fmt.Printf("Allowed: %t, Data: %s\n", allowed, data)
+			fmt.Printf("Wrote Data: %s\n", data)
+		}
+	},
+}
+
+var sourcesAddCmd = &cobra.Command{
+	Use:   "add",
+	Short: "add a source schema to local registry",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 1 {
+			log.Error().Msg("not enough arguments to sources add, needs file with schema")
+			return
+		}
+
+		input, err := os.ReadFile(args[0])
+		if err != nil {
+			log.Error().Msgf("Error reading input: %s", err.Error())
+			return
+		}
+
+		sch := jsonschema.Must(string(input))
+		id := sources.GetSchemaId(sch)
+		fmt.Println(sr.Add(id, sch))
+	},
+}
+
+var sourcesShowCmd = &cobra.Command{
+	Use:   "show",
+	Short: "show everything in local registry",
+	Run: func(cmd *cobra.Command, args []string) {
+
+		path := sr.Path
+		files, err := ioutil.ReadDir(path)
+		if err != nil {
+			fmt.Printf("error reading path %s: %s", path, err.Error())
+			return
+		}
+		for _, file := range files {
+			fmt.Println(file.Name(), file.IsDir())
 		}
 	},
 }
 
 /*
-var sourcesAddCmd = &cobra.Command{
-	Use:   "add",
-	Short: "add a source to local registry",
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) < 1 {
-			log.Error().Msg("Not enough arguments to read command, needs source name")
-			return
-		}
-
-		input, err := os.ReadFile(args[0])
-		if err != nil {
-			log.Error().Msgf("Error reading input: %s", err.Error())
-			return
-		}
-		req := &sources.WriteRequest{}
-		err = json.Unmarshal(input, req)
-		if err != nil {
-			log.Error().Msgf("Erroring unmarshaling json: %s", err.Error())
-			return
-		}
-		allowed, err := writer.Write(req)
-
-		fmt.Printf("Source Write Request from app %s for: %s\n", req.Requester, req.SourceName)
-		if err != nil {
-			log.Error().Msgf("Error reading source: %s", err.Error())
-		} else {
-			fmt.Printf("Allowed: %t, Data: %s\n", allowed, req.Data)
-		}
-	},
-}
-
 var sourcesDeleteCmd = &cobra.Command{
 	Use:   "remove",
 	Short: "remove a source from the local registry",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
-			log.Error().Msg("Not enough arguments to read command, needs source name")
+			log.Error().Msg("not enough arguments to sources add, needs file with schema")
 			return
 		}
 
@@ -122,20 +126,9 @@ var sourcesDeleteCmd = &cobra.Command{
 			log.Error().Msgf("Error reading input: %s", err.Error())
 			return
 		}
-		req := &sources.WriteRequest{}
-		err = json.Unmarshal(input, req)
-		if err != nil {
-			log.Error().Msgf("Erroring unmarshaling json: %s", err.Error())
-			return
-		}
-		allowed, err := writer.Write(req)
 
-		fmt.Printf("Source Write Request from app %s for: %s\n", req.Requester, req.SourceName)
-		if err != nil {
-			log.Error().Msgf("Error reading source: %s", err.Error())
-		} else {
-			fmt.Printf("Allowed: %t, Data: %s\n", allowed, req.Data)
-		}
+		sch := jsonschema.Must(string(input))
+		sr.Delete(sources.GetSchemaId(sch))
 	},
 }
 */
@@ -149,10 +142,15 @@ func init() {
 	sourcesWriteCmd.MarkFlagRequired("id")
 	sourcesWriteCmd.MarkFlagRequired("data")
 
-	sourcesCmd.PersistentFlags().String("path", compass.LocalSourcesPath(), "The path where sources data is located")
-	sourcesCmd.MarkFlagRequired("path")
+	sourcesCmd.PersistentFlags().String("sources_path", compass.LocalSourcesPath(), "The path where sources data is located")
+	sourcesCmd.MarkFlagRequired("sources_path")
+
+	sourcesCmd.PersistentFlags().String("schema_path", compass.LocalSchemaPath(), "The path where sources data is located")
+	sourcesCmd.MarkFlagRequired("schema_path")
 
 	sourcesCmd.AddCommand(sourcesReadCmd)
 	sourcesCmd.AddCommand(sourcesWriteCmd)
+	sourcesCmd.AddCommand(sourcesAddCmd)
+	sourcesCmd.AddCommand(sourcesShowCmd)
 	rootCmd.AddCommand(sourcesCmd)
 }
