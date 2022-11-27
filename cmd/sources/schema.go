@@ -42,7 +42,6 @@ func WriteSchemaToPath(path string, sch *jsonschema.Schema) error {
 	if err != nil {
 		return fmt.Errorf("error writing to file: %s", err.Error())
 	}
-	fmt.Println("successfully wrote to path", path, string(bytes))
 	return nil
 }
 
@@ -78,10 +77,12 @@ type SchemaRegistry struct {
 }
 
 func NewSchemaRegistry(path string) *SchemaRegistry {
-	fmt.Println("creating schema registry at path: ", path)
 	err := os.MkdirAll(path, 0755)
 	if err != nil {
-		panic("unable to create schema registry; can't create registry path")
+		panic(err)
+	}
+	if _, err = os.Stat(path); err != nil {
+		panic(fmt.Sprintf("no directory at %s", path))
 	}
 	return &SchemaRegistry{Path: path}
 }
@@ -93,7 +94,7 @@ func (sr *SchemaRegistry) Lookup(id string) (*jsonschema.Schema, error) {
 	}
 
 	if sch != nil && !CheckSchemaId(sch, id) {
-		return nil, fmt.Errorf("id supplied (%s) and schema id don't match. id supplied", id)
+		return nil, fmt.Errorf("id supplied (%s) and schema id don't match", id)
 	}
 	return sch, nil
 
@@ -103,8 +104,6 @@ func (sr *SchemaRegistry) Add(id string, sch *jsonschema.Schema) error {
 	if id == "" {
 		return fmt.Errorf("nil id supplied")
 	}
-	fmt.Println(sr.Path, id, ".json")
-	fmt.Println("path should be: ", filepath.Join(sr.Path, id+".json"))
 	return WriteSchemaToPath(filepath.Join(sr.Path, id+".json"), sch)
 }
 

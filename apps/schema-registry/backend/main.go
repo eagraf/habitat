@@ -8,6 +8,7 @@ import (
 	"net/url"
 
 	"github.com/eagraf/habitat/cmd/sources"
+	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/gorilla/mux"
 	"github.com/qri-io/jsonschema"
 	"github.com/rs/zerolog/log"
@@ -42,9 +43,9 @@ func (s *SchemaRegistryServer) LookupHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if surl.Host != s.Host {
+	if surl.Host != "" && surl.Host != s.Host {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("hostname does not match this registry's hostname"))
+		w.Write([]byte(fmt.Sprintf("hostname does not match this registry's hostname %s, %s", surl.Host, s.Host)))
 		return
 	}
 
@@ -52,6 +53,12 @@ func (s *SchemaRegistryServer) LookupHandler(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
+		return
+	}
+
+	if sch == nil {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("no schema found!"))
 		return
 	}
 
@@ -79,7 +86,7 @@ func (s *SchemaRegistryServer) AddHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var sch *jsonschema.Schema
+	sch := &jsonschema.Schema{}
 	if err = sch.UnmarshalJSON(slurp); err != nil {
 		writeHeaderAndBytes(w, http.StatusInternalServerError, fmt.Sprintf("unable to unmarshal body json into schema: %s", err.Error()))
 		return
@@ -118,4 +125,10 @@ func (s *SchemaRegistryServer) Start(ctx context.Context, port string) {
 	if err := http.ListenAndServe(port, r); err != nil {
 		log.Fatal().Err(err)
 	}
+}
+
+func main() {
+	sr := sources.NewSchemaRegistry(compass.LocalSchemaPath())
+	srServer := NewSchemaRegistryServer("localhost", ":8767", sr)
+	srServer.Start(context.Background(), ":8767")
 }
