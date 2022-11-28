@@ -75,7 +75,7 @@ func main() {
 	go handleInterupt(ProcessManager)
 
 	// Create community manager
-	CommunityManager, err = community.NewManager(communityDir, ProcessManager, &reverseProxy.Rules, p2pNode.Host())
+	CommunityManager, err = community.NewManager(communityDir, ProcessManager, &reverseProxy.Rules, p2pNode)
 	if err != nil {
 		log.Fatal().Msgf("unable to start community manager: %s", err)
 	}

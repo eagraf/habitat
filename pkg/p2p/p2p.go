@@ -48,6 +48,10 @@ func (n *Node) Host() host.Host {
 	return n.host
 }
 
+func (n *Node) PostHTTPRequest(addr ma.Multiaddr, route string, peerID peer.ID, req *http.Request) (*http.Response, error) {
+	return libP2PHTTPRequest(addr, n.host, route, peerID, req)
+}
+
 func standardHostOpts(priv crypto.PrivKey, listenAddrs []ma.Multiaddr) []config.Option {
 	return []config.Option{
 		libp2p.ListenAddrs(listenAddrs...),
@@ -78,15 +82,17 @@ func LibP2PHTTPRequestWithRandomClient(addr ma.Multiaddr, route string, peerID p
 	// TODO @eagraf handle IPv6
 	listen, _ := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%s", ip, port))
 
-	fmt.Println(addr.String())
-
 	hostOpts := standardHostOpts(privKey, []ma.Multiaddr{listen})
 	h, _ := libp2p.New(hostOpts...)
 
-	h.Peerstore().AddAddr(peerID, addr, peerstore.PermanentAddrTTL)
+	return libP2PHTTPRequest(addr, h, route, peerID, req)
+}
+
+func libP2PHTTPRequest(addr ma.Multiaddr, host host.Host, route string, peerID peer.ID, req *http.Request) (*http.Response, error) {
+	host.Peerstore().AddAddr(peerID, addr, peerstore.PermanentAddrTTL)
 
 	tr := &http.Transport{}
-	tr.RegisterProtocol("libp2p", p2phttp.NewTransport(h))
+	tr.RegisterProtocol("libp2p", p2phttp.NewTransport(host))
 
 	client := &http.Client{
 		Transport: tr,

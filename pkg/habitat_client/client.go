@@ -3,8 +3,10 @@ package client
 import (
 	"bufio"
 	"bytes"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -12,8 +14,10 @@ import (
 	"net/http"
 
 	"github.com/eagraf/habitat/pkg/compass"
+	"github.com/eagraf/habitat/pkg/identity"
 	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/eagraf/habitat/structs/ctl"
+	"github.com/gorilla/websocket"
 )
 
 type Client struct {
@@ -108,11 +112,11 @@ func PostRequestToAddress(address string, req, res interface{}) (error, error) {
 	return nil, nil
 }
 
-func PostLibP2PRequestToAddress(proxyAddr string, route string, req, res interface{}) (error, error) {
+func PostLibP2PRequestToAddress(node *p2p.Node, proxyAddr string, route string, req, res interface{}) (error, error) {
 
 	peerID, addr, err := compass.LibP2PHabitatAPIAddr(proxyAddr)
 	if err != nil {
-		return err, nil
+		return fmt.Errorf("error decomposing multiaddr: %s", err), nil
 	}
 
 	reqBody, err := json.Marshal(req)
@@ -125,9 +129,19 @@ func PostLibP2PRequestToAddress(proxyAddr string, route string, req, res interfa
 		return fmt.Errorf("error constructing HTTP request: %s", err), nil
 	}
 
-	p2pRes, err := p2p.LibP2PHTTPRequestWithRandomClient(addr, route, peerID, p2pReq)
-	if err != nil {
-		return err, nil
+	var p2pRes *http.Response
+	if node == nil {
+		randRes, err := p2p.LibP2PHTTPRequestWithRandomClient(addr, route, peerID, p2pReq)
+		if err != nil {
+			return err, nil
+		}
+		p2pRes = randRes
+	} else {
+		nodeRes, err := node.PostHTTPRequest(addr, route, peerID, p2pReq)
+		if err != nil {
+			return err, nil
+		}
+		p2pRes = nodeRes
 	}
 
 	resBody, err := io.ReadAll(p2pRes.Body)
@@ -146,4 +160,55 @@ func PostLibP2PRequestToAddress(proxyAddr string, route string, req, res interfa
 	}
 
 	return nil, nil
+}
+
+func GetWebsocketConn(addr, route string) (*websocket.Conn, error) {
+	wsURL := addr + route
+
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return conn, nil
+}
+
+func WebsocketKeySigningExchange(conn *websocket.Conn, userIdentity *identity.UserIdentity) error {
+	var pubKeyMsg ctl.SigningPublicKeyMsg
+	err := conn.ReadJSON(&pubKeyMsg)
+	if err != nil {
+		return err
+	}
+	if werr := pubKeyMsg.GetError(); werr != nil {
+		return werr
+	}
+
+	pubKey, err := x509.ParsePKCS1PublicKey(pubKeyMsg.PublicKey)
+	if err != nil {
+		return err
+	}
+
+	// TODO propogate proper node IDs through
+	cert, err := identity.GenerateMemberNodeCertificate(pubKeyMsg.NodeID, userIdentity, pubKey)
+	if err != nil {
+		return err
+	}
+
+	// PEM encode the cert
+	certPEM := new(bytes.Buffer)
+	pem.Encode(certPEM, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert,
+	})
+
+	certMsg := &ctl.SigningCertMsg{
+		UserCertificate: userIdentity.CertBytes,
+		NodeCertificate: certPEM.Bytes(),
+	}
+
+	err = conn.WriteJSON(certMsg)
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -10,8 +10,12 @@ import (
 
 const (
 	TransitionTypeInitializeCommunity = "initialize_community"
-	TransitionTypeInitializeCounter   = "initialize_counter"
-	TransitionTypeIncrementCounter    = "increment_counter"
+	TransitionTypeAddMember           = "add_member"
+	TransitionTypeAddNode             = "add_node"
+
+	TransitionTypeInitializeCounter = "initialize_counter"
+	TransitionTypeIncrementCounter  = "increment_counter"
+
 	TransitionTypeInitializeIPFSSwarm = "initialize_ipfs_swarm"
 )
 
@@ -130,5 +134,80 @@ func (t *InitializeIPFSSwarmTransition) Validate(oldState *community.CommunitySt
 	if len(t.IPFSConfig.BootstrapAddresses) == 0 {
 		return errors.New("no bootstrap addresses supplied")
 	}
+	return nil
+}
+
+type AddMemberTransition struct {
+	Member *community.Member
+}
+
+func (t *AddMemberTransition) Type() string {
+	return TransitionTypeAddMember
+}
+
+func (t *AddMemberTransition) Patch(oldState *community.CommunityState) ([]byte, error) {
+	marshaledMember, err := json.Marshal(t.Member)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(fmt.Sprintf(`[{
+		"op": "add",
+		"path": "/members/-",
+		"value": %s
+	}]`, string(marshaledMember))), nil
+}
+
+func (t *AddMemberTransition) Validate(oldState *community.CommunityState) error {
+	// TODO cryptographically verify all of this stuff
+	// Make sure member is not already a part of the community
+	for _, m := range oldState.Members {
+		if m.ID == t.Member.ID {
+			return fmt.Errorf("member with ID %s already in community", m.ID)
+		}
+	}
+
+	return nil
+}
+
+type AddNodeTransition struct {
+	Node *community.Node
+}
+
+func (t *AddNodeTransition) Type() string {
+	return TransitionTypeAddNode
+}
+
+func (t *AddNodeTransition) Patch(oldState *community.CommunityState) ([]byte, error) {
+	marshaledNode, err := json.Marshal(t.Node)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(fmt.Sprintf(`[{
+		"op": "add",
+		"path": "/nodes/-",
+		"value": %s
+	}]`, string(marshaledNode))), nil
+}
+
+func (t *AddNodeTransition) Validate(oldState *community.CommunityState) error {
+	found := false
+	for _, m := range oldState.Members {
+		if t.Node.MemberID == m.ID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("associated member %s is not in the community", t.Node.MemberID)
+	}
+
+	for _, n := range oldState.Nodes {
+		if n.ID == t.Node.ID {
+			return fmt.Errorf("node with ID %s already in community", n.ID)
+		}
+	}
+
 	return nil
 }

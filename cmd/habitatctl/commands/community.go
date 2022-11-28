@@ -18,8 +18,10 @@ package commands
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 
+	client "github.com/eagraf/habitat/pkg/habitat_client"
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/spf13/cobra"
 )
@@ -35,7 +37,7 @@ var communityCmd = &cobra.Command{
 	<community_id> propose <data>
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("%s is an invalid subcommand for community %s\n", args[1], args[0])
+		fmt.Println(cmd.Usage())
 	},
 }
 
@@ -44,23 +46,53 @@ var communityCreateCmd = &cobra.Command{
 	Short: "create a new community",
 	Run: func(cmd *cobra.Command, args []string) {
 
+		userIdentity, err := loadUserIdentity(cmd)
+		if err != nil {
+			printError(fmt.Errorf("error loading user identity: %s", err))
+		}
+
 		name := cmd.Flags().Lookup("name")
 		if name == nil {
-			fmt.Println("name flag needs to be set")
-			return
+			printError(errors.New("name flag needs to be set"))
 		}
 
 		ipfs, _ := cmd.Flags().GetBool("ipfs")
+
+		conn, err := getWebsocketConn(ctl.CommandCommunityCreate)
+		if err != nil {
+			printError(fmt.Errorf("error establishing websocket connection: %s", err))
+		}
+		defer conn.Close()
+
+		err = client.WebsocketKeySigningExchange(conn, userIdentity)
+		if err != nil {
+			printError(fmt.Errorf("error signing new node's certificate: %s", err))
+		}
 
 		req := &ctl.CommunityCreateRequest{
 			CommunityName:     name.Value.String(),
 			CreateIPFSCluster: ipfs,
 		}
-		var res ctl.CommunityCreateResponse
-		postRequest(ctl.CommandCommunityCreate, req, &res)
 
-		fmt.Println(res.CommunityID)
-		fmt.Println(res.JoinToken)
+		err = conn.WriteJSON(req)
+		if err != nil {
+			printError(err)
+		}
+
+		var res ctl.CommunityCreateResponse
+		err = conn.ReadJSON(&res)
+		if err != nil {
+			printError(err)
+		}
+		if werr := res.GetError(); werr != nil {
+			printError(werr)
+		}
+
+		pretty, err := json.MarshalIndent(res, "", "    ")
+		if err != nil {
+			printError(err)
+		}
+		fmt.Println(string(pretty))
 	},
 }
 
@@ -102,59 +134,35 @@ var communityJoinCmd = &cobra.Command{
 			req.CommunityID = joinInfo.CommunityID
 		}
 
-		var res ctl.CommunityJoinResponse
-		postRequest(ctl.CommandCommunityJoin, req, &res)
+		userIdentity, err := loadUserIdentity(cmd)
+		if err != nil {
+			printError(fmt.Errorf("error loading user identity: %s", err))
+		}
 
-		fmt.Println(res.AddMemberToken)
-	},
-}
+		conn, err := getWebsocketConn(ctl.CommandCommunityJoin)
+		if err != nil {
+			printError(fmt.Errorf("error establishing websocket connection: %s", err))
+		}
+		defer conn.Close()
 
-var communityAddMemberCmd = &cobra.Command{
-	Use:   "add",
-	Short: "add a member to the community",
-	Run: func(cmd *cobra.Command, args []string) {
-		req := &ctl.CommunityAddMemberRequest{}
-		token, err := cmd.Flags().GetString("token")
+		err = client.WebsocketKeySigningExchange(conn, userIdentity)
+		if err != nil {
+			printError(fmt.Errorf("error signing new node's certificate: %s", err))
+		}
+
+		err = conn.WriteJSON(req)
 		if err != nil {
 			printError(err)
 		}
-		if token == "" {
-			address := cmd.Flags().Lookup("address")
-			if address == nil {
-				fmt.Println("address flag needs to be set")
-				return
-			}
 
-			communityID := cmd.Flags().Lookup("community")
-			if communityID == nil {
-				fmt.Println("community flag needs to be set")
-				return
-			}
-
-			nodeID := cmd.Flags().Lookup("node")
-			if communityID == nil {
-				fmt.Println("node flag needs to be set")
-				return
-			}
-			req.JoiningNodeAddress = address.Value.String()
-			req.CommunityID = communityID.Value.String()
-			req.NodeID = nodeID.Value.String()
-		} else {
-			decoded, err := base64.StdEncoding.DecodeString(token)
-			if err != nil {
-				printError(err)
-			}
-			var addInfo ctl.AddMemberInfo
-			err = json.Unmarshal(decoded, &addInfo)
-			if err != nil {
-				printError(err)
-			}
-			req.JoiningNodeAddress = addInfo.Address
-			req.CommunityID = addInfo.CommunityID
-			req.NodeID = addInfo.NodeID
+		var res ctl.CommunityJoinResponse
+		err = conn.ReadJSON(&res)
+		if err != nil {
+			printError(err)
 		}
-
-		postRequest(ctl.CommandCommunityAddMember, req, &ctl.CommunityAddMemberResponse{})
+		if werr := res.GetError(); werr != nil {
+			printError(werr)
+		}
 	},
 }
 
@@ -223,23 +231,21 @@ func init() {
 	communityCreateCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
 	communityCreateCmd.Flags().StringP("name", "n", "", "name of the community being created")
 	communityCreateCmd.Flags().Bool("ipfs", false, "create a new IPFS swarm for the community")
+	addUserFlags(communityCreateCmd)
 
 	communityJoinCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
 	communityJoinCmd.Flags().StringP("community", "c", "", "id of community to be joined")
 	communityJoinCmd.Flags().StringP("token", "t", "", "token to join the community")
-
-	communityAddMemberCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
-	communityAddMemberCmd.Flags().StringP("community", "c", "", "id of community to be joined")
-	communityAddMemberCmd.Flags().StringP("node", "n", "", "node id of node that is being added")
-	communityAddMemberCmd.Flags().StringP("token", "t", "", "token to add member to the community")
+	addUserFlags(communityJoinCmd)
 
 	communityProposeTransitionsCmd.Flags().StringP("community", "c", "", "id of community to be joined")
+	addUserFlags(communityProposeTransitionsCmd)
 
 	communityStateCmd.Flags().StringP("community", "c", "", "id of community to be joined")
+	addUserFlags(communityStateCmd)
 
 	communityCmd.AddCommand(communityCreateCmd)
 	communityCmd.AddCommand(communityJoinCmd)
-	communityCmd.AddCommand(communityAddMemberCmd)
 	communityCmd.AddCommand(communityProposeTransitionsCmd)
 	communityCmd.AddCommand(communityStateCmd)
 	communityCmd.AddCommand(communityListCmd)

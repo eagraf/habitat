@@ -17,16 +17,16 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/ipfs"
+	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/eagraf/habitat/structs/community"
 	"github.com/google/uuid"
-	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/rs/zerolog/log"
 )
 
 type Manager struct {
 	Path           string
 	config         *ipfs.IPFSConfig
-	p2pHost        host.Host
+	p2pNode        *p2p.Node
 	processManager procs.Manager
 
 	clusterManager  *cluster.ClusterManager
@@ -34,8 +34,8 @@ type Manager struct {
 	communitiesLock *sync.Mutex
 }
 
-func NewManager(path string, procManager *procs.Manager, proxyRules *proxy.RuleSet, host host.Host) (*Manager, error) {
-	clusterManager := cluster.NewClusterManager(host)
+func NewManager(path string, procManager *procs.Manager, proxyRules *proxy.RuleSet, node *p2p.Node) (*Manager, error) {
+	clusterManager := cluster.NewClusterManager(node.Host())
 
 	err := clusterManager.Start(proxyRules)
 	if err != nil {
@@ -49,7 +49,7 @@ func NewManager(path string, procManager *procs.Manager, proxyRules *proxy.RuleS
 			// TODO: @arushibandi remove this usage of compass
 			StartCmd: filepath.Join(compass.ProcsPath(), "bin", "amd64-darwin", "start-ipfs"),
 		},
-		p2pHost:         host,
+		p2pNode:         node,
 		processManager:  *procManager,
 		clusterManager:  clusterManager,
 		communities:     make(map[string]*state.CommunityStateMachine),
@@ -115,7 +115,7 @@ func (m *Manager) checkCommunityExists(communityID string) bool {
 
 }
 
-func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.CommunityState, error) {
+func (m *Manager) CreateCommunity(name string, createIpfs bool, member *community.Member, node *community.Node) (*community.CommunityState, error) {
 	// Generate UUID for now
 	communityID := uuid.New().String()
 
@@ -148,6 +148,12 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool) (*community.Comm
 	transitions := []state.CommunityStateTransition{
 		&state.InitializeCommunityTransition{
 			CommunityID: communityID,
+		},
+		&state.AddMemberTransition{
+			Member: member,
+		},
+		&state.AddNodeTransition{
+			Node: node,
 		},
 	}
 
@@ -197,6 +203,28 @@ func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, a
 	}
 
 	return stateMachine.State()
+}
+
+func (m *Manager) AddMemberNode(communityID string, member *community.Member, node *community.Node) (*community.CommunityState, error) {
+	stateMachine, ok := m.communities[communityID]
+	if !ok {
+		return nil, fmt.Errorf("community %s is not on this instance", communityID)
+	}
+
+	transitions := []state.CommunityStateTransition{
+		&state.AddMemberTransition{
+			Member: member,
+		},
+		&state.AddNodeTransition{
+			Node: node,
+		},
+	}
+	state, err := stateMachine.ProposeTransitions(transitions)
+	if err != nil {
+		return nil, err
+	}
+
+	return state, nil
 }
 
 func (m *Manager) ProposeTransitions(communityID string, transitions []byte) error {

@@ -50,10 +50,13 @@ func (cm *ClusterManager) Start(proxyRules *proxy.RuleSet) error {
 	}
 
 	// TODO switch between implementations of cluster services
-	proxyRules.Add("raft-service", &proxy.RedirectRule{
+	err = proxyRules.Add("raft-service", &proxy.RedirectRule{
 		Matcher:         "/raft/msg",
 		ForwardLocation: url,
 	})
+	if err != nil {
+		return err
+	}
 
 	err = cm.raftClusterService.Start()
 	if err != nil {
