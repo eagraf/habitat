@@ -1,4 +1,5 @@
 name: schema-registry
 bin: schema-registry
-ports: 8767
+ports: 
+  - 8767
 proxy-rules:
