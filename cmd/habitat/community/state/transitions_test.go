@@ -9,8 +9,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testTransitions(transitions []CommunityStateTransition) (*community.CommunityState, error) {
-	state := community.NewCommunityState()
+func testTransitions(oldState *community.CommunityState, transitions []CommunityStateTransition) (*community.CommunityState, error) {
+	var state *community.CommunityState
+	if oldState == nil {
+		state = community.NewCommunityState()
+	} else {
+		state = oldState
+	}
 	for _, t := range transitions {
 
 		err := t.Validate(state)
@@ -50,6 +55,22 @@ func testTransitions(transitions []CommunityStateTransition) (*community.Communi
 	return state, nil
 }
 
+// use this if you expect the transitions to cause an error
+func testTransitionsOnCopy(oldState *community.CommunityState, transitions []CommunityStateTransition) (*community.CommunityState, error) {
+	marshaled, err := json.Marshal(oldState)
+	if err != nil {
+		return nil, err
+	}
+
+	var copy community.CommunityState
+	err = json.Unmarshal(marshaled, &copy)
+	if err != nil {
+		return nil, err
+	}
+
+	return testTransitions(&copy, transitions)
+}
+
 func TestCommunityInitialization(t *testing.T) {
 	transitions := []CommunityStateTransition{
 		&InitializeCommunityTransition{
@@ -70,7 +91,7 @@ func TestCommunityInitialization(t *testing.T) {
 		},
 	}
 
-	state, err := testTransitions(transitions)
+	state, err := testTransitions(nil, transitions)
 	assert.Nil(t, err)
 	assert.NotNil(t, state)
 	assert.Equal(t, "abc", state.CommunityID)
@@ -95,7 +116,7 @@ func TestCommunityInitialization(t *testing.T) {
 		},
 	}
 
-	_, err = testTransitions(transitions)
+	_, err = testTransitions(nil, transitions)
 	assert.NotNil(t, err)
 
 	// test adding a node not associated with a current member
@@ -117,6 +138,137 @@ func TestCommunityInitialization(t *testing.T) {
 		},
 	}
 
-	_, err = testTransitions(transitions)
+	_, err = testTransitions(nil, transitions)
 	assert.NotNil(t, err)
+}
+
+func TestProcessManagement(t *testing.T) {
+	transitions := []CommunityStateTransition{
+		&InitializeCommunityTransition{
+			CommunityID: "abc",
+		},
+		&AddMemberTransition{
+			Member: &community.Member{
+				ID:          "jorts",
+				Certificate: []byte("mycert"),
+			},
+		},
+		&AddNodeTransition{
+			Node: &community.Node{
+				ID:          "node1",
+				MemberID:    "jorts",
+				Certificate: []byte("mycert"),
+			},
+		},
+		&AddNodeTransition{
+			Node: &community.Node{
+				ID:          "node2",
+				MemberID:    "jorts",
+				Certificate: []byte("mycert"),
+			},
+		},
+		&StartProcessTransition{
+			Process: &community.Process{
+				ID:      "proc1",
+				AppName: "app1",
+				Args:    []string{},
+				Env:     []string{},
+				Flags:   []string{},
+			},
+		},
+		&StartProcessTransition{
+			Process: &community.Process{
+				ID:      "proc2",
+				AppName: "app2",
+				Args:    []string{},
+				Env:     []string{},
+				Flags:   []string{},
+			},
+		},
+		&StartProcessInstanceTransition{
+			ProcessInstance: &community.ProcessInstance{
+				ProcessID: "proc1",
+				NodeID:    "node1",
+			},
+		},
+		&StartProcessInstanceTransition{
+			ProcessInstance: &community.ProcessInstance{
+				ProcessID: "proc1",
+				NodeID:    "node2",
+			},
+		},
+	}
+	state, err := testTransitions(nil, transitions)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(state.Processes))
+	assert.Equal(t, 2, len(state.ProcessInstances))
+
+	// try starting a process with the same id
+	_, err = testTransitionsOnCopy(state, []CommunityStateTransition{
+		&StartProcessTransition{
+			Process: &community.Process{
+				ID:      "proc1",
+				AppName: "app1",
+			},
+		},
+	})
+	assert.NotNil(t, err)
+
+	// try starting a process instance on a node that does not exist
+	_, err = testTransitionsOnCopy(state, []CommunityStateTransition{
+		&StartProcessInstanceTransition{
+			ProcessInstance: &community.ProcessInstance{
+				ProcessID: "proc1",
+				NodeID:    "node3",
+			},
+		},
+	})
+	assert.NotNil(t, err)
+
+	// try starting a process instance for a process that does not exist
+	_, err = testTransitionsOnCopy(state, []CommunityStateTransition{
+		&StartProcessInstanceTransition{
+			ProcessInstance: &community.ProcessInstance{
+				ProcessID: "proc3",
+				NodeID:    "node1",
+			},
+		},
+	})
+	assert.NotNil(t, err)
+
+	// try starting a duplicate process instance
+	_, err = testTransitionsOnCopy(state, []CommunityStateTransition{
+		&StartProcessInstanceTransition{
+			ProcessInstance: &community.ProcessInstance{
+				ProcessID: "proc1",
+				NodeID:    "node1",
+			},
+		},
+	})
+	assert.NotNil(t, err)
+
+	// try stopping process with instances still running
+	_, err = testTransitionsOnCopy(state, []CommunityStateTransition{
+		&StopProcessTransition{
+			ProcessID: "proc1",
+		},
+	})
+	assert.NotNil(t, err)
+
+	// Stop proc1
+	state, err = testTransitions(state, []CommunityStateTransition{
+		&StopProcessInstanceTransition{
+			ProcessID: "proc1",
+			NodeID:    "node1",
+		},
+		&StopProcessInstanceTransition{
+			ProcessID: "proc1",
+			NodeID:    "node2",
+		},
+		&StopProcessTransition{
+			ProcessID: "proc1",
+		},
+	})
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(state.Processes))
 }
