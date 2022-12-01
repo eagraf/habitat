@@ -15,10 +15,7 @@ func TestCommunityStateSchema(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Test that an empty CommunityState struct matches the schema
-	cs := CommunityState{
-		Members: []*Member{},
-		Nodes:   []*Node{},
-	}
+	cs := NewCommunityState()
 	marshaled, err := json.Marshal(&cs)
 	assert.Nil(t, err)
 	keyErrs, err := rs.ValidateBytes(context.Background(), marshaled)
