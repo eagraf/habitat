@@ -34,6 +34,7 @@ func (e *NOOPExecutor) Execute(update *StateUpdate) {
 
 type StateUpdate struct {
 	NewState       []byte
+	Transition     []byte
 	TransitionType string
 }
 

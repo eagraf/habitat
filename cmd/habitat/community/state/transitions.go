@@ -25,8 +25,9 @@ const (
 )
 
 type TransitionWrapper struct {
-	Type  string `json:"type"`
-	Patch []byte `json:"patch"`
+	Type       string `json:"type"`
+	Patch      []byte `json:"patch"`      // The JSON patch generated from the transition struct
+	Transition []byte `json:"transition"` // JSON encoded transition struct
 }
 
 type CommunityStateTransition interface {
@@ -41,9 +42,15 @@ func wrapTransition(t CommunityStateTransition, oldState *community.CommunitySta
 		return nil, err
 	}
 
+	transition, err := json.Marshal(t)
+	if err != nil {
+		return nil, err
+	}
+
 	return &TransitionWrapper{
-		Type:  t.Type(),
-		Patch: patch,
+		Type:       t.Type(),
+		Patch:      patch,
+		Transition: transition,
 	}, nil
 }
 

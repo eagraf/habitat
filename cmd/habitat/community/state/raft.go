@@ -61,6 +61,7 @@ func (sm *RaftFSMAdapter) Apply(entry *raft.Log) interface{} {
 
 		sm.updateChan <- StateUpdate{
 			TransitionType: w.Type,
+			Transition:     w.Transition,
 			NewState:       sm.jsonState.Bytes(),
 		}
 	}
