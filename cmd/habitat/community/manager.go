@@ -13,31 +13,28 @@ import (
 
 	"github.com/eagraf/habitat/cmd/habitat/community/consensus/cluster"
 	"github.com/eagraf/habitat/cmd/habitat/community/state"
-	"github.com/eagraf/habitat/cmd/habitat/procs"
-	"github.com/eagraf/habitat/cmd/habitat/proxy"
+	"github.com/eagraf/habitat/cmd/habitat/node"
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/ipfs"
-	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/eagraf/habitat/structs/community"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
 
 type Manager struct {
-	Path           string
-	config         *ipfs.IPFSConfig
-	p2pNode        *p2p.Node
-	processManager procs.Manager
+	Path   string
+	config *ipfs.IPFSConfig
+	node   *node.Node
 
 	clusterManager  *cluster.ClusterManager
 	communities     map[string]*state.CommunityStateMachine
 	communitiesLock *sync.Mutex
 }
 
-func NewManager(path string, procManager *procs.Manager, proxyRules *proxy.RuleSet, node *p2p.Node) (*Manager, error) {
-	clusterManager := cluster.NewClusterManager(node.Host())
+func NewManager(path string, habitatNode *node.Node) (*Manager, error) {
+	clusterManager := cluster.NewClusterManager(habitatNode.P2PNode.Host())
 
-	err := clusterManager.Start(proxyRules)
+	err := clusterManager.Start(&habitatNode.ReverseProxy.Rules)
 	if err != nil {
 		return nil, fmt.Errorf("error starting cluster manager: %s", err)
 	}
@@ -49,8 +46,7 @@ func NewManager(path string, procManager *procs.Manager, proxyRules *proxy.RuleS
 			// TODO: @arushibandi remove this usage of compass
 			StartCmd: filepath.Join(compass.ProcsPath(), "bin", "amd64-darwin", "start-ipfs"),
 		},
-		p2pNode:         node,
-		processManager:  *procManager,
+		node:            habitatNode,
 		clusterManager:  clusterManager,
 		communities:     make(map[string]*state.CommunityStateMachine),
 		communitiesLock: &sync.Mutex{},
@@ -71,7 +67,7 @@ func NewManager(path string, procManager *procs.Manager, proxyRules *proxy.RuleS
 					communityID:    dir.Name(),
 					clusterManager: manager.clusterManager,
 				},
-				NewCommunityExecutor(&manager.processManager),
+				NewCommunityExecutor(manager.node),
 			)
 			if err != nil {
 				return nil, err
@@ -134,7 +130,7 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool, member *communit
 	stateMachine, err := state.NewCommunityStateMachine(community.NewCommunityState(), updateChan, &ClusterDispatcher{
 		communityID:    communityID,
 		clusterManager: m.clusterManager,
-	}, NewCommunityExecutor(&m.processManager))
+	}, NewCommunityExecutor(m.node))
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +188,7 @@ func (m *Manager) JoinCommunity(name string, swarmkey string, btstps []string, a
 	stateMachine, err := state.NewCommunityStateMachine(community.NewCommunityState(), updateChan, &ClusterDispatcher{
 		communityID:    communityID,
 		clusterManager: m.clusterManager,
-	}, NewCommunityExecutor(&m.processManager))
+	}, NewCommunityExecutor(m.node))
 	if err != nil {
 		return nil, err
 	}

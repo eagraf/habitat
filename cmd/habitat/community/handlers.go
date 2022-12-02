@@ -191,7 +191,7 @@ func (m *Manager) CommunityJoinHandler(w http.ResponseWriter, r *http.Request) {
 		Node:               newNode,
 	}
 	var addMemberRes ctl.CommunityAddMemberResponse
-	err, apiErr := client.PostLibP2PRequestToAddress(m.p2pNode, commReq.AcceptingNodeAddr, ctl.GetRoute(ctl.CommandCommunityAddMember), addMemberReq, &addMemberRes)
+	err, apiErr := client.PostLibP2PRequestToAddress(m.node.P2PNode, commReq.AcceptingNodeAddr, ctl.GetRoute(ctl.CommandCommunityAddMember), addMemberReq, &addMemberRes)
 	if err != nil {
 		api.WriteWebsocketError(conn, err, &commRes)
 		return

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/eagraf/habitat/cmd/habitat/community/state"
-	"github.com/eagraf/habitat/cmd/habitat/procs"
+	"github.com/eagraf/habitat/cmd/habitat/node"
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/rs/zerolog/log"
 )
@@ -18,12 +18,12 @@ type TransitionExecutor func(update *state.StateUpdate) error
 // It receives incoming state transitions from the replicated state machine,
 // and executes the commands on the running node.
 type CommunityExecutor struct {
-	processManager *procs.Manager
+	node *node.Node
 }
 
-func NewCommunityExecutor(p *procs.Manager) *CommunityExecutor {
+func NewCommunityExecutor(n *node.Node) *CommunityExecutor {
 	return &CommunityExecutor{
-		processManager: p,
+		node: n,
 	}
 }
 
@@ -69,7 +69,7 @@ func (e *CommunityExecutor) InitializeIPFSSwarm(update *state.StateUpdate) error
 	args := []string{ipfsPath}
 	flags := []string{"-c", communityIPFSConfigB64}
 
-	_, err = e.processManager.StartProcess("ipfs-driver", newState.CommunityID, args, []string{}, flags)
+	_, err = e.node.ProcessManager.StartProcess("ipfs-driver", newState.CommunityID, args, []string{}, flags)
 	if err != nil {
 		return fmt.Errorf("error starting IPFS driver process: %s", err)
 	}
