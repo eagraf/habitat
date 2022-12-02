@@ -90,12 +90,11 @@ func main() {
 	})
 
 	instance := &Instance{
-		ProcessManager:   ProcessManager,
-		CommunityManager: CommunityManager,
-		P2PNode:          p2pNode,
+		ProcessManager: ProcessManager,
+		P2PNode:        p2pNode,
 	}
 
-	router := getRouter(instance)
+	router := getRouter(instance, CommunityManager)
 
 	serveHabitatAPI(router)
 }

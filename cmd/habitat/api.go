@@ -21,19 +21,19 @@ const (
 	HabitatCTLPort = "2040"
 )
 
-func getRouter(i *Instance) *mux.Router {
+func getRouter(i *Instance, cm *community.Manager) *mux.Router {
 	router := mux.NewRouter()
 	router.HandleFunc(ctl.GetRoute(ctl.CommandInspect), i.inspectHandler)
 	router.HandleFunc(ctl.GetRoute(ctl.CommandListProcesses), i.ProcessManager.ListProcessesHandler)
 	router.HandleFunc(ctl.GetRoute(ctl.CommandStart), i.ProcessManager.StartProcessHandler)
 	router.HandleFunc(ctl.GetRoute(ctl.CommandStop), i.ProcessManager.StopProcessHandler)
 
-	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityCreate), i.CommunityManager.CommunityCreateHandler)
-	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityJoin), i.CommunityManager.CommunityJoinHandler)
-	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityAddMember), i.CommunityManager.CommunityAddMemberHandler)
-	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityPropose), i.CommunityManager.CommunityProposeHandler)
-	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityState), i.CommunityManager.CommunityStateHandler)
-	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityList), i.CommunityManager.CommunityListHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityCreate), cm.CommunityCreateHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityJoin), cm.CommunityJoinHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityAddMember), cm.CommunityAddMemberHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityPropose), cm.CommunityProposeHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityState), cm.CommunityStateHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityList), cm.CommunityListHandler)
 
 	return router
 }
@@ -52,9 +52,8 @@ func serveHabitatAPI(router *mux.Router) {
 }
 
 type Instance struct {
-	CommunityManager *community.Manager
-	ProcessManager   *procs.Manager
-	P2PNode          *p2p.Node
+	ProcessManager *procs.Manager
+	P2PNode        *p2p.Node
 }
 
 func (i *Instance) inspectHandler(w http.ResponseWriter, r *http.Request) {
