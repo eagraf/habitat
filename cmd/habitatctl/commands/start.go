@@ -81,7 +81,7 @@ var startCmd = &cobra.Command{
 		var res ctl.StartResponse
 		postRequest(ctl.CommandStart, req, &res)
 
-		fmt.Println(res.ProcID)
+		fmt.Println(res.ProcessInstanceID)
 	},
 }
 

@@ -18,7 +18,7 @@ type StartRequest struct {
 }
 
 type StartResponse struct {
-	ProcID string `json:"process_id"`
+	ProcessInstanceID string `json:"process_instance_id"`
 }
 
 type StopRequest struct {
@@ -93,6 +93,44 @@ type CommunityListResponse struct {
 	NodeID      string   `json:"node_id"`
 	Communities []string `json:"communities"`
 }
+
+type CommunityPSRequest struct {
+	CommunityID string `json:"community_id"`
+}
+
+type CommunityPSProcess struct {
+	*community.Process
+	Instances []*community.ProcessInstance `json:"instances"`
+}
+
+type CommunityPSResponse struct {
+	Processes []*CommunityPSProcess `json:"processes"`
+}
+
+type CommunityStartProcessRequest struct {
+	CommunityID string `json:"community_id"`
+
+	App   string   `json:"app"`
+	Args  []string `json:"args"`
+	Env   []string `json:"env"`
+	Flags []string `json:"flags"`
+
+	InstancesNodes []string `json:"instance_nodes"`
+}
+
+type CommunityStartProcessResponse struct {
+}
+
+type CommunityStopProcessRequest struct {
+	CommunityID    string   `json:"community_id"`
+	ProcessID      string   `json:"process_id"`
+	InstancesNodes []string `json:"instance_nodes"`
+}
+
+type CommunityStopProcessResponse struct {
+}
+
+// The following message types are for key signing exchanges
 
 type JoinInfo struct {
 	CommunityID string `json:"community_id"`

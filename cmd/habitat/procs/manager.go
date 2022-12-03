@@ -2,12 +2,14 @@ package procs
 
 import (
 	"fmt"
+	"hash/fnv"
 	"path/filepath"
 	"sync"
 
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/structs/configuration"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
 
@@ -31,13 +33,13 @@ func NewManager(procDir string, rules proxy.RuleSet) *Manager {
 	}
 }
 
-func (m *Manager) StartProcess(app, communityID string, args, env, flags []string) (string, error) {
+func (m *Manager) StartProcessInstance(communityID, processID, app string, args, env, flags []string) (string, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	procID := app
-	if communityID != "" {
-		procID = fmt.Sprintf("%s-%s", app, communityID)
+	processInstanceID, err := GetProcessInstanceID(communityID, compass.NodeID(), processID)
+	if err != nil {
+		return "", err
 	}
 
 	appConfig, appPath, err := configuration.GetAppConfig(app)
@@ -47,11 +49,11 @@ func (m *Manager) StartProcess(app, communityID string, args, env, flags []strin
 
 	binPath := filepath.Join(appPath, "bin", appConfig.Bin)
 
-	if _, ok := m.Procs[procID]; ok {
-		return "", fmt.Errorf("process with name %s already exists", procID)
+	if _, ok := m.Procs[processInstanceID]; ok {
+		return "", fmt.Errorf("process with name %s already exists", processInstanceID)
 	}
 
-	proc := NewProc(procID, binPath, m.errChan, env, flags, args, appConfig)
+	proc := NewProc(processInstanceID, binPath, m.errChan, env, flags, args, appConfig)
 	err = proc.Start()
 	if err != nil {
 		return "", err
@@ -66,8 +68,8 @@ func (m *Manager) StartProcess(app, communityID string, args, env, flags []strin
 		m.ProxyRules.Add(ruleConfig.Hash(), rule)
 	}
 
-	m.Procs[procID] = proc
-	return procID, nil
+	m.Procs[processInstanceID] = proc
+	return processInstanceID, nil
 }
 
 /*
@@ -96,7 +98,7 @@ func (m *Manager) StartArbitraryProcess(name string, cmdPath string, dataPath st
 }
 */
 
-func (m *Manager) StopProcess(procID string) error {
+func (m *Manager) StopProcessInstance(procID string) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -121,7 +123,7 @@ func (m *Manager) StopProcess(procID string) error {
 }
 
 // Return a readonly list of processes
-func (m *Manager) listProcesses() ([]*Proc, error) {
+func (m *Manager) listProcessInstances() ([]*Proc, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -143,7 +145,7 @@ func (m *Manager) ListenForErrors() {
 		log.Error().Msg("proc err listener got: " + procErr.String())
 
 		// try stop command in case it has any clean up, don't worry too much about errors
-		m.StopProcess(procErr.proc.Name)
+		m.StopProcessInstance(procErr.proc.Name)
 	}
 }
 
@@ -167,4 +169,20 @@ func (pe ProcError) Error() string {
 
 func (pe ProcError) String() string {
 	return pe.Error()
+}
+
+func RandomProcessID() string {
+	return uuid.New().String()
+}
+
+func GetProcessInstanceID(communityID, nodeID, processID string) (string, error) {
+	concatenated := fmt.Sprintf("%s-%s-%s", communityID, nodeID, processID)
+	hasher := fnv.New128a()
+	_, err := hasher.Write([]byte(concatenated))
+	if err != nil {
+		return "", err
+	}
+
+	res := hasher.Sum([]byte{})
+	return string(res), nil
 }

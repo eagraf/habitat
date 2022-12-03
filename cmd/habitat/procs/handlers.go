@@ -15,14 +15,20 @@ func (m *Manager) StartProcessHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	procID, err := m.StartProcess(startReq.App, startReq.CommunityID, startReq.Args, startReq.Env, startReq.Flags)
+	procID := RandomProcessID()
+	if err != nil {
+		api.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	processInstanceID, err := m.StartProcessInstance(startReq.CommunityID, procID, startReq.App, startReq.Args, startReq.Env, startReq.Flags)
 	if err != nil {
 		api.WriteError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	startRes := &ctl.StartResponse{
-		ProcID: procID,
+		ProcessInstanceID: processInstanceID,
 	}
 
 	api.WriteResponse(w, startRes)
@@ -36,7 +42,7 @@ func (m *Manager) StopProcessHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = m.StopProcess(stopReq.ProcID)
+	err = m.StopProcessInstance(stopReq.ProcID)
 	if err != nil {
 		api.WriteError(w, http.StatusInternalServerError, err)
 		return
@@ -48,7 +54,7 @@ func (m *Manager) StopProcessHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m *Manager) ListProcessesHandler(w http.ResponseWriter, r *http.Request) {
-	procs, err := m.listProcesses()
+	procs, err := m.listProcessInstances()
 	if err != nil {
 		api.WriteError(w, http.StatusInternalServerError, err)
 		return
