@@ -30,6 +30,9 @@ func getRouter(n *node.Node, cm *community.Manager) *mux.Router {
 	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityPropose), cm.CommunityProposeHandler)
 	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityState), cm.CommunityStateHandler)
 	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityList), cm.CommunityListHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityPS), cm.CommunityPSHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityStartProcess), cm.CommunityStartProcessHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityStopProcess), cm.CommunityStopProcessHandler)
 
 	return router
 }

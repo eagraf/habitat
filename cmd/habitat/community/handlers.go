@@ -10,6 +10,8 @@ import (
 	"os"
 
 	"github.com/eagraf/habitat/cmd/habitat/api"
+	"github.com/eagraf/habitat/cmd/habitat/community/state"
+	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/pkg/compass"
 	client "github.com/eagraf/habitat/pkg/habitat_client"
 	"github.com/eagraf/habitat/pkg/identity"
@@ -315,4 +317,147 @@ func (m *Manager) CommunityListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	api.WriteResponse(w, commRes)
+}
+
+func (m *Manager) CommunityPSHandler(w http.ResponseWriter, r *http.Request) {
+	var commReq ctl.CommunityPSRequest
+	err := api.BindPostRequest(r, &commReq)
+	if err != nil {
+		api.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	communityID := commReq.CommunityID
+
+	state, err := m.GetState(communityID)
+	if err != nil {
+		api.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+	commRes := &ctl.CommunityPSResponse{
+		Processes: []*ctl.CommunityPSProcess{},
+	}
+
+	processInstances := make(map[string][]*community.ProcessInstance)
+	for _, i := range state.ProcessInstances {
+		if instances, ok := processInstances[i.ProcessID]; ok {
+			processInstances[i.ProcessID] = append(instances, i)
+		} else {
+			processInstances[i.ProcessID] = []*community.ProcessInstance{
+				i,
+			}
+		}
+	}
+
+	for _, p := range state.Processes {
+		instances, ok := processInstances[p.ID]
+		if !ok {
+			instances = []*community.ProcessInstance{}
+		}
+		commRes.Processes = append(commRes.Processes, &ctl.CommunityPSProcess{
+			Process:   p,
+			Instances: instances,
+		})
+
+	}
+
+	api.WriteResponse(w, commRes)
+}
+
+func (m *Manager) CommunityStartProcessHandler(w http.ResponseWriter, r *http.Request) {
+	var commReq ctl.CommunityStartProcessRequest
+	err := api.BindPostRequest(r, &commReq)
+	if err != nil {
+		api.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	communityID := commReq.CommunityID
+
+	stateMachine, ok := m.communities[communityID]
+	if !ok {
+		api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("community %s is not on this instance", communityID))
+	}
+
+	processID := procs.RandomProcessID()
+
+	transitions := []state.CommunityStateTransition{
+		&state.StartProcessTransition{
+			Process: &community.Process{
+				ID:      processID,
+				AppName: commReq.App,
+				Args:    commReq.Args,
+				Flags:   commReq.Flags,
+				Env:     commReq.Env,
+			},
+		},
+	}
+
+	for _, i := range commReq.InstancesNodes {
+		transitions = append(transitions, &state.StartProcessInstanceTransition{
+			ProcessInstance: &community.ProcessInstance{
+				ProcessID: processID,
+				NodeID:    i,
+			},
+		})
+	}
+
+	_, err = stateMachine.ProposeTransitions(transitions)
+	if err != nil {
+		api.WriteError(w, http.StatusInternalServerError, err)
+	}
+
+	api.WriteResponse(w, &ctl.CommunityStartProcessResponse{})
+}
+
+func (m *Manager) CommunityStopProcessHandler(w http.ResponseWriter, r *http.Request) {
+	var commReq ctl.CommunityStopProcessRequest
+	err := api.BindPostRequest(r, &commReq)
+	if err != nil {
+		api.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	communityID := commReq.CommunityID
+
+	stateMachine, ok := m.communities[communityID]
+	if !ok {
+		api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("community %s is not on this instance", communityID))
+	}
+
+	curState, err := stateMachine.State()
+	if err != nil {
+		api.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	transitions := []state.CommunityStateTransition{}
+
+	if len(commReq.InstancesNodes) == 0 {
+		for _, i := range curState.ProcessInstances {
+			if i.ProcessID == commReq.ProcessID {
+				transitions = append(transitions, &state.StopProcessInstanceTransition{
+					ProcessID: i.ProcessID,
+					NodeID:    i.NodeID,
+				})
+			}
+		}
+		transitions = append(transitions, &state.StopProcessTransition{
+			ProcessID: commReq.ProcessID,
+		})
+	} else {
+		for _, i := range commReq.InstancesNodes {
+			transitions = append(transitions, &state.StopProcessInstanceTransition{
+				ProcessID: commReq.ProcessID,
+				NodeID:    i,
+			})
+		}
+	}
+
+	_, err = stateMachine.ProposeTransitions(transitions)
+	if err != nil {
+		api.WriteError(w, http.StatusInternalServerError, err)
+	}
+
+	api.WriteResponse(w, &ctl.CommunityStartProcessResponse{})
 }
