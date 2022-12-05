@@ -223,8 +223,14 @@ func (m *Manager) CommunityStateHandler(w http.ResponseWriter, r *http.Request) 
 		api.WriteError(w, http.StatusInternalServerError, err)
 		return
 	}
+
+	marshaled, err := json.Marshal(state)
+	if err != nil {
+		api.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
 	commRes := &ctl.CommunityStateResponse{
-		State: state,
+		State: marshaled,
 	}
 
 	api.WriteResponse(w, commRes)

@@ -2,7 +2,6 @@ package community
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -236,7 +235,7 @@ func (m *Manager) ProposeTransitions(communityID string, transitions []byte) err
 	return nil
 }
 
-func (m *Manager) GetState(communityID string) ([]byte, error) {
+func (m *Manager) GetState(communityID string) (*community.CommunityState, error) {
 	if !m.checkCommunityExists(communityID) {
 		return nil, fmt.Errorf("community %s does not exist in communities directory", communityID)
 	}
@@ -248,7 +247,7 @@ func (m *Manager) GetState(communityID string) ([]byte, error) {
 			return nil, err
 		}
 
-		return json.Marshal(state)
+		return state, nil
 	}
 
 	return nil, fmt.Errorf("community state machine for community id %s not found", communityID)
