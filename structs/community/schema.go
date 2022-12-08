@@ -19,9 +19,11 @@ var CommunityStateSchema = []byte(`{
 				"id": { "type": "string" },
 				"address": { "type": "string" },
 				"certificate": { "type": "string" },
-				"member_id": { "type": "string" }
+				"member_id": { "type": "string" },
+				"reachability": { "type": "string" },
+				"relay": { "type": "boolean" }
 			},
-			"required": [ "id", "address", "certificate", "member_id" ]
+			"required": [ "id", "address", "certificate", "member_id", "reachability", "relay" ]
 		},
 		"process": {
 			"type": "object",
@@ -131,11 +133,19 @@ type Member struct {
 	Certificate []byte `json:"certificate"`
 }
 
+const (
+	ReachabilityUnknown = "unknown"
+	ReachabilityPublic  = "public"
+	ReachabilityPrivate = "private"
+)
+
 type Node struct {
-	ID          string `json:"id"`
-	Address     string `json:"address"`
-	Certificate []byte `json:"certificate"`
-	MemberID    string `json:"member_id"`
+	ID           string `json:"id"`
+	Address      string `json:"address"`
+	Certificate  []byte `json:"certificate"`
+	MemberID     string `json:"member_id"`
+	Reachability string `json:"reachability"`
+	Relay        bool   `json:"relay"`
 }
 
 type Process struct {
