@@ -16,6 +16,7 @@ import (
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/eagraf/habitat/structs/ctl"
+	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -29,7 +30,8 @@ const (
 )
 
 type Node struct {
-	ID string
+	ID     string
+	PeerID peer.ID
 
 	ProcessManager *procs.Manager
 	P2PNode        *p2p.Node
@@ -51,6 +53,7 @@ func NewNode() (*Node, error) {
 
 	return &Node{
 		ID:             compass.NodeID(),
+		PeerID:         p2pNode.Host().ID(),
 		P2PNode:        p2pNode,
 		ReverseProxy:   reverseProxy,
 		DataProxy:      dataproxy.NewDataProxy(map[string]*sources.DataServerNode{}),
@@ -86,6 +89,15 @@ func (n *Node) Start() error {
 
 func (n *Node) LibP2PProxyMultiaddr() (ma.Multiaddr, error) {
 	return ma.NewMultiaddr(n.P2PNode.Host().Addrs()[0].String() + "/p2p/" + n.P2PNode.Host().ID().String())
+}
+
+func (n *Node) Addrs() []string {
+	multiAddrs := n.P2PNode.Host().Addrs()
+	res := []string{}
+	for _, m := range multiAddrs {
+		res = append(res, m.String())
+	}
+	return res
 }
 
 func (n *Node) InspectHandler(w http.ResponseWriter, r *http.Request) {

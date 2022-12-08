@@ -1,6 +1,11 @@
 package community
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/libp2p/go-libp2p-core/peer"
+	ma "github.com/multiformats/go-multiaddr"
+)
 
 var CommunityStateSchema = []byte(`{
 	"$defs": {
@@ -17,13 +22,17 @@ var CommunityStateSchema = []byte(`{
 			"type": "object",
 			"properties": {
 				"id": { "type": "string" },
-				"address": { "type": "string" },
+				"peer_id": { "type": "string" },
+				"addresses": {
+					"type": "array",
+					"items": { "type": "string" }
+				},
 				"certificate": { "type": "string" },
 				"member_id": { "type": "string" },
 				"reachability": { "type": "string" },
 				"relay": { "type": "boolean" }
 			},
-			"required": [ "id", "address", "certificate", "member_id", "reachability", "relay" ]
+			"required": [ "id", "peer_id", "addresses", "certificate", "member_id", "reachability", "relay" ]
 		},
 		"process": {
 			"type": "object",
@@ -140,12 +149,38 @@ const (
 )
 
 type Node struct {
-	ID           string `json:"id"`
-	Address      string `json:"address"`
-	Certificate  []byte `json:"certificate"`
-	MemberID     string `json:"member_id"`
-	Reachability string `json:"reachability"`
-	Relay        bool   `json:"relay"`
+	ID           string   `json:"id"`
+	PeerID       string   `json:"peer_id"`
+	Addresses    []string `json:"addresses"`
+	Certificate  []byte   `json:"certificate"`
+	MemberID     string   `json:"member_id"`
+	Reachability string   `json:"reachability"`
+	Relay        bool     `json:"relay"`
+}
+
+func (n *Node) DecodedPeerID() (peer.ID, error) {
+	return peer.Decode(n.PeerID)
+}
+
+func (n *Node) AddrInfo() (*peer.AddrInfo, error) {
+	peerID, err := n.DecodedPeerID()
+	if err != nil {
+		return nil, err
+	}
+	res := &peer.AddrInfo{
+		ID:    peerID,
+		Addrs: []ma.Multiaddr{},
+	}
+
+	for _, a := range n.Addresses {
+		addr, err := ma.NewMultiaddr(a)
+		if err != nil {
+			return nil, err
+		}
+		res.Addrs = append(res.Addrs, addr)
+	}
+
+	return res, nil
 }
 
 type Process struct {

@@ -84,9 +84,11 @@ func TestCommunityInitialization(t *testing.T) {
 		},
 		&AddNodeTransition{
 			Node: &community.Node{
-				ID:          "george",
-				MemberID:    "jorts",
-				Certificate: []byte("mycert"),
+				ID:           "george",
+				MemberID:     "jorts",
+				Certificate:  []byte("mycert"),
+				Addresses:    []string{},
+				Reachability: "Unknown",
 			},
 		},
 	}
@@ -127,8 +129,10 @@ func TestCommunityInitialization(t *testing.T) {
 		},
 		&AddNodeTransition{
 			Node: &community.Node{
-				ID:       "george",
-				MemberID: "jorts",
+				ID:           "george",
+				MemberID:     "jorts",
+				Addresses:    []string{},
+				Reachability: "Unknown",
 			},
 		},
 		&AddMemberTransition{
@@ -155,16 +159,20 @@ func TestProcessManagement(t *testing.T) {
 		},
 		&AddNodeTransition{
 			Node: &community.Node{
-				ID:          "node1",
-				MemberID:    "jorts",
-				Certificate: []byte("mycert"),
+				ID:           "node1",
+				MemberID:     "jorts",
+				Certificate:  []byte("mycert"),
+				Addresses:    []string{},
+				Reachability: "Unknown",
 			},
 		},
 		&AddNodeTransition{
 			Node: &community.Node{
-				ID:          "node2",
-				MemberID:    "jorts",
-				Certificate: []byte("mycert"),
+				ID:           "node2",
+				MemberID:     "jorts",
+				Certificate:  []byte("mycert"),
+				Addresses:    []string{},
+				Reachability: "Unknown",
 			},
 		},
 		&StartProcessTransition{

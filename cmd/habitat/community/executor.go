@@ -7,6 +7,7 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/node"
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/structs/community"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/rs/zerolog/log"
 )
 
@@ -37,6 +38,8 @@ func (e *CommunityExecutor) GetTransitionExecutor(transitionType string) Transit
 		return e.StartProcessInstance
 	case state.TransitionTypeStopProcessInstance:
 		return e.StopProcessInstance
+	case state.TransitionTypeNodeReachability:
+		return e.ReachabilityChange
 	default:
 		return nil
 	}
@@ -122,6 +125,35 @@ func (e *CommunityExecutor) StopProcessInstance(update *state.StateUpdate) error
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (e *CommunityExecutor) ReachabilityChange(update *state.StateUpdate) error {
+	var transition state.ReachabilityTransition
+	err := json.Unmarshal(update.Transition, &transition)
+	if err != nil {
+		return err
+	}
+
+	// Push peer onto queue
+	if transition.Reachability == network.ReachabilityPublic {
+		state, err := update.State()
+		if err != nil {
+			return err
+		}
+
+		for _, n := range state.Nodes {
+			if n.ID == transition.NodeID {
+				err := e.node.P2PNode.AnnounceReachableNode(n)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
 	}
 
 	return nil
