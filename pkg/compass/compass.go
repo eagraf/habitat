@@ -22,7 +22,6 @@ const (
 
 	habitatPathEnv         = "HABITAT_PATH"
 	habitatIdentityPathEnv = "HABITAT_IDENTITY_PATH"
-	defaultHabitatPathUnix = ".habitat"
 
 	nodeIDRelativePath = "node_id"
 
