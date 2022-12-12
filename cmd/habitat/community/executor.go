@@ -29,8 +29,6 @@ func NewCommunityExecutor(n *node.Node) *CommunityExecutor {
 // TODO this is pretty silly, lets find a way to do this with reflection or equivalent
 func (e *CommunityExecutor) GetTransitionExecutor(transitionType string) TransitionExecutor {
 	switch transitionType {
-	case state.TransitionTypeInitializeIPFSSwarm:
-		return e.InitializeIPFSSwarm
 	case state.TransitionTypeStartProcess:
 		return e.StartProcess
 	case state.TransitionTypeStopProcess:
@@ -54,32 +52,6 @@ func (e *CommunityExecutor) Execute(update *state.StateUpdate) {
 			log.Error().Err(err).Msgf("error executing %s", update.TransitionType)
 		}
 	}
-}
-
-func (e *CommunityExecutor) InitializeIPFSSwarm(update *state.StateUpdate) error {
-	/*newState, err := update.State()
-	if err != nil {
-		return err
-	}
-	communityIPFSConfig, err := json.Marshal(newState.IPFSConfig)
-	if err != nil {
-		return fmt.Errorf("error marshaling IPFS config: %s", err)
-	}
-
-	communityIPFSConfigB64 := base64.StdEncoding.EncodeToString(communityIPFSConfig)
-	if err != nil {
-		return fmt.Errorf("error base64 encoding IPFS config: %s", err)
-	}
-
-	ipfsPath := filepath.Join(compass.CommunitiesPath(), newState.CommunityID, "ipfs")
-	args := []string{ipfsPath}
-	flags := []string{"-c", communityIPFSConfigB64}
-
-	_, err = e.node.ProcessManager.StartProcessInstance("ipfs-driver", newState.CommunityID, args, []string{}, flags)
-	if err != nil {
-		return fmt.Errorf("error starting IPFS driver process: %s", err)
-	}*/
-	return nil
 }
 
 func (e *CommunityExecutor) StartProcess(update *state.StateUpdate) error {

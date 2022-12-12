@@ -2,6 +2,7 @@ package community
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -13,6 +14,7 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/community/consensus/cluster"
 	"github.com/eagraf/habitat/cmd/habitat/community/state"
 	"github.com/eagraf/habitat/cmd/habitat/node"
+	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/ipfs"
 	"github.com/eagraf/habitat/structs/community"
@@ -154,14 +156,46 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool, member *communit
 
 	if createIpfs {
 		// After cluster is created, immediately add transition to initialize IPFS
+		// TODO the details of starting this process should be handled by a higher level
+		// controller
 		ipfsConfig, err := newIPFSSwarm(communityID)
 		if err != nil {
 			return nil, err
 		}
 
-		transitions = append(transitions, &state.InitializeIPFSSwarmTransition{
-			IPFSConfig: ipfsConfig,
-		})
+		ipfsPath := filepath.Join(compass.CommunitiesPath(), communityID, "ipfs")
+
+		communityIPFSConfig, err := json.Marshal(ipfsConfig)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling IPFS config: %s", err)
+		}
+
+		communityIPFSConfigB64 := base64.StdEncoding.EncodeToString(communityIPFSConfig)
+		if err != nil {
+			return nil, fmt.Errorf("error base64 encoding IPFS config: %s", err)
+		}
+
+		procID := procs.RandomProcessID()
+
+		transitions = append(transitions,
+			&state.StartProcessTransition{
+				Process: &community.Process{
+					ID:      procID,
+					AppName: "ipfs-driver",
+					Args:    []string{ipfsPath},
+					Flags:   []string{"-c", communityIPFSConfigB64},
+					Env:     []string{},
+
+					Config: ipfsConfig,
+				},
+			},
+			&state.StartProcessInstanceTransition{
+				ProcessInstance: &community.ProcessInstance{
+					ProcessID: procID,
+					NodeID:    node.ID,
+				},
+			},
+		)
 	}
 
 	state, err := stateMachine.ProposeTransitions(transitions)
