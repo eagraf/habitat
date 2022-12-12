@@ -161,9 +161,8 @@ func (csm *CommunityStateMachine) State() (*community.CommunityState, error) {
 }
 
 type JSONState struct {
-	schema         *jsonschema.Schema
-	state          []byte
-	transitionChan chan<- *CommunityStateTransition
+	schema *jsonschema.Schema
+	state  []byte
 
 	*sync.Mutex
 }
@@ -183,10 +182,9 @@ func NewJSONState(jsonSchema []byte, initState []byte) (*JSONState, error) {
 	}
 
 	return &JSONState{
-		schema:         rs,
-		state:          initState,
-		Mutex:          &sync.Mutex{},
-		transitionChan: make(chan *CommunityStateTransition),
+		schema: rs,
+		state:  initState,
+		Mutex:  &sync.Mutex{},
 	}, nil
 }
 
