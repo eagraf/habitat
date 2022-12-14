@@ -5,6 +5,8 @@ TARGETS = bin/amd64-linux/habitat \
 
 include ../common.mk
 
+all:: $(TARGETS)
+
 install::
 	mkdir -p $(BINDIR)
 	$(CP) -r ./bin/$(CURARCH)/* $(BINDIR)
