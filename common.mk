@@ -57,6 +57,10 @@ GO_RUN_FLAGS			?=
 GO_TEST_FLAGS			?=
 GO_BUILD_FLAGS_NATIVE	?=
 
+GO_BUILD_AMD64_LINUX		= GOARCH=amd64 GOOS=linux $(GO_BUILD)
+GO_BUILD_AMD64_DARWIN		= GOARCH=amd64 GOOS=darwin $(GO_BUILD)
+GO_BUILD_AMD64_WINDOWS		= GOARCH=amd64 GOOS=windows$(GO_BUILD)
+
 TARGETS			?=
 SUBDIRS			?=
 
@@ -85,12 +89,3 @@ $(SUBDIRS):
 .FORCE:
 
 .ONESHELL:
-
-bin/amd64-linux/%:
-	GOARCH=amd64 GOOS=linux $(GO_BUILD) -o $@ $(GO_BUILD_PACKAGE)
-
-bin/amd64-darwin/%:
-	GOARCH=amd64 GOOS=darwin $(GO_BUILD) -o $@ $(GO_BUILD_PACKAGE)
-
-bin/amd64-windows/%:
-	GOARCH=amd64 GOOS=windows $(GO_BUILD) -o $@ $(GO_BUILD_PACKAGE)

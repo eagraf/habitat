@@ -16,4 +16,13 @@ clean::
 
 build: clean $(TARGETS) install
 
+bin/amd64-linux/%:
+	$(GO_BUILD_AMD64_LINUX) -o $@ $(GO_BUILD_PACKAGE)
+
+bin/amd64-darwin/%:
+	$(GO_BUILD_AMD64_DARWIN) -o $@ $(GO_BUILD_PACKAGE)
+
+bin/amd64-windows/%:
+	$(GO_BUILD_AMD64_WINDOWS) -o $@ $(GO_BUILD_PACKAGE)
+
 .PHONY: build
