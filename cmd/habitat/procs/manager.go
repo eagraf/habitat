@@ -59,7 +59,7 @@ func (m *Manager) StartProcess(app, communityID string, args, env, flags []strin
 
 	// Update reverse proxy ruleset
 	for _, ruleConfig := range appConfig.ProxyRules {
-		rule, err := proxy.GetRuleFromConfig(ruleConfig, m.ProcDir)
+		rule, err := proxy.GetRuleFromConfig(ruleConfig, appPath)
 		if err != nil {
 			return "", err
 		}
