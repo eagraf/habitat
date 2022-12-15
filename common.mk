@@ -46,9 +46,6 @@ GO_TEST				=	$(GO_ENV) $(GO) test $(GO_TEST_FLAGS)
 GO_TARGETS			=	$(shell $(GO) list ./... | grep -v /vendor/)
 GO_RUN				=	$(GO_ENV) $(GO) run $(GO_RUN_FLAGS)
 
-ALL_PLATFORMS		=	amd64-linux amd64-windows amd64-darwin
-bin_all_platforms	=	$(foreach platform, $(ALL_PLATFORMS), bin/$(platform)/$(strip $(1)))
-
 GO_BUILD_CMD		=	$(GO_BUILD) -o $@ ./$<
 GO_DEFAULT_DEPS		=	.FORCE
 GO_BUILD_PACKAGE	=	./$(@F)
