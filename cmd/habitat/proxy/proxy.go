@@ -147,7 +147,6 @@ func (r *RedirectRule) Handler() http.Handler {
 }
 
 func GetRuleFromConfig(config *configuration.ProxyRule, appPath string) (Rule, error) {
-	fmt.Println(config)
 	switch config.Type {
 	case configuration.ProxyRuleFileServer:
 		return &FileServerRule{
