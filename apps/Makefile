@@ -1,6 +1,5 @@
-SUBDIRS	=	ipfs-driver
-
-APPS	=	ipfs-driver
+SUBDIRS	=	ipfs-driver community
+APPS	=	$(SUBDIRS)
 
 include ../common.mk
 

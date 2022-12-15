@@ -1,22 +1,25 @@
-MKFILE_PATH := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+TARGETS = bin/amd64-linux/community \
+		bin/amd64-darwin/community \
+		web
 
-export OUT_DIR := $(MKFILE_PATH)out
+include ../../common.mk
 
-all : clean build-frontend build-backend
+all:: $(TARGETS)
 
-clean :
-	rm -rf $(OUT_DIR)
+clean::
+	rm -rf web
+	rm -rf bin
 
-build-frontend : 
-	rm -rf $(MKFILE_PATH)frontend/build/*
-	mkdir -p $(OUT_DIR)/frontend
-	$(MAKE) -C frontend build-frontend
-	cp -R $(MKFILE_PATH)frontend/build/* $(OUT_DIR)/frontend
+bin/amd64-linux/%:
+	$(GO_BUILD_AMD64_LINUX) -o $@ ./backend/cmd/api
 
-build-backend : 
-	mkdir -p $(OUT_DIR)/backend
-	GOOS=linux GOARCH=amd64 go build -o $(OUT_DIR)/backend/amd64-linux/community_backend github.com/eagraf/habitat/apps/community/backend/cmd/api
-	GOOS=darwin GOARCH=amd64 go build -o $(OUT_DIR)/backend/amd64-darwin/community_backend github.com/eagraf/habitat/apps/community/backend/cmd/api
+bin/amd64-darwin/%:
+	$(GO_BUILD_AMD64_DARWIN) -o $@ ./backend/cmd/api
 
-.PHONY: out
-out : build-frontend build-backend
+bin/amd64-windows/%:
+	$(GO_BUILD_AMD64_WINDOWS) -o $@ ./backend/cmd/api
+
+web:
+	mkdir -p ./web
+	(cd frontend && npm install && npm run build)
+	$(CP) -r frontend/build/* ./web

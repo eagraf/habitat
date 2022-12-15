@@ -8,7 +8,6 @@ import NodeId from "./NodeId";
 import React from "react";
 
 import { ConnectedCommunities, ListCommunitiesResponse } from "./community";
-import { AsyncState } from "./types";
 import axios from "axios";
 import AddMember from "./AddMember";
 
