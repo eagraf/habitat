@@ -1,7 +1,6 @@
 import "./Community.css";
 import JoinCommunity from "./JoinCommunity";
 import CreateCommunity from "./CreateCommunity";
-import ConnectCommunity from "./ConnectCommunity";
 import { ConnectedCommunities } from "./community";
 
 type Props = {

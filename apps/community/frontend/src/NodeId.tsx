@@ -1,5 +1,4 @@
-import React, { useEffect } from "react";
-import { AsyncState } from "./types";
+import React from "react";
 import axios from "axios";
 
 type NodeIdResponse = {
