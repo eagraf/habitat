@@ -13,6 +13,11 @@ const (
 	TransitionTypeAddMember           = "add_member"
 	TransitionTypeAddNode             = "add_node"
 
+	TransitionTypeStartProcess         = "start_process"
+	TransitionTypeStopProcess          = "stop_process"
+	TransitionTypeStartProcessInstance = "start_process_instance"
+	TransitionTypeStopProcessInstance  = "stop_process_instance"
+
 	TransitionTypeInitializeCounter = "initialize_counter"
 	TransitionTypeIncrementCounter  = "increment_counter"
 
@@ -20,8 +25,9 @@ const (
 )
 
 type TransitionWrapper struct {
-	Type  string `json:"type"`
-	Patch []byte `json:"patch"`
+	Type       string `json:"type"`
+	Patch      []byte `json:"patch"`      // The JSON patch generated from the transition struct
+	Transition []byte `json:"transition"` // JSON encoded transition struct
 }
 
 type CommunityStateTransition interface {
@@ -36,9 +42,15 @@ func wrapTransition(t CommunityStateTransition, oldState *community.CommunitySta
 		return nil, err
 	}
 
+	transition, err := json.Marshal(t)
+	if err != nil {
+		return nil, err
+	}
+
 	return &TransitionWrapper{
-		Type:  t.Type(),
-		Patch: patch,
+		Type:       t.Type(),
+		Patch:      patch,
+		Transition: transition,
 	}, nil
 }
 
@@ -210,4 +222,159 @@ func (t *AddNodeTransition) Validate(oldState *community.CommunityState) error {
 	}
 
 	return nil
+}
+
+type StartProcessTransition struct {
+	Process *community.Process
+}
+
+func (t *StartProcessTransition) Type() string {
+	return TransitionTypeStartProcess
+}
+
+func (t *StartProcessTransition) Patch(oldState *community.CommunityState) ([]byte, error) {
+	marshaledProcess, err := json.Marshal(t.Process)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(fmt.Sprintf(`[{
+		"op": "add",
+		"path": "/processes/-",
+		"value": %s
+	}]`, string(marshaledProcess))), nil
+}
+
+func (t *StartProcessTransition) Validate(oldState *community.CommunityState) error {
+	// make sure no process with same process id and app name is already started
+	for _, p := range oldState.Processes {
+		if p.ID == t.Process.ID {
+			return fmt.Errorf("process ID %s already used in community %s", t.Process.ID, oldState.CommunityID)
+		}
+		if p.AppName == t.Process.AppName {
+			return fmt.Errorf("community %s already has app %s running", oldState.CommunityID, t.Process.ID)
+		}
+	}
+
+	return nil
+}
+
+type StopProcessTransition struct {
+	ProcessID string
+}
+
+func (t *StopProcessTransition) Type() string {
+	return TransitionTypeStopProcess
+}
+
+func (t *StopProcessTransition) Patch(oldState *community.CommunityState) ([]byte, error) {
+	for i, p := range oldState.Processes {
+		if p.ID == t.ProcessID {
+			return []byte(fmt.Sprintf(`[{
+				"op": "remove",
+				"path": "/processes/%d"
+			}]`, i)), nil
+		}
+	}
+
+	return nil, fmt.Errorf("process ID %s not found in processes list", t.ProcessID)
+}
+
+func (t *StopProcessTransition) Validate(oldState *community.CommunityState) error {
+	// ensure no process_instances with the process ID are still around
+	for _, i := range oldState.ProcessInstances {
+		if i.ProcessID == t.ProcessID {
+			return fmt.Errorf("there are still process instances with process ID %s", t.ProcessID)
+		}
+	}
+
+	for _, p := range oldState.Processes {
+		if p.ID == t.ProcessID {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("process ID %s not found in processes list", t.ProcessID)
+}
+
+type StartProcessInstanceTransition struct {
+	ProcessInstance *community.ProcessInstance
+}
+
+func (t *StartProcessInstanceTransition) Type() string {
+	return TransitionTypeStartProcessInstance
+}
+
+func (t *StartProcessInstanceTransition) Patch(oldState *community.CommunityState) ([]byte, error) {
+	marshaledProcessInstance, err := json.Marshal(t.ProcessInstance)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(fmt.Sprintf(`[{
+		"op": "add",
+		"path": "/process_instances/-",
+		"value": %s
+	}]`, string(marshaledProcessInstance))), nil
+}
+
+func (t *StartProcessInstanceTransition) Validate(oldState *community.CommunityState) error {
+	found := false
+	for _, p := range oldState.Processes {
+		if p.ID == t.ProcessInstance.ProcessID {
+			found = true
+		}
+	}
+	if !found {
+		return fmt.Errorf("no process with ID %s found in community %s", t.ProcessInstance.ProcessID, oldState.CommunityID)
+	}
+
+	found = false
+	for _, n := range oldState.Nodes {
+		if n.ID == t.ProcessInstance.NodeID {
+			found = true
+		}
+	}
+	if !found {
+		return fmt.Errorf("no node with ID %s found in community %s", t.ProcessInstance.NodeID, oldState.CommunityID)
+	}
+
+	for _, i := range oldState.ProcessInstances {
+		if i.NodeID == t.ProcessInstance.NodeID && i.ProcessID == t.ProcessInstance.ProcessID {
+			return fmt.Errorf("process instane with matching node and process IDs found")
+		}
+	}
+	return nil
+}
+
+type StopProcessInstanceTransition struct {
+	ProcessID string
+	NodeID    string
+}
+
+func (t *StopProcessInstanceTransition) Type() string {
+	return TransitionTypeStopProcessInstance
+}
+
+func (t *StopProcessInstanceTransition) Patch(oldState *community.CommunityState) ([]byte, error) {
+	for i, p := range oldState.ProcessInstances {
+		if p.ProcessID == t.ProcessID && p.NodeID == t.NodeID {
+			return []byte(fmt.Sprintf(`[{
+				"op": "remove",
+				"path": "/process_instances/%d"
+			}]`, i)), nil
+		}
+	}
+
+	return nil, fmt.Errorf("process ID %s not found in processes list", t.ProcessID)
+}
+
+func (t *StopProcessInstanceTransition) Validate(oldState *community.CommunityState) error {
+	for _, p := range oldState.ProcessInstances {
+		if p.ProcessID == t.ProcessID && p.NodeID == t.NodeID {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("process instance with matching process and node IDs not found")
 }

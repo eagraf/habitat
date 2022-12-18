@@ -22,6 +22,37 @@ var CommunityStateSchema = []byte(`{
 				"member_id": { "type": "string" }
 			},
 			"required": [ "id", "address", "certificate", "member_id" ]
+		},
+		"process": {
+			"type": "object",
+			"properties": {
+				"id": { "type": "string" },
+				"app_name": { "type": "string" },
+				"env": {
+					"type": "array",
+					"items": { "type": "string" }
+				},
+				"flags": {
+					"type": "array",
+					"items": { "type": "string" }
+				},
+				"args": {
+					"type": "array",
+					"items": { "type": "string" }
+				},
+				"config": {
+					"type": [ "null", "object" ]
+				}
+			},
+			"required": [ "id", "app_name", "env", "flags", "args" ]
+		},
+		"process_instance": {
+			"type": "object",
+			"properties": {
+				"process_id": { "type": "string" },
+				"node_id": { "type": "string" }
+			},
+			"required": [ "process_id", "node_id" ]
 		}
 	},
 	"title": "community state schema",
@@ -59,20 +90,34 @@ var CommunityStateSchema = []byte(`{
 			"items": {
 				"$ref": "#/$defs/node"
 			}
+		},
+		"processes": {
+			"type": "array",
+			"items": {
+				"$ref": "#/$defs/process"
+			}
+		},
+		"process_instances": {
+			"type": "array",
+			"items": {
+				"$ref": "#/$defs/process_instance"
+			}
 		}
 	},
-	"required": [ "community_id", "members", "nodes" ]
+	"required": [ "community_id", "members", "nodes", "processes", "process_instances" ]
 }`)
 
 // CommunityState is a Go struct that correspons to the community state JSON schema
 // TODO look at ways to generate this from the schema or vice versa so there is a single
 // source of truth
 type CommunityState struct {
-	CommunityID string      `json:"community_id"`
-	Counter     int         `json:"counter,omitempty"`
-	IPFSConfig  *IPFSConfig `json:"ipfs_config"`
-	Members     []*Member   `json:"members"`
-	Nodes       []*Node     `json:"nodes"`
+	CommunityID      string             `json:"community_id"`
+	Counter          int                `json:"counter,omitempty"`
+	IPFSConfig       *IPFSConfig        `json:"ipfs_config"`
+	Members          []*Member          `json:"members"`
+	Nodes            []*Node            `json:"nodes"`
+	Processes        []*Process         `json:"processes"`
+	ProcessInstances []*ProcessInstance `json:"process_instances"`
 }
 
 type IPFSConfig struct {
@@ -93,10 +138,28 @@ type Node struct {
 	MemberID    string `json:"member_id"`
 }
 
+type Process struct {
+	ID string `json:"id"`
+
+	AppName string   `json:"app_name"`
+	Env     []string `json:"env"`
+	Flags   []string `json:"flags"`
+	Args    []string `json:"args"`
+
+	Config interface{} `json:"config"`
+}
+
+type ProcessInstance struct {
+	ProcessID string `json:"process_id"`
+	NodeID    string `json:"node_id"`
+}
+
 func NewCommunityState() *CommunityState {
 	return &CommunityState{
-		Members: []*Member{},
-		Nodes:   []*Node{},
+		Members:          []*Member{},
+		Nodes:            []*Node{},
+		Processes:        []*Process{},
+		ProcessInstances: []*ProcessInstance{},
 	}
 }
 

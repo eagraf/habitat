@@ -8,16 +8,19 @@ import (
 )
 
 const (
-	CommandInspect            = "inspect"
-	CommandStart              = "start"
-	CommandStop               = "stop"
-	CommandListProcesses      = "ps"
-	CommandCommunityCreate    = "community_create"
-	CommandCommunityJoin      = "community_join"
-	CommandCommunityAddMember = "community_add_member"
-	CommandCommunityPropose   = "community_propose"
-	CommandCommunityState     = "community_state"
-	CommandCommunityList      = "community_list"
+	CommandInspect               = "inspect"
+	CommandStart                 = "start"
+	CommandStop                  = "stop"
+	CommandListProcesses         = "ps"
+	CommandCommunityCreate       = "community_create"
+	CommandCommunityJoin         = "community_join"
+	CommandCommunityAddMember    = "community_add_member"
+	CommandCommunityPropose      = "community_propose"
+	CommandCommunityState        = "community_state"
+	CommandCommunityList         = "community_list"
+	CommandCommunityPS           = "community_ps"
+	CommandCommunityStartProcess = "community_start_process"
+	CommandCommunityStopProcess  = "community_stop_process"
 
 	StatusOK                  = 0
 	StatusBadRequest          = 1
@@ -52,6 +55,12 @@ func requestType(req interface{}) (string, error) {
 		return CommandCommunityState, nil
 	case CommunityListRequest, *CommunityListRequest, CommunityListResponse, *CommunityListResponse:
 		return CommandCommunityList, nil
+	case CommunityPSRequest, *CommunityPSRequest, CommunityPSResponse, *CommunityPSResponse:
+		return CommandCommunityPS, nil
+	case CommunityStartProcessRequest, *CommunityStartProcessRequest, CommunityStartProcessResponse, *CommunityStartProcessResponse:
+		return CommandCommunityStartProcess, nil
+	case CommunityStopProcessRequest, *CommunityStopProcessRequest, CommunityStopProcessResponse, *CommunityStopProcessResponse:
+		return CommandCommunityStopProcess, nil
 	default:
 		return "", fmt.Errorf("type %T is not a valid request type", req)
 	}

@@ -227,6 +227,101 @@ var communityListCmd = &cobra.Command{
 	},
 }
 
+var communityPSCmd = &cobra.Command{
+	Use:   "ps",
+	Short: "list the processes that are actively running in this community",
+	Run: func(cmd *cobra.Command, args []string) {
+		communityID := cmd.Flags().Lookup("community")
+		if communityID == nil {
+			printError(fmt.Errorf("community flag needs to be set"))
+			return
+		}
+
+		req := &ctl.CommunityPSRequest{
+			CommunityID: communityID.Value.String(),
+		}
+
+		var res ctl.CommunityPSResponse
+		postRequest(ctl.CommandCommunityPS, req, &res)
+
+		pretty, err := json.MarshalIndent(&res, "", "    ")
+		if err != nil {
+			printError(fmt.Errorf("error prettifying JSON response: %s", err))
+		}
+		fmt.Println(string(pretty))
+	},
+}
+
+var communityStartProcessCmd = &cobra.Command{
+	Use:   "start -c <community_id> -n <node 1> -n <node 2> -- <app_name> [args]",
+	Short: "start process instances on specific nodes in the community",
+	Run: func(cmd *cobra.Command, args []string) {
+		communityID := cmd.Flags().Lookup("community")
+		if communityID == nil {
+			printError(fmt.Errorf("community flag needs to be set"))
+			return
+		}
+
+		instanceNodes, err := cmd.Flags().GetStringSlice("node")
+		if err != nil {
+			printError(err)
+			return
+		}
+
+		procArgs := cmd.Flags().Args()[cmd.ArgsLenAtDash():]
+		flags, env := parseFlags(procArgs)
+
+		if len(procArgs) < 1 {
+			printError(fmt.Errorf("no app specified"))
+			return
+		}
+
+		req := &ctl.CommunityStartProcessRequest{
+			CommunityID: communityID.Value.String(),
+			App:         procArgs[0],
+			Args:        args[1:],
+			Flags:       flags,
+			Env:         env,
+
+			InstancesNodes: instanceNodes,
+		}
+
+		var res ctl.CommunityStartProcessRequest
+		postRequest(ctl.CommandCommunityStartProcess, req, &res)
+	},
+}
+
+var communityStopProcessCmd = &cobra.Command{
+	Use:   "stop -c <community_id> [-n <node_id>...] <process_id>",
+	Short: "stop a process on a community. if nodes are specified, only their specific process instances will be stopped",
+	Run: func(cmd *cobra.Command, args []string) {
+		communityID := cmd.Flags().Lookup("community")
+		if communityID == nil {
+			printError(fmt.Errorf("community flag needs to be set"))
+			return
+		}
+
+		instanceNodes, err := cmd.Flags().GetStringSlice("node")
+		if err != nil {
+			printError(err)
+			return
+		}
+
+		if len(args) < 1 {
+			printError(fmt.Errorf("must supply a process ID to stop"))
+		}
+
+		req := &ctl.CommunityStopProcessRequest{
+			CommunityID:    communityID.Value.String(),
+			ProcessID:      args[0],
+			InstancesNodes: instanceNodes,
+		}
+
+		var res ctl.CommunityStopProcessResponse
+		postRequest(ctl.CommandCommunityStopProcess, req, &res)
+	},
+}
+
 func init() {
 	communityCreateCmd.Flags().StringP("address", "a", "", "address that this node can be reached at")
 	communityCreateCmd.Flags().StringP("name", "n", "", "name of the community being created")
@@ -244,11 +339,22 @@ func init() {
 	communityStateCmd.Flags().StringP("community", "c", "", "id of community to be joined")
 	addUserFlags(communityStateCmd)
 
+	communityPSCmd.Flags().StringP("community", "c", "", "id of community to be joined")
+
+	communityStartProcessCmd.Flags().StringP("community", "c", "", "id of community to be joined")
+	communityStartProcessCmd.Flags().StringSliceP("node", "n", []string{}, "node ID to have a process instance started on")
+
+	communityStopProcessCmd.Flags().StringP("community", "c", "", "id of community to be joined")
+	communityStopProcessCmd.Flags().StringSliceP("node", "n", []string{}, "node ID to have a process instance started on")
+
 	communityCmd.AddCommand(communityCreateCmd)
 	communityCmd.AddCommand(communityJoinCmd)
 	communityCmd.AddCommand(communityProposeTransitionsCmd)
 	communityCmd.AddCommand(communityStateCmd)
 	communityCmd.AddCommand(communityListCmd)
+	communityCmd.AddCommand(communityPSCmd)
+	communityCmd.AddCommand(communityStartProcessCmd)
+	communityCmd.AddCommand(communityStopProcessCmd)
 
 	rootCmd.AddCommand(communityCmd)
 }

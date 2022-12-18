@@ -34,6 +34,7 @@ func (e *NOOPExecutor) Execute(update *StateUpdate) {
 
 type StateUpdate struct {
 	NewState       []byte
+	Transition     []byte
 	TransitionType string
 }
 
@@ -103,6 +104,11 @@ func (csm *CommunityStateMachine) ProposeTransitions(transitions []CommunityStat
 		return nil, err
 	}
 
+	jsonStateBranch, err := csm.jsonState.Copy()
+	if err != nil {
+		return nil, err
+	}
+
 	wrappers := make([]*TransitionWrapper, 0)
 
 	for _, t := range transitions {
@@ -117,10 +123,12 @@ func (csm *CommunityStateMachine) ProposeTransitions(transitions []CommunityStat
 			return nil, err
 		}
 
-		newStateBytes, err := csm.jsonState.ValidatePatch(patch)
+		err = jsonStateBranch.ApplyPatch(patch)
 		if err != nil {
 			return nil, err
 		}
+
+		newStateBytes := jsonStateBranch.state
 
 		var newState community.CommunityState
 		err = json.Unmarshal(newStateBytes, &newState)
@@ -161,9 +169,8 @@ func (csm *CommunityStateMachine) State() (*community.CommunityState, error) {
 }
 
 type JSONState struct {
-	schema         *jsonschema.Schema
-	state          []byte
-	transitionChan chan<- *CommunityStateTransition
+	schema *jsonschema.Schema
+	state  []byte
 
 	*sync.Mutex
 }
@@ -183,10 +190,9 @@ func NewJSONState(jsonSchema []byte, initState []byte) (*JSONState, error) {
 	}
 
 	return &JSONState{
-		schema:         rs,
-		state:          initState,
-		Mutex:          &sync.Mutex{},
-		transitionChan: make(chan *CommunityStateTransition),
+		schema: rs,
+		state:  initState,
+		Mutex:  &sync.Mutex{},
 	}, nil
 }
 
@@ -240,4 +246,12 @@ func (s *JSONState) Unmarshal(dest interface{}) error {
 
 func (s *JSONState) Bytes() []byte {
 	return s.state
+}
+
+func (s *JSONState) Copy() (*JSONState, error) {
+	schema, err := json.Marshal(s.schema)
+	if err != nil {
+		return nil, err
+	}
+	return NewJSONState(schema, s.state)
 }
