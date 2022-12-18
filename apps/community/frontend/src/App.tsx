@@ -3,12 +3,10 @@ import "react-minimal-side-navigation/lib/ReactMinimalSideNavigation.css";
 
 import "./App.css";
 import Community from "./AddCommunity";
-import ConnectCommunity from "./ConnectCommunity";
 import NodeId from "./NodeId";
 import React from "react";
 
 import { ConnectedCommunities, ListCommunitiesResponse } from "./community";
-import { AsyncState } from "./types";
 import axios from "axios";
 import AddMember from "./AddMember";
 
@@ -18,9 +16,6 @@ function nameToNav(name: string): NavItemProps {
 
 function App() {
   const [comm, setComm] = React.useState<string>("");
-  const [communities, setCommunities] = React.useState<
-    AsyncState<ListCommunitiesResponse>
-  >({ state: "init" });
   const [subNav, setSubNav] = React.useState<NavItemProps[]>([
     { title: "Fetching communities", itemId: "" },
   ]);
@@ -69,17 +64,9 @@ function App() {
     axios
       .get<ListCommunitiesResponse>(`http://localhost:8008/communities`)
       .then((response) => {
-        setCommunities({
-          state: "success",
-          data: response.data,
-        });
         setSubNav(response.data.Communities.map((name) => nameToNav(name)));
       })
       .catch((error: Error) => {
-        setCommunities({
-          state: "error",
-          message: error.message,
-        });
         console.log("ERRO!!", error);
         setSubNav([{ title: "Error fetching communities!!", itemId: "" }]);
       });

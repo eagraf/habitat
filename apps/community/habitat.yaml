@@ -1,0 +1,11 @@
+name: community
+bin: community
+ports:
+  - 8008
+proxy_rules:
+  - type: file
+    matcher: /community
+    target: web
+  - type: redirect
+    matcher: /api_community
+    target: http://0.0.0.0:8008

@@ -1,7 +1,7 @@
 import React from 'react';
 import { AsyncState } from './types'
 import axios from 'axios';
-import { ConnectCommunityResponse, JoinCommunityResponse } from './community';
+import { ConnectCommunityResponse} from './community';
 
 const JoinCommunityContainer = () => {
 

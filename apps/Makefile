@@ -1,16 +1,13 @@
-TARGETS = bin/amd64-linux/ipfs-driver \
-		bin/amd64-darwin/ipfs-driver
+SUBDIRS	=	ipfs-driver community
+APPS	=	$(SUBDIRS)
 
 include ../common.mk
 
-IPFS_DRIVER_DIR = $(DEV_APPDIR)/ipfs-driver
-
-install:: install-ipfs-driver
-
-clean::
-	rm -rf bin
-
-install-ipfs-driver:
-	mkdir -p $(IPFS_DRIVER_DIR)/bin	
-	$(CP) ./bin/$(CURARCH)/ipfs-driver $(IPFS_DRIVER_DIR)/bin
-	$(CP) ./ipfs-driver/habitat.yaml $(IPFS_DRIVER_DIR)
+install::
+	for dir in $(APPS); do \
+		mkdir -p $(DEV_APPDIR)/$$dir/bin ; \
+		mkdir -p $(DEV_APPDIR)/$$dir/web ; \
+		$(CP) $$dir/bin/$(CURARCH)/* $(DEV_APPDIR)/$$dir/bin ; \
+		if [ -d $$dir/web ] ; then $(CP) -r $$dir/web/* $(DEV_APPDIR)/$$dir/web | true ; fi ; \
+		$(CP) $$dir/habitat.yaml $(DEV_APPDIR)/$$dir ; \
+	done

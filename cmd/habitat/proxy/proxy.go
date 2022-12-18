@@ -146,12 +146,12 @@ func (r *RedirectRule) Handler() http.Handler {
 	}
 }
 
-func GetRuleFromConfig(config *configuration.ProxyRule, procDir string) (Rule, error) {
+func GetRuleFromConfig(config *configuration.ProxyRule, appPath string) (Rule, error) {
 	switch config.Type {
 	case configuration.ProxyRuleFileServer:
 		return &FileServerRule{
 			Matcher: config.Matcher,
-			Path:    filepath.Join(procDir, "web", config.Target),
+			Path:    filepath.Join(appPath, config.Target),
 		}, nil
 	case configuration.ProxyRuleRedirect:
 		targetURL, err := url.Parse(config.Target)
