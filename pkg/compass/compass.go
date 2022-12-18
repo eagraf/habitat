@@ -21,7 +21,7 @@ const (
 	osDarwin = "darwin"
 
 	habitatPathEnv         = "HABITAT_PATH"
-	habitatIdentityPathEnv = "HABITAT_IDENTITY_PATH"
+	habitatIdentityPathEnv = "HABITATCTL_IDENTITY_PATH"
 
 	nodeIDRelativePath = "node_id"
 

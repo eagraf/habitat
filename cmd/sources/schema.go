@@ -110,14 +110,3 @@ func (sr *SchemaRegistry) Add(id string, sch *jsonschema.Schema) error {
 func (sr *SchemaRegistry) Delete(id string) error {
 	return os.Remove(filepath.Join(sr.Path, id+".json"))
 }
-
-// TODO: NewSchema()
-// functions for evolving schema
-/*
-func NewSchema(schema []byte) (error, jsonschema.Schema) {
-	rs := &jsonschema.Schema{}
-	if err := json.Unmarshal(schema, rs); err != nil {
-		panic("unmarshal schema: " + err.Error())
-	}
-}
-*/

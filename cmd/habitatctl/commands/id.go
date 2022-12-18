@@ -26,7 +26,7 @@ var idCmd = &cobra.Command{
 var idInitCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize habitatctl identity management",
-	Long:  "habitatctl checks the value of the HABITAT_IDENTITY_PATH env variable. If no value is found, the default for your operating system is used.",
+	Long:  "habitatctl checks the value of the HABITATCTL_IDENTITY_PATH env variable. If no value is found, the default for your operating system is used.",
 	Run: func(cmd *cobra.Command, args []string) {
 
 		fmt.Println("Initializing Habitat identity management")
