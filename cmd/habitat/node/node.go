@@ -14,7 +14,6 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/node/fs"
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
-	"github.com/eagraf/habitat/cmd/sources"
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/ipfs"
 	"github.com/eagraf/habitat/pkg/p2p"
@@ -69,7 +68,7 @@ func NewNode() (*Node, error) {
 		ID:             compass.NodeID(),
 		P2PNode:        p2pNode,
 		ReverseProxy:   reverseProxy,
-		DataProxy:      dataproxy.NewDataProxy(map[string]*sources.DataServerNode{}),
+		DataProxy:      dataproxy.NewDataProxy(context.Background(), map[string]*dataproxy.DataServerNode{}),
 		ProcessManager: procs.NewManager(procsDir, reverseProxy.Rules),
 		FS:             fs,
 		IPFSClient:     ipfsClient,
@@ -89,7 +88,7 @@ func (n *Node) Start() error {
 
 	// Start data proxy
 	sourcesPort := viper.GetString("data-proxy-port")
-	go n.DataProxy.Start(context.Background(), sourcesPort)
+	go n.DataProxy.Serve(context.Background(), sourcesPort)
 
 	// Start process manager
 	go n.ProcessManager.ListenForErrors()

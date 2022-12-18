@@ -121,14 +121,15 @@ func (s *SchemaRegistryServer) Start(ctx context.Context, port string) {
 	r.HandleFunc("/lookup", s.LookupHandler)
 	r.HandleFunc("/add", s.AddHandler)
 	r.HandleFunc("/delete", s.DeleteHandler)
-	log.Info().Msgf("Starting source server on %s", port)
+	log.Info().Msgf("Starting schema registry server on %s", port)
 	if err := http.ListenAndServe(port, r); err != nil {
 		log.Fatal().Err(err)
 	}
 }
 
 func main() {
+	// TODO: change this to use something from habitat.yml
 	sr := sources.NewSchemaRegistry(compass.LocalSchemaPath())
-	srServer := NewSchemaRegistryServer("localhost", ":8767", sr)
-	srServer.Start(context.Background(), ":8767")
+	srServer := NewSchemaRegistryServer("localhost", ":8766", sr)
+	srServer.Start(context.Background(), ":8766")
 }

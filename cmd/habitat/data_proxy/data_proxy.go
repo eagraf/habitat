@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"time"
 
 	"github.com/eagraf/habitat/cmd/sources"
+	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/permissions"
 	"github.com/qri-io/jsonschema"
 	"github.com/rs/zerolog/log"
@@ -20,7 +22,7 @@ import (
 type dataType string
 
 const (
-	sourcesRequest dataType = "sources"
+	SourcesRequest dataType = "sources"
 )
 
 type ReadRequest struct {
@@ -60,9 +62,16 @@ func (c *LocalSchemaCache) Get(id string) (*jsonschema.Schema, error) {
 	return sch, nil
 }
 
+func newLocalSchemaCache(ctx context.Context) *LocalSchemaCache {
+	return &LocalSchemaCache{
+		ctx:           ctx,
+		cacheRegistry: jsonschema.GetSchemaRegistry(),
+	}
+}
+
 type DataProxy struct {
 	// for sources
-	schemaRegistry      LocalSchemaCache
+	schemaRegistry      *LocalSchemaCache
 	localSourcesHandler *sources.JSONReaderWriter
 	sourcesPermissions  permissions.SourcesPermissionsManager
 
@@ -79,7 +88,7 @@ func writeHeaderAndBytes(w http.ResponseWriter, status int, resp string) {
 	w.Write([]byte(resp))
 }
 
-func NewDataProxy(dataNodes map[string]*DataServerNode) *DataProxy {
+func NewDataProxy(ctx context.Context, dataNodes map[string]*DataServerNode) *DataProxy {
 	proxyNodes := make(map[string]*httputil.ReverseProxy)
 	for community, dataNode := range dataNodes {
 		url, err := dataNode.GetUrl()
@@ -90,9 +99,11 @@ func NewDataProxy(dataNodes map[string]*DataServerNode) *DataProxy {
 	}
 	p := permissions.NewBasicPermissionsManager()
 	return &DataProxy{
-		dataNodes:          proxyNodes,
-		appPermissions:     p,
-		sourcesPermissions: p,
+		schemaRegistry:      newLocalSchemaCache(ctx),
+		localSourcesHandler: sources.NewJSONReaderWriter(ctx, compass.LocalSourcesPath()),
+		dataNodes:           proxyNodes,
+		appPermissions:      p,
+		sourcesPermissions:  p,
 	}
 }
 
@@ -121,7 +132,7 @@ func (s *DataProxy) ReadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch req.T {
-	case sourcesRequest:
+	case SourcesRequest:
 		// TODO: handle sources that are not stored locally
 		var sreq sources.SourceRequest
 		if err = json.Unmarshal(req.Body, &sreq); err != nil {
@@ -170,7 +181,7 @@ func (s *DataProxy) WriteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch req.T {
-	case sourcesRequest:
+	case SourcesRequest:
 		// TODO: handle sources that are not stored locally
 		var sreq sources.SourceRequest
 		if err = json.Unmarshal(req.Body, &sreq); err != nil {
@@ -180,10 +191,21 @@ func (s *DataProxy) WriteHandler(w http.ResponseWriter, r *http.Request) {
 
 		s.sourcesPermissions.CheckCanWrite(req.Token, sreq.SourceID)
 		sch, err := s.schemaRegistry.Get(sreq.SourceID)
+		fmt.Println(s.schemaRegistry.cacheRegistry)
 		if err != nil {
 			writeHeaderAndBytes(w, http.StatusBadRequest, fmt.Sprintf("unable to find schema with matching sourceID"))
+			return
 		}
-		s.localSourcesHandler.Write(sources.SourceID(sreq.SourceID), sch, req.Data)
+
+		err = s.localSourcesHandler.Write(sources.SourceID(sreq.SourceID), sch, req.Data)
+		if err != nil {
+			writeHeaderAndBytes(w, http.StatusInternalServerError, fmt.Sprintf("unable to write sources data: %s", err.Error()))
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("success!"))
+		return
 	}
 }
 
@@ -201,12 +223,20 @@ func (s *DataProxy) AddDataNode(communityID string, dataNode DataServerNode) err
 	return nil
 }
 
-func (s *DataProxy) Start(ctx context.Context, port string) {
+func (s *DataProxy) Serve(ctx context.Context, addr string) {
+
 	r := mux.NewRouter()
 	r.HandleFunc("/read", s.ReadHandler)
 	r.HandleFunc("/write", s.WriteHandler)
-	log.Info().Msgf("Starting source server on %s", port)
-	if err := http.ListenAndServe(port, r); err != nil {
-		log.Fatal().Err(err)
+
+	srv := &http.Server{
+		Handler:      r,
+		Addr:         addr,
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
 	}
+
+	log.Info().Msgf("Starting source server on %s", addr)
+	err := srv.ListenAndServe()
+	log.Fatal().Err(err)
 }

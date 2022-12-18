@@ -25,8 +25,9 @@ const (
 
 	nodeIDRelativePath = "node_id"
 
-	apiPort = "2040"
-	p2pPort = "6000"
+	apiPort     = "2040"
+	p2pPort     = "6000"
+	sourcesPort = "8765"
 )
 
 func HabitatPath() string {
@@ -76,11 +77,15 @@ func CommunitiesPath() string {
 }
 
 func LocalSourcesPath() string {
-	return filepath.Join(HabitatPath(), "sources")
+	return filepath.Join(DataPath(), "sources")
 }
 
 func LocalSchemaPath() string {
-	return filepath.Join(HabitatPath(), "schema")
+	return filepath.Join(DataPath(), "schema")
+}
+
+func SourcesServerPort() string {
+	return sourcesPort
 }
 
 // NodeID will return the value in the node_id file, creating it if it doesn't exist

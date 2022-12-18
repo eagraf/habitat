@@ -59,7 +59,7 @@ func getSourceRaw(path string) string {
 }
 func TestBasicReadWrite(t *testing.T) {
 	setupReaderWriter()
-	sourcePath := "./test-geo.json"
+	sourcePath := getPath(".", "test-geo")
 	bytes, err := json.Marshal(geoSource)
 	assert.Nil(t, err)
 	setupSource(string(bytes), sourcePath)

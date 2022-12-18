@@ -2,6 +2,7 @@ package sources
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -18,7 +19,8 @@ import (
 
 // Shared functions
 func getPath(basePath string, id SourceID) string {
-	p := filepath.Join(basePath, string(id)+".json")
+	fname := base64.StdEncoding.EncodeToString([]byte(id))
+	p := filepath.Join(basePath, string(fname)+".json")
 	return p
 }
 
@@ -36,8 +38,8 @@ func NewJSONReaderWriter(ctx context.Context, path string) *JSONReaderWriter {
 	return &JSONReaderWriter{ctx: ctx, Path: path}
 }
 
-func (R *JSONReaderWriter) Read(id SourceID) ([]byte, error) {
-	path := getPath(R.Path, id)
+func (rw *JSONReaderWriter) Read(id SourceID) ([]byte, error) {
+	path := getPath(rw.Path, id)
 	source, err := ReadSource(path)
 	if source == nil {
 		return nil, err
@@ -45,15 +47,15 @@ func (R *JSONReaderWriter) Read(id SourceID) ([]byte, error) {
 	return source.Data, err
 }
 
-func (W *JSONReaderWriter) Write(id SourceID, sch *jsonschema.Schema, data []byte) error {
-	path := getPath(W.Path, id)
+func (rw *JSONReaderWriter) Write(id SourceID, sch *jsonschema.Schema, data []byte) error {
+	path := getPath(rw.Path, id)
 	source, err := ReadSource(path)
 
 	if source == nil {
 		source = &SourceFile{}
 	}
 
-	if err = ValidateSchemaBytes(W.ctx, sch, data); err != nil {
+	if err = ValidateSchemaBytes(rw.ctx, sch, data); err != nil {
 		return fmt.Errorf("validation err: %s", err.Error())
 	}
 
@@ -64,5 +66,9 @@ func (W *JSONReaderWriter) Write(id SourceID, sch *jsonschema.Schema, data []byt
 	}
 
 	err = os.WriteFile(path, bytes, os.ModePerm)
-	return err
+	if err != nil {
+		return err
+	}
+	log.Info().Msgf("wrote sources to %s", path)
+	return nil
 }
