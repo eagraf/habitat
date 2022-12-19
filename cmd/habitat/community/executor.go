@@ -36,7 +36,7 @@ func (e *CommunityExecutor) GetTransitionExecutor(transitionType string) Transit
 	case state.TransitionTypeStartProcessInstance:
 		return e.StartProcessInstance
 	case state.TransitionTypeStopProcessInstance:
-		return e.StartProcessInstance
+		return e.StopProcessInstance
 	default:
 		return nil
 	}
@@ -95,7 +95,7 @@ func (e *CommunityExecutor) StartProcessInstance(update *state.StateUpdate) erro
 }
 
 func (e *CommunityExecutor) StopProcessInstance(update *state.StateUpdate) error {
-	var transition state.StartProcessInstanceTransition
+	var transition state.StopProcessInstanceTransition
 	err := json.Unmarshal(update.Transition, &transition)
 	if err != nil {
 		return err
@@ -108,12 +108,12 @@ func (e *CommunityExecutor) StopProcessInstance(update *state.StateUpdate) error
 
 	var process *community.Process
 	for _, p := range state.Processes {
-		if p.ID == transition.ProcessInstance.ProcessID {
+		if p.ID == transition.ProcessID {
 			process = p
 		}
 	}
 
-	if transition.ProcessInstance.NodeID == e.node.ID {
+	if transition.NodeID == e.node.ID {
 		processInstanceID, err := procs.GetProcessInstanceID(state.CommunityID, e.node.ID, process.ID)
 		if err != nil {
 			return err

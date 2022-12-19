@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -268,8 +268,16 @@ var communityStartProcessCmd = &cobra.Command{
 			return
 		}
 
+		dashPosition := cmd.ArgsLenAtDash()
+		if dashPosition >= len(cmd.Flags().Args()) {
+			printError(fmt.Errorf("Usage: %s", cmd.Use))
+			return
+		}
 		procArgs := cmd.Flags().Args()[cmd.ArgsLenAtDash():]
-		flags, env := parseFlags(procArgs)
+		flags, env := []string{}, []string{}
+		if len(procArgs) > 1 {
+			flags, env = parseFlags(procArgs[1:])
+		}
 
 		if len(procArgs) < 1 {
 			printError(fmt.Errorf("no app specified"))
