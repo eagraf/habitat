@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime/debug"
 
 	"github.com/eagraf/habitat/pkg/compass"
 	client "github.com/eagraf/habitat/pkg/habitat_client"
@@ -17,6 +18,7 @@ import (
 
 func printError(err error) {
 	fmt.Printf("failed to make request: %s\n", err)
+	debug.PrintStack()
 	os.Exit(1)
 }
 
@@ -73,7 +75,7 @@ func loadUserIdentity(cmd *cobra.Command) (*identity.UserIdentity, error) {
 
 	userIdentity, err := identity.LoadUserIdentity(idPath, username, []byte(password))
 	if err != nil {
-		fmt.Printf("error loading user identity for %s\n", username)
+		fmt.Printf("error loading user identity for %s: %s\n", username, err.Error())
 		os.Exit(1)
 	}
 

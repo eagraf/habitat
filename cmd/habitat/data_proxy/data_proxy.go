@@ -57,6 +57,7 @@ func (s *DataProxy) ReadHandler(w http.ResponseWriter, r *http.Request) {
 
 	var req ctl.DataReadRequest
 	slurp, err := ioutil.ReadAll(r.Body)
+	r.Body.Close()
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, fmt.Errorf("unable read body: %s", err.Error()))
 		return
@@ -116,6 +117,8 @@ func (s *DataProxy) WriteHandler(w http.ResponseWriter, r *http.Request) {
 		api.WriteError(w, http.StatusBadRequest, fmt.Errorf("unable read body: %s", err.Error()))
 		return
 	}
+
+	fmt.Printf("got %T %s\n", slurp, string(slurp))
 	err = json.Unmarshal(slurp, &req)
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, fmt.Errorf("unable read unmarshal json: %s", err.Error()))

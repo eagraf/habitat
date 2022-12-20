@@ -81,6 +81,7 @@ func signKeyExchange(conn *websocket.Conn, finalMsg ctl.WebsocketMessage, nodeID
 
 	node := &community.Node{
 		ID:          nodeID,
+		P2PID:       compass.PeerID().String(),
 		MemberID:    userID,
 		Certificate: certMsg.NodeCertificate,
 	}

@@ -7,7 +7,7 @@ var CommunityStateSchema = []byte(`{
 		"member": {
 			"type": "object",
 			"properties": {
-				"id": { "type": "string" },
+				"member_id": { "type": "string" },
 				"username": { "type": "string" },
 				"certificate": { "type": "string" }
 			},
@@ -17,6 +17,7 @@ var CommunityStateSchema = []byte(`{
 			"type": "object",
 			"properties": {
 				"id": { "type": "string" },
+				"p2p_id": { "type": "string" },
 				"address": { "type": "string" },
 				"ipfs_swarm_address": { "type": "string" },
 				"certificate": { "type": "string" },
@@ -134,6 +135,7 @@ type Member struct {
 
 type Node struct {
 	ID               string `json:"id"`
+	P2PID            string `json:"p2p_id"`
 	Address          string `json:"address"`
 	IPFSSwarmAddress string `json:"ipfs_swarm_address"` // This should be temporary
 	Certificate      []byte `json:"certificate"`
