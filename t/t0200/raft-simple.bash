@@ -42,7 +42,7 @@ TRANSITION3=$(base64 -w 0 <<EOF
 EOF
 )
 
-setup_community
+setup_community false
 
 $ALICE_CMD community propose -c $COMMUNITY_UUID $(wrapTransition "initialize_counter" $TRANSITION1)
 $ALICE_CMD community propose -c $COMMUNITY_UUID $(wrapTransition "increment_counter" $TRANSITION2)

@@ -2,10 +2,10 @@
 
 setup_community() {
     docker-compose -f docker-compose-raft.yml up -V 2> /dev/null &
-#    atexit "docker-compose -f docker-compose-raft.yml down"
-    #atexit "docker-compose rm -f"
+    atexit "docker-compose -f docker-compose-raft.yml down"
+    atexit "docker-compose rm -f"
 
-    sleep 5
+    sleep 10
 
     ID_PATH="$(temp::dir)"
     export HABITATCTL_IDENTITY_PATH=$ID_PATH
@@ -27,7 +27,15 @@ setup_community() {
     BOB_CMD="$BOB_NODE_CLI_CMD --username bob --password abc"
     CHARLIE_CMD="$CHARLIE_NODE_CLI_CMD --username charlie --password abc"
 
-    COMMUNITY_CREATE_RES=`$ALICE_CMD community create`
+    local community_create_command="$ALICE_CMD community create"
+    if $1 ; then
+        community_create_command+=" --ipfs" 
+    fi
+    echo $community_create_command
+
+    COMMUNITY_CREATE_RES=`$community_create_command` || true
+    echo $COMMUNITY_CREATE_RES
+
     COMMUNITY_UUID=`echo $COMMUNITY_CREATE_RES | jq -r .community_id`
     COMMUNITY_JOIN_CODE=`echo $COMMUNITY_CREATE_RES | jq -r .join_code`
 
