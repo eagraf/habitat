@@ -35,7 +35,7 @@ var sourcesReadCmd = &cobra.Command{
 		fmt.Printf("Source Read Request for %s\n", id)
 
 		sourcereq := sources.SourceRequest{
-			SourceID: id,
+			Id: id,
 		}
 		b, err := json.Marshal(sourcereq)
 		if err != nil {
@@ -83,7 +83,7 @@ var sourcesWriteCmd = &cobra.Command{
 		fmt.Printf("Source Write Request for %s, %s\n", id, data)
 
 		sourcereq := sources.SourceRequest{
-			SourceID: id,
+			Id: id,
 		}
 		b, err := json.Marshal(sourcereq)
 		if err != nil {

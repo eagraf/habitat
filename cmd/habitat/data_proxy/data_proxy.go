@@ -13,7 +13,6 @@ import (
 	"github.com/eagraf/habitat/cmd/sources"
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/permissions"
-	"github.com/qri-io/jsonschema"
 	"github.com/rs/zerolog/log"
 
 	"github.com/gorilla/mux"
@@ -40,38 +39,9 @@ type WriteRequest struct {
 	Data        []byte          `json:"data"`
 }
 
-type LocalSchemaCache struct {
-	ctx           context.Context
-	cacheRegistry *jsonschema.SchemaRegistry
-}
-
-func (c *LocalSchemaCache) Get(id string) (*jsonschema.Schema, error) {
-
-	if sch := c.cacheRegistry.GetLocal(id); sch != nil {
-		// locally cached schema
-		return sch, nil
-	}
-
-	// Resolves url address in id to fetch schema
-	sch := c.cacheRegistry.Get(c.ctx, id)
-	if sch == nil {
-		return nil, fmt.Errorf("schema not found at given uri")
-	}
-
-	c.cacheRegistry.RegisterLocal(sch)
-	return sch, nil
-}
-
-func newLocalSchemaCache(ctx context.Context) *LocalSchemaCache {
-	return &LocalSchemaCache{
-		ctx:           ctx,
-		cacheRegistry: jsonschema.GetSchemaRegistry(),
-	}
-}
-
 type DataProxy struct {
 	// for sources
-	schemaRegistry      *LocalSchemaCache
+	schemaStore         *sources.LocalSchemaStore
 	localSourcesHandler *sources.JSONReaderWriter
 	sourcesPermissions  permissions.SourcesPermissionsManager
 
@@ -99,7 +69,7 @@ func NewDataProxy(ctx context.Context, dataNodes map[string]*DataServerNode) *Da
 	}
 	p := permissions.NewBasicPermissionsManager()
 	return &DataProxy{
-		schemaRegistry:      newLocalSchemaCache(ctx),
+		schemaStore:         sources.NewLocalSchemaStore(compass.LocalSchemaPath()),
 		localSourcesHandler: sources.NewJSONReaderWriter(ctx, compass.LocalSourcesPath()),
 		dataNodes:           proxyNodes,
 		appPermissions:      p,
@@ -140,9 +110,12 @@ func (s *DataProxy) ReadHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		s.sourcesPermissions.CheckCanRead(req.Token, sreq.SourceID)
+		if !s.sourcesPermissions.CheckCanRead(req.Token, sreq.Id) {
+			writeHeaderAndBytes(w, http.StatusInternalServerError, fmt.Sprintf("requester not allowed permission to read source %s", sreq.Id))
+			return
+		}
 
-		bytes, err := s.localSourcesHandler.Read(sources.SourceID(sreq.SourceID))
+		bytes, err := s.localSourcesHandler.Read(sreq.Id)
 
 		if err != nil {
 			writeHeaderAndBytes(w, http.StatusInternalServerError, fmt.Sprintf("error reading source: %s", err.Error()))
@@ -189,15 +162,22 @@ func (s *DataProxy) WriteHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		s.sourcesPermissions.CheckCanWrite(req.Token, sreq.SourceID)
-		sch, err := s.schemaRegistry.Get(sreq.SourceID)
-		fmt.Println(s.schemaRegistry.cacheRegistry)
-		if err != nil {
-			writeHeaderAndBytes(w, http.StatusBadRequest, fmt.Sprintf("unable to find schema with matching sourceID"))
+		if !s.sourcesPermissions.CheckCanWrite(req.Token, sreq.Id) {
+			writeHeaderAndBytes(w, http.StatusInternalServerError, fmt.Sprintf("requester not allowed permission to write source %s: %s", sreq.Id, err.Error()))
 			return
 		}
 
-		err = s.localSourcesHandler.Write(sources.SourceID(sreq.SourceID), sch, req.Data)
+		sch, err := s.schemaStore.Get(sreq.Id)
+
+		if err != nil {
+			writeHeaderAndBytes(w, http.StatusBadRequest, fmt.Sprintf("error finding schema with id %s: %s", sreq.Id, err.Error()))
+			return
+		} else if sch == nil {
+			writeHeaderAndBytes(w, http.StatusBadRequest, fmt.Sprintf("unable to find schema with matching Id"))
+			return
+		}
+
+		err = s.localSourcesHandler.Write(sreq.Id, sch, req.Data)
 		if err != nil {
 			writeHeaderAndBytes(w, http.StatusInternalServerError, fmt.Sprintf("unable to write sources data: %s", err.Error()))
 			return

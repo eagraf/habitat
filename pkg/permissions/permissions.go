@@ -5,6 +5,7 @@ type AppPermissionsManager interface {
 }
 
 type SourcesPermissionsManager interface {
+	// TODO: return reason when permission is false
 	CheckCanRead(token string, sourceID string) bool
 	CheckCanWrite(token string, sourceID string) bool
 

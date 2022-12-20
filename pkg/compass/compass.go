@@ -77,11 +77,11 @@ func CommunitiesPath() string {
 }
 
 func LocalSourcesPath() string {
-	return filepath.Join(DataPath(), "sources")
+	return filepath.Join(HabitatPath(), "sources")
 }
 
 func LocalSchemaPath() string {
-	return filepath.Join(DataPath(), "schema")
+	return filepath.Join(HabitatPath(), "schema")
 }
 
 func SourcesServerPort() string {

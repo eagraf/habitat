@@ -1,5 +1,0 @@
-name: schema-registry
-bin: schema-registry
-ports:
-  - 8766
-proxy-rules:
