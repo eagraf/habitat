@@ -90,3 +90,17 @@ func (c *Client) ListFiles() (*ListFilesResponse, error) {
 
 	return &res, nil
 }
+
+type AddPeerResponse struct {
+	ID     string
+	Status string
+}
+
+func (c *Client) AddPeer(peerAddr string) (*AddPeerResponse, error) {
+	var res AddPeerResponse
+	err := c.postRequest(fmt.Sprintf("/swarm/peering/add?arg=%s", peerAddr), nil, &res)
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
+}

@@ -37,6 +37,8 @@ func (e *CommunityExecutor) GetTransitionExecutor(transitionType string) Transit
 		return e.StartProcessInstance
 	case state.TransitionTypeStopProcessInstance:
 		return e.StopProcessInstance
+	case state.TransitionTypeAddNode:
+		return e.AddNode
 	default:
 		return nil
 	}
@@ -122,6 +124,27 @@ func (e *CommunityExecutor) StopProcessInstance(update *state.StateUpdate) error
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (e *CommunityExecutor) AddNode(update *state.StateUpdate) error {
+	var transition state.AddNodeTransition
+	err := json.Unmarshal(update.Transition, &transition)
+	if err != nil {
+		return err
+	}
+
+	// Check if the node is this instance
+	if transition.Node.ID == e.node.ID {
+		return nil
+	}
+
+	// HAX: req IPFS to add node as peer
+	_, err = e.node.IPFSClient.AddPeer(transition.Node.IPFSSwarmAddress)
+	if err != nil {
+		return err
 	}
 
 	return nil
