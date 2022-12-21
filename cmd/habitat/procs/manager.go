@@ -2,7 +2,6 @@ package procs
 
 import (
 	"fmt"
-	"hash/fnv"
 	"path/filepath"
 	"sync"
 
@@ -177,12 +176,5 @@ func RandomProcessID() string {
 
 func GetProcessInstanceID(communityID, nodeID, processID string) (string, error) {
 	concatenated := fmt.Sprintf("%s-%s-%s", communityID, nodeID, processID)
-	hasher := fnv.New128a()
-	_, err := hasher.Write([]byte(concatenated))
-	if err != nil {
-		return "", err
-	}
-
-	res := hasher.Sum([]byte{})
-	return string(res), nil
+	return concatenated, nil
 }
