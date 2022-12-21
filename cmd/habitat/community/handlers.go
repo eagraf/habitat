@@ -377,6 +377,7 @@ func (m *Manager) CommunityStartProcessHandler(w http.ResponseWriter, r *http.Re
 	stateMachine, ok := m.communities[communityID]
 	if !ok {
 		api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("community %s is not on this instance", communityID))
+		return
 	}
 
 	processID := procs.RandomProcessID()
@@ -423,6 +424,7 @@ func (m *Manager) CommunityStopProcessHandler(w http.ResponseWriter, r *http.Req
 	stateMachine, ok := m.communities[communityID]
 	if !ok {
 		api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("community %s is not on this instance", communityID))
+		return
 	}
 
 	curState, err := stateMachine.State()
