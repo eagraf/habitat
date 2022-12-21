@@ -2,7 +2,6 @@ package community
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -158,22 +157,22 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool, member *communit
 		// After cluster is created, immediately add transition to initialize IPFS
 		// TODO the details of starting this process should be handled by a higher level
 		// controller
-		ipfsConfig, err := newIPFSSwarm(communityID)
-		if err != nil {
-			return nil, err
-		}
+		/*		ipfsConfig, err := newIPFSSwarm(communityID)
+				if err != nil {
+					return nil, err
+				}*/
 
 		ipfsPath := filepath.Join(compass.CommunitiesPath(), communityID, "ipfs")
 
-		communityIPFSConfig, err := json.Marshal(ipfsConfig)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling IPFS config: %s", err)
-		}
+		/*	communityIPFSConfig, err := json.Marshal(ipfsConfig)
+			if err != nil {
+				return nil, fmt.Errorf("error marshaling IPFS config: %s", err)
+			}
 
-		communityIPFSConfigB64 := base64.StdEncoding.EncodeToString(communityIPFSConfig)
-		if err != nil {
-			return nil, fmt.Errorf("error base64 encoding IPFS config: %s", err)
-		}
+				communityIPFSConfigB64 := base64.StdEncoding.EncodeToString(communityIPFSConfig)
+					if err != nil {
+						return nil, fmt.Errorf("error base64 encoding IPFS config: %s", err)
+					}*/
 
 		procID := procs.RandomProcessID()
 
@@ -183,10 +182,10 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool, member *communit
 					ID:      procID,
 					AppName: "ipfs-driver",
 					Args:    []string{ipfsPath},
-					Flags:   []string{"-c", communityIPFSConfigB64},
+					Flags:   []string{},
 					Env:     []string{},
 
-					Config: ipfsConfig,
+					Config: nil,
 				},
 			},
 			&state.StartProcessInstanceTransition{
