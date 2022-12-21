@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 
 	"github.com/eagraf/habitat/cmd/habitat/api"
 	dataproxy "github.com/eagraf/habitat/cmd/habitat/data_proxy"
@@ -76,6 +77,14 @@ func (n *Node) Start() error {
 	// Start process manager
 	go n.ProcessManager.ListenForErrors()
 	go handleInterupt(n.ProcessManager)
+
+	// start IPFS grand-child process
+	// Note that this is temporary, and we will likely eventually move away from IPFS
+	ipfsPath := filepath.Join(compass.HabitatPath(), "ipfs")
+	_, err = n.ProcessManager.StartProcessInstance("", "ipfs", "ipfs-driver", []string{ipfsPath}, []string{}, []string{})
+	if err != nil {
+		log.Fatal().Err(err).Msg("error start IPFS grandchild process")
+	}
 
 	// Keep this thread running
 	ctx := context.Background()
