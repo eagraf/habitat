@@ -13,6 +13,7 @@ import (
 )
 
 // TODO refactor this into the ipfs-driver proc
+//nolint
 func newIPFSSwarm(communityID string) (*community.IPFSConfig, error) {
 	ipfsPath := filepath.Join(compass.CommunitiesPath(), communityID, "ipfs")
 	err := os.MkdirAll(ipfsPath, 0700)

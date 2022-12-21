@@ -13,7 +13,6 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/community/consensus/cluster"
 	"github.com/eagraf/habitat/cmd/habitat/community/state"
 	"github.com/eagraf/habitat/cmd/habitat/node"
-	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/ipfs"
 	"github.com/eagraf/habitat/structs/community"
@@ -151,50 +150,6 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool, member *communit
 		&state.AddNodeTransition{
 			Node: node,
 		},
-	}
-
-	if createIpfs {
-		// After cluster is created, immediately add transition to initialize IPFS
-		// TODO the details of starting this process should be handled by a higher level
-		// controller
-		/*		ipfsConfig, err := newIPFSSwarm(communityID)
-				if err != nil {
-					return nil, err
-				}*/
-
-		ipfsPath := filepath.Join(compass.CommunitiesPath(), communityID, "ipfs")
-
-		/*	communityIPFSConfig, err := json.Marshal(ipfsConfig)
-			if err != nil {
-				return nil, fmt.Errorf("error marshaling IPFS config: %s", err)
-			}
-
-				communityIPFSConfigB64 := base64.StdEncoding.EncodeToString(communityIPFSConfig)
-					if err != nil {
-						return nil, fmt.Errorf("error base64 encoding IPFS config: %s", err)
-					}*/
-
-		procID := procs.RandomProcessID()
-
-		transitions = append(transitions,
-			&state.StartProcessTransition{
-				Process: &community.Process{
-					ID:      procID,
-					AppName: "ipfs-driver",
-					Args:    []string{ipfsPath},
-					Flags:   []string{},
-					Env:     []string{},
-
-					Config: nil,
-				},
-			},
-			&state.StartProcessInstanceTransition{
-				ProcessInstance: &community.ProcessInstance{
-					ProcessID: procID,
-					NodeID:    node.ID,
-				},
-			},
-		)
 	}
 
 	state, err := stateMachine.ProposeTransitions(transitions)
