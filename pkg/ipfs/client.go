@@ -87,7 +87,7 @@ type ListFilesResponse struct {
 
 func (c *Client) ListFiles() (*ListFilesResponse, error) {
 	var res ListFilesResponse
-	err := c.postRequest("files/ls", nil, &res)
+	err := c.postRequest("/files/ls", nil, &res)
 	if err != nil {
 		return nil, err
 	}

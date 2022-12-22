@@ -15,6 +15,7 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
 	"github.com/eagraf/habitat/cmd/sources"
 	"github.com/eagraf/habitat/pkg/compass"
+	"github.com/eagraf/habitat/pkg/ipfs"
 	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/eagraf/habitat/structs/ctl"
 	ma "github.com/multiformats/go-multiaddr"
@@ -27,6 +28,8 @@ const (
 	ReverseProxyPort = "2041"
 
 	P2PPort = "6000"
+
+	IPFSAPIURL = "http://localhost:5001/api/v0"
 )
 
 type Node struct {
@@ -36,6 +39,9 @@ type Node struct {
 	P2PNode        *p2p.Node
 	ReverseProxy   *proxy.Server
 	DataProxy      *dataproxy.DataProxy
+
+	// Temporary IPFS
+	IPFSClient *ipfs.Client
 }
 
 func NewNode() (*Node, error) {
@@ -50,12 +56,18 @@ func NewNode() (*Node, error) {
 	procsDir := compass.ProcsPath()
 	reverseProxy := proxy.NewServer()
 
+	ipfsClient, err := ipfs.NewClient(IPFSAPIURL)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Node{
 		ID:             compass.NodeID(),
 		P2PNode:        p2pNode,
 		ReverseProxy:   reverseProxy,
 		DataProxy:      dataproxy.NewDataProxy(map[string]*sources.DataServerNode{}),
 		ProcessManager: procs.NewManager(procsDir, reverseProxy.Rules),
+		IPFSClient:     ipfsClient,
 	}, nil
 }
 
