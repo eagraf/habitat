@@ -34,6 +34,7 @@ func NewServer() *Server {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Reverse Proxy: got request: ", r.URL.String())
 	for _, rule := range s.Rules {
 		if rule.Match(r.URL) {
 			rule.Handler().ServeHTTP(w, r)
@@ -53,6 +54,7 @@ func (r RuleSet) Add(name string, rule Rule) error {
 		return fmt.Errorf("rule name %s is already taken", name)
 	}
 	r[name] = rule
+	fmt.Println("proxy ruleset ", r)
 	return nil
 }
 
@@ -129,6 +131,7 @@ func (r *RedirectRule) Handler() http.Handler {
 			req.URL.Scheme = r.ForwardLocation.Scheme
 			req.URL.Host = target
 			req.URL.Path = strings.TrimPrefix(req.URL.Path, r.Matcher) // TODO this needs to be fixed when globs are implemented
+			fmt.Println("Reverse Proxy: forwarded request to: ", req.URL.String())
 		},
 		Transport: &http.Transport{
 			Dial: (&net.Dialer{
@@ -139,7 +142,7 @@ func (r *RedirectRule) Handler() http.Handler {
 			return nil
 		},
 		ErrorHandler: func(rw http.ResponseWriter, r *http.Request, err error) {
-			log.Error().Err(err).Msg("reverse proxy request forwarding error")
+			log.Error().Err(err).Msgf("reverse proxy request forwarding error. request to %s", r.URL.String())
 			rw.WriteHeader(http.StatusInternalServerError)
 			rw.Write([]byte(err.Error()))
 		},

@@ -201,11 +201,12 @@ func PostLibP2PRequestToAddress(node *p2p.Node, proxyAddr string, route string, 
 
 	var p2pRes *http.Response
 	if node == nil {
-		randRes, err := p2p.LibP2PHTTPRequestWithRandomClient(addr, route, peerID, p2pReq)
+		apiErr, err := PostLibP2PRequestToAddress(nil, addr.String(), route, p2pReq, p2pRes)
 		if err != nil {
 			return err, nil
+		} else if apiErr != nil {
+			return apiErr, nil
 		}
-		p2pRes = randRes
 	} else {
 		nodeRes, err := node.PostHTTPRequest(addr, route, peerID, p2pReq)
 		if err != nil {

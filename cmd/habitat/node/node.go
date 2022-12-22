@@ -25,6 +25,7 @@ import (
 const (
 	ReverseProxyHost = "0.0.0.0"
 	ReverseProxyPort = "2041"
+	SourcesPort      = "8765"
 
 	P2PPort = "6000"
 
@@ -55,6 +56,7 @@ func NewNode() (*Node, error) {
 
 	procsDir := compass.ProcsPath()
 	reverseProxy := proxy.NewServer()
+	dataproxy := dataproxy.NewDataProxy(context.Background(), p2pNode, map[string]*dataproxy.DataServerNode{})
 
 	ipfsClient, err := ipfs.NewClient(IPFSAPIURL)
 	if err != nil {
@@ -67,7 +69,7 @@ func NewNode() (*Node, error) {
 		ID:             compass.NodeID(),
 		P2PNode:        p2pNode,
 		ReverseProxy:   reverseProxy,
-		DataProxy:      dataproxy.NewDataProxy(context.Background(), map[string]*dataproxy.DataServerNode{}),
+		DataProxy:      dataproxy,
 		ProcessManager: procs.NewManager(procsDir, reverseProxy.Rules),
 		FS:             fs,
 		IPFSClient:     ipfsClient,
@@ -79,11 +81,23 @@ func (n *Node) Start() error {
 	proxyAddr := fmt.Sprintf("%s:%s", ReverseProxyHost, ReverseProxyPort)
 	go n.ReverseProxy.Start(proxyAddr)
 
-	redirectURL, err := url.Parse("http://" + proxyAddr + "/habitat")
+	redirectURL, err := url.Parse("http://" + proxyAddr)
 	if err != nil {
 		log.Fatal().Err(err)
 	}
 	go proxy.LibP2PHTTPProxy(n.P2PNode.Host(), redirectURL)
+
+	// Forward data reads
+	ustr := compass.DefaultHabitatAPIAddr()
+	u, err := url.Parse(ustr)
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+
+	n.ReverseProxy.Rules.Add("data-proxy", &proxy.RedirectRule{
+		Matcher:         "/data",
+		ForwardLocation: u,
+	})
 
 	// Start process manager
 	go n.ProcessManager.ListenForErrors()

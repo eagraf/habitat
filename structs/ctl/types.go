@@ -165,6 +165,7 @@ const (
 
 type DataReadRequest struct {
 	Type        dataType        `json:"data_type"`
+	NodeID      string          `json:"node_id"`
 	CommunityID string          `json:"community_id"`
 	Token       string          `json:"token"`
 	Body        json.RawMessage `json:"body"`
@@ -176,6 +177,7 @@ type DataReadResponse struct {
 
 type DataWriteRequest struct {
 	Type        dataType        `json:"data_type"`
+	NodeID      string          `json:"node_id"`
 	CommunityID string          `json:"community_id"`
 	Token       string          `json:"token"`
 	Body        json.RawMessage `json:"body"`

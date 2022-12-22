@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
@@ -52,19 +53,21 @@ func TestSourcesWriteRead(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	p := NewDataProxy(ctx, map[string]*DataServerNode{})
+	p := NewDataProxy(ctx, nil, map[string]*DataServerNode{})
 
 	path := t.TempDir()
 
 	p.localSourcesHandler = sources.NewJSONReaderWriter(ctx, filepath.Join(path, "sources"))
 	p.schemaStore = sources.NewLocalSchemaStore(filepath.Join(path, "schema"))
-	p.schemaStore.Add(geoSchema)
+	// require.Nil(t, p.schemaStore.Add(geoSchema))
 
 	addr := "0.0.0.0:8765"
 	go p.Serve(ctx, addr)
+
+	// TODO: find a better way to wait for server to startup
 	time.Sleep(1 * time.Second)
 
-	data := `{"latitude":48,"longitude":90}`
+	data := `{"latitude":48,"longitude":91}`
 
 	sourcereq := sources.SourceRequest{
 		ID: id,
@@ -79,6 +82,7 @@ func TestSourcesWriteRead(t *testing.T) {
 	}
 
 	b2, err := json.Marshal(req)
+	fmt.Println(string(b2))
 	require.Nil(t, err)
 
 	rsp, err := http.Post("http://"+addr+"/write", "application/json", bytes.NewReader(b2))

@@ -62,12 +62,12 @@ func (s *LocalSchemaStore) Add(sch *Schema) error {
 }
 
 func (s *LocalSchemaStore) Get(id string) (*Schema, error) {
-
 	path := getPath(s.path, id)
 
 	// TODO: schema must be explicitly added through schema store: add support in CLI
 	// schema doesn't exist - right now just write it and continue
 	if _, err := os.Stat(path); err != nil {
+		// TODO: properly indicate the schema doesn't exist
 		return nil, nil
 	}
 

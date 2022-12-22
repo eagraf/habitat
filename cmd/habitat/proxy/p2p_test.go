@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -28,16 +27,16 @@ func TestLibP2PProxy(t *testing.T) {
 
 	url, err := url.Parse(redirectedServer.URL)
 	assert.Nil(t, err)
+	fmt.Println("redirected url ", url)
 
 	go LibP2PHTTPProxy(p2pNode.Host(), url)
 
 	req, err := http.NewRequest("GET", "", nil)
 	assert.Nil(t, err)
 
-	res, err := p2p.LibP2PHTTPRequestWithRandomClient(p2pNode.Host().Addrs()[0], "/hello", p2pNode.Host().ID(), req)
+	res, err := p2p.PostLibP2PRequestToAddress(nil, p2pNode.ConstructMultiAddr(), "/hello", req)
 	assert.Nil(t, err)
 
-	body, err := io.ReadAll(res.Body)
 	assert.Nil(t, err)
-	assert.Equal(t, "Hello, World!", string(body))
+	assert.Equal(t, "Hello, World!", string(res))
 }

@@ -62,5 +62,4 @@ func initHabitatDirectory() {
 	if err != nil {
 		log.Fatal().Msgf("invalid procs directory: %s", err)
 	}
-	return
 }

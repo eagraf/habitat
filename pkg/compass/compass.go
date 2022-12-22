@@ -224,6 +224,7 @@ func InDockerContainer() bool {
 }
 
 func DecomposeNodeMultiaddr(multiaddr string) (peer.ID, ma.Multiaddr, error) {
+
 	remoteMA, err := ma.NewMultiaddr(multiaddr)
 	if err != nil {
 		return "", nil, err

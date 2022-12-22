@@ -1,15 +1,17 @@
 package commands
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
-	"runtime/debug"
 
 	"github.com/eagraf/habitat/pkg/compass"
 	client "github.com/eagraf/habitat/pkg/habitat_client"
 	"github.com/eagraf/habitat/pkg/identity"
+	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/cobra"
@@ -18,7 +20,6 @@ import (
 
 func printError(err error) {
 	fmt.Printf("failed to make request: %s\n", err)
-	debug.PrintStack()
 	os.Exit(1)
 }
 
@@ -26,11 +27,22 @@ func postRequest(reqType string, req, res interface{}) {
 	if viper.IsSet("libp2p-proxy") {
 		proxyAddr := viper.GetString("libp2p-proxy")
 
-		err, apiErr := client.PostLibP2PRequestToAddress(nil, proxyAddr, ctl.GetRoute(reqType), req, res)
+		reqBody, err := json.Marshal(req)
+		if err != nil {
+			printError(fmt.Errorf("error marshaling POST request body: %s", err))
+		}
+
+		p2pReq, err := http.NewRequest("POST", "", bytes.NewReader(reqBody))
+		if err != nil {
+			printError(fmt.Errorf("error constructing HTTP request: %s", err))
+		}
+
+		// TODO: change this path if used outside of community or /habitat commands
+		bytes, err := p2p.PostLibP2PRequestToAddress(nil, proxyAddr, "/habitat"+ctl.GetRoute(reqType), p2pReq)
 		if err != nil {
 			printError(fmt.Errorf("error submitting request: %s", err))
-		} else if apiErr != nil {
-			printError(apiErr)
+		} else if err := json.Unmarshal(bytes, res); err != nil {
+			printError(fmt.Errorf("error unmarshalling response: %s", err.Error()))
 		}
 	} else {
 		err, apiErr := client.PostRequestToAddress(compass.CustomHabitatAPIAddr("localhost", viper.GetString("port"))+ctl.GetRoute(reqType), req, res)

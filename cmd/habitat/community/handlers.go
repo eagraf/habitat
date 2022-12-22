@@ -1,6 +1,7 @@
 package community
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -13,8 +14,8 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/community/state"
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/pkg/compass"
-	client "github.com/eagraf/habitat/pkg/habitat_client"
 	"github.com/eagraf/habitat/pkg/identity"
+	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/eagraf/habitat/structs/community"
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/gorilla/websocket"
@@ -210,12 +211,23 @@ func (m *Manager) CommunityJoinHandler(w http.ResponseWriter, r *http.Request) {
 		Node:               newNode,
 	}
 	var addMemberRes ctl.CommunityAddMemberResponse
-	err, apiErr := client.PostLibP2PRequestToAddress(m.node.P2PNode, commReq.AcceptingNodeAddr, ctl.GetRoute(ctl.CommandCommunityAddMember), addMemberReq, &addMemberRes)
+
+	reqBody, err := json.Marshal(addMemberReq)
+	if err != nil {
+		api.WriteWebsocketError(conn, err, &commRes)
+	}
+
+	p2pReq, err := http.NewRequest("POST", "", bytes.NewReader(reqBody))
+	if err != nil {
+		api.WriteWebsocketError(conn, err, &commRes)
+	}
+
+	bytes, err := p2p.PostLibP2PRequestToAddress(m.node.P2PNode, commReq.AcceptingNodeAddr, "/habitat"+ctl.GetRoute(ctl.CommandCommunityAddMember), p2pReq)
 	if err != nil {
 		api.WriteWebsocketError(conn, err, &commRes)
 		return
-	} else if apiErr != nil {
-		api.WriteWebsocketError(conn, fmt.Errorf("accepting node could not add new member node: %s", apiErr), &commRes)
+	} else if err := json.Unmarshal(bytes, &addMemberRes); err != nil {
+		api.WriteWebsocketError(conn, err, &commRes)
 		return
 	}
 
@@ -278,6 +290,8 @@ func (m *Manager) CommunityAddMemberHandler(w http.ResponseWriter, r *http.Reque
 		api.WriteError(w, http.StatusInternalServerError, err)
 		return
 	}
+
+	m.node.DataProxy.AddPeerNode(nodeID, address)
 
 	commRes := &ctl.CommunityAddMemberResponse{}
 	api.WriteResponse(w, commRes)

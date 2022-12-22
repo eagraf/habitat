@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"fmt"
+	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -44,6 +45,14 @@ func NewNode(port string, priv crypto.PrivKey) (*Node, error) {
 	return node, nil
 }
 
+func (n *Node) ConstructMultiAddr() string {
+	return n.Addr().String() + "/p2p/" + n.Host().ID().Pretty()
+}
+
+func (n *Node) Addr() ma.Multiaddr {
+	return n.listenAddr
+}
+
 func (n *Node) Host() host.Host {
 	return n.host
 }
@@ -64,7 +73,42 @@ func standardHostOpts(priv crypto.PrivKey, listenAddrs []ma.Multiaddr) []config.
 
 }
 
-func LibP2PHTTPRequestWithRandomClient(addr ma.Multiaddr, route string, peerID peer.ID, req *http.Request) (*http.Response, error) {
+func PostLibP2PRequestToAddress(node *Node, proxyAddr string, route string, req *http.Request) ([]byte, error) {
+
+	peerID, addr, err := compass.LibP2PHabitatAPIAddr(proxyAddr)
+	if err != nil {
+		return nil, fmt.Errorf("error decomposing multiaddr: %s", err)
+	}
+
+	var p2pRes *http.Response
+	if node == nil {
+		randRes, err := libP2PHTTPRequestWithRandomClient(addr, route, peerID, req)
+		if err != nil {
+			return nil, err
+		}
+		p2pRes = randRes
+	} else {
+		nodeRes, err := node.PostHTTPRequest(addr, route, peerID, req)
+		if err != nil {
+			return nil, err
+		}
+		p2pRes = nodeRes
+	}
+
+	resBody, err := io.ReadAll(p2pRes.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %s", err)
+	}
+
+	// The request was fine, but we got an error back from server
+	if p2pRes.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%s: %s", p2pRes.Status, string(resBody))
+	}
+
+	return resBody, nil
+}
+
+func libP2PHTTPRequestWithRandomClient(addr ma.Multiaddr, route string, peerID peer.ID, req *http.Request) (*http.Response, error) {
 	// generate a temporary host to make the request
 	ip, err := compass.LocalIPv4()
 	if err != nil {
@@ -89,6 +133,7 @@ func LibP2PHTTPRequestWithRandomClient(addr ma.Multiaddr, route string, peerID p
 }
 
 func libP2PHTTPRequest(addr ma.Multiaddr, host host.Host, route string, peerID peer.ID, req *http.Request) (*http.Response, error) {
+	fmt.Println("libp2phttprequest called on ", addr, host, route, peerID, req)
 	host.Peerstore().AddAddr(peerID, addr, peerstore.PermanentAddrTTL)
 
 	tr := &http.Transport{}
@@ -99,6 +144,7 @@ func libP2PHTTPRequest(addr ma.Multiaddr, host host.Host, route string, peerID p
 	}
 	url, err := url.Parse(fmt.Sprintf("libp2p://%s%s", peerID.String(), route))
 	if err != nil {
+		fmt.Println("error on url parsing")
 		return nil, err
 	}
 	req.URL = url

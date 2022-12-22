@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -15,6 +16,7 @@ import (
 
 func LibP2PHTTPProxy(host host.Host, redirectURL *url.URL) {
 	listener, _ := gostream.Listen(host, p2phttp.DefaultP2PProtocol)
+	fmt.Println("listening on host ", host.Addrs(), "redirect url ", redirectURL)
 	defer listener.Close()
 
 	handler := &httputil.ReverseProxy{
@@ -22,6 +24,8 @@ func LibP2PHTTPProxy(host host.Host, redirectURL *url.URL) {
 			req.URL.Scheme = redirectURL.Scheme
 			req.URL.Host = redirectURL.Host
 			req.URL.Path = redirectURL.Path + req.URL.Path
+
+			fmt.Println("req URL", req.URL, " redirect URL ", redirectURL)
 		},
 		Transport: &http.Transport{
 			Dial: (&net.Dialer{
@@ -32,7 +36,7 @@ func LibP2PHTTPProxy(host host.Host, redirectURL *url.URL) {
 			return nil
 		},
 		ErrorHandler: func(rw http.ResponseWriter, r *http.Request, err error) {
-			log.Error().Err(err).Msgf("libp2p reverse proxy request forwarding error")
+			log.Error().Err(err).Msgf("libp2p reverse proxy request forwarding error. request to: %s", r.URL.String())
 			rw.WriteHeader(http.StatusInternalServerError)
 			rw.Write([]byte(err.Error()))
 		},
