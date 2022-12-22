@@ -3,10 +3,10 @@ package ipfs
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"path"
 )
 
 type Client struct {
@@ -24,17 +24,21 @@ func NewClient(apiURL string) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) getEndpointURL(endpointPath string) *url.URL {
-	urlCopy := *c.apiURL
-	urlCopy.Path = path.Join(urlCopy.Path, endpointPath)
-
-	return &urlCopy
+func (c *Client) getEndpointURL(endpointPath string) string {
+	return c.apiURL.String() + endpointPath
 }
 
 func (c *Client) postRequest(endpointPath string, body, res interface{}) error {
-	resp, err := http.Post(c.getEndpointURL(endpointPath).String(), "raw/json", nil)
+	resp, err := http.Post(c.getEndpointURL(endpointPath), "raw/json", nil)
 	if err != nil {
 		return fmt.Errorf("error creating request: %s", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("got exit code %s from IPFS: %s", resp.Status, body)
 	}
 
 	buf, err := ioutil.ReadAll(resp.Body)
