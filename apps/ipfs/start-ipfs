@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # t is for TCP port, g is for Gateway port, s is for Swarm port
 # TODO later (not obvious how to change the ports programmatically on start up)
