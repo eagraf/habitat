@@ -5,7 +5,7 @@ services:
         volumes:
             - .habitat/procs:/habitat/procs
             - ./dist/bin:/habitat/bin
-        command: /habitat/bin/habitat --hostname localhost
+        command: /habitat/bin/amd64-linux/habitat --hostname localhost
         environment:
             - HABITAT_PATH=/habitat
         image: ubuntu:latest
@@ -18,7 +18,7 @@ services:
         volumes:
             - .habitat/procs:/habitat/procs
             - ./dist/bin:/habitat/bin
-        command: /habitat/bin/habitat --hostname localhost
+        command: /habitat/bin/amd64-linux/habitat --hostname localhost
         environment:
             - HABITAT_PATH=/habitat
         image: ubuntu:latest
@@ -31,7 +31,7 @@ services:
         volumes:
             - .habitat/procs:/habitat/procs
             - ./dist/bin:/habitat/bin
-        command: /habitat/bin/habitat --hostname localhost
+        command: /habitat/bin/amd64-linux/habitat --hostname localhost
         environment:
             - HABITAT_PATH=/habitat
         image: ubuntu:latest
