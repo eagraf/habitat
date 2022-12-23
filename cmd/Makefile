@@ -8,8 +8,9 @@ include ../common.mk
 all:: $(TARGETS)
 
 install::
-	mkdir -p $(BINDIR)
+	mkdir -p $(BINDIR)/amd64-linux
 	$(CP) -r ./bin/$(CURARCH)/* $(BINDIR)
+	$(CP) -r ./bin/amd64-linux/* $(BINDIR)/amd64-linux
 
 clean::
 	rm -rf bin
