@@ -10,8 +10,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/identity"
@@ -77,13 +80,14 @@ func (c *Client) ReadResponse() (*ctl.ResponseWrapper, error) {
 }
 
 func PostRequest(req, res interface{}, route string) (error, error) {
-	return PostRequestToAddress(fmt.Sprintf("%s/%s", compass.DefaultHabitatAPIAddr(), route), req, res)
+	return PostRequestToAddress(fmt.Sprintf("%s%s", compass.DefaultHabitatAPIAddr(), route), req, res)
 }
 
 // PostRequestToAddress posts to the Habitat API. The first error returned is
 // for when the client is somehow unable to successfully make the request.
 // The second error is if the request is successfully made, but the server responds
 // with an error.
+// TODO refactor so everything takes in a http.Client. This allows us to deduplicate libp2p and regular transport requests
 func PostRequestToAddress(address string, req, res interface{}) (error, error) {
 	reqBody, err := json.Marshal(req)
 	if err != nil {
@@ -110,6 +114,72 @@ func PostRequestToAddress(address string, req, res interface{}) (error, error) {
 	}
 
 	return nil, nil
+}
+
+func PostFileToAddress(address string, client *http.Client, file *os.File, res interface{}) (error, error) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", filepath.Base(file.Name()))
+	if err != nil {
+		return fmt.Errorf("error creating form file: %s", err), nil
+	}
+
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return fmt.Errorf("error copying file contents into request: %s", err), nil
+	}
+	err = writer.Close()
+	if err != nil {
+		return err, nil
+	}
+
+	req, err := http.NewRequest("POST", address, body)
+	if err != nil {
+		return err, nil
+	}
+	req.Header.Add("Content-Type", writer.FormDataContentType())
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err, nil
+	}
+
+	resBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading response body: %s", err), nil
+	}
+	// The request was fine, but we got an error back from server
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(string(resBody))
+	}
+
+	err = json.Unmarshal(resBody, res)
+	if err != nil {
+		return fmt.Errorf("error unmarshaling response body into result struct: %s", err), nil
+	}
+
+	return nil, nil
+}
+
+func PostRetrieveFileFromAddress(address string, req interface{}) (io.Reader, error, error) {
+	reqBody, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling POST request body: %s", err), nil
+	}
+
+	r, err := http.Post(address, "application/json", bytes.NewReader(reqBody))
+	if err != nil {
+		return nil, err, nil
+	}
+	if r.StatusCode != http.StatusOK {
+		resBody, err := io.ReadAll(r.Body)
+		if err != nil {
+			return nil, err, nil
+		}
+		return nil, nil, errors.New(string(resBody))
+	}
+
+	return r.Body, nil, nil
 }
 
 func PostLibP2PRequestToAddress(node *p2p.Node, proxyAddr string, route string, req, res interface{}) (error, error) {

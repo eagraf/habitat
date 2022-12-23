@@ -22,6 +22,9 @@ const (
 	CommandCommunityStartProcess = "community_start_process"
 	CommandCommunityStopProcess  = "community_stop_process"
 
+	CommandAddFile = "add_file"
+	CommandGetFile = "get_file"
+
 	StatusOK                  = 0
 	StatusBadRequest          = 1
 	StatusInternalServerError = 2
@@ -61,6 +64,10 @@ func requestType(req interface{}) (string, error) {
 		return CommandCommunityStartProcess, nil
 	case CommunityStopProcessRequest, *CommunityStopProcessRequest, CommunityStopProcessResponse, *CommunityStopProcessResponse:
 		return CommandCommunityStopProcess, nil
+	case AddFileRequest, *AddFileRequest, AddFileResponse, *AddFileResponse:
+		return CommandAddFile, nil
+	case GetFileRequest, *GetFileRequest, GetFileResponse, *GetFileResponse:
+		return CommandGetFile, nil
 	default:
 		return "", fmt.Errorf("type %T is not a valid request type", req)
 	}
