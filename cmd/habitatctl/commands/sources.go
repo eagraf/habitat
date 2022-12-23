@@ -25,8 +25,9 @@ var sourcesReadCmd = &cobra.Command{
 
 		// TODO: take in community ID flag & set
 		id := cmd.Flags().Lookup("id").Value.String()
+		node := cmd.Flags().Lookup("node").Value.String()
 
-		fmt.Printf("Source Read Request for %s\n", id)
+		fmt.Printf("[Sources] read request for $id: %s at node: %s\n", id, node)
 
 		sourcereq := sources.SourceRequest{
 			ID: id,
@@ -58,7 +59,7 @@ var sourcesWriteCmd = &cobra.Command{
 		id := cmd.Flags().Lookup("id").Value.String()
 		data := cmd.Flags().Lookup("data").Value.String()
 
-		fmt.Printf("Source Write Request for %s, %s\n", id, data)
+		fmt.Printf("[Sources] write request for $id: %s, data: %s\n", id, data)
 
 		sourcereq := sources.SourceRequest{
 			ID: id,
@@ -83,9 +84,10 @@ var sourcesWriteCmd = &cobra.Command{
 
 func init() {
 
-	sourcesReadCmd.Flags().String("id", "", "id (name) of the source being read")
+	sourcesReadCmd.Flags().String("id", "", "$id of the source being read")
+	sourcesReadCmd.Flags().String("node", "", "peer id of node to read data from (default local node)")
 	sourcesReadCmd.MarkFlagRequired("id")
-	sourcesWriteCmd.Flags().String("id", "", "id (name) of the source being read")
+	sourcesWriteCmd.Flags().String("id", "", "$id of the source being read")
 	sourcesWriteCmd.Flags().StringP("data", "d", "", "data to write to the source")
 	sourcesWriteCmd.MarkFlagRequired("id")
 	sourcesWriteCmd.MarkFlagRequired("data")

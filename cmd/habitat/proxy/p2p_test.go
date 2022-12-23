@@ -27,7 +27,6 @@ func TestLibP2PProxy(t *testing.T) {
 
 	url, err := url.Parse(redirectedServer.URL)
 	assert.Nil(t, err)
-	fmt.Println("redirected url ", url)
 
 	go LibP2PHTTPProxy(p2pNode.Host(), url)
 

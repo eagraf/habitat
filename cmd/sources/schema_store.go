@@ -51,7 +51,7 @@ func (s *LocalSchemaStore) Add(sch *Schema) error {
 		return err
 	}
 
-	path := getPath(s.path, sch.ID)
+	path := getSourcePath(s.path, GetSchemaIdRaw(sch))
 	err = os.WriteFile(path, bytes, os.ModePerm)
 	if err != nil {
 		log.Error().Msgf("error writing schema to path %s: %s", path, err.Error())
@@ -62,7 +62,7 @@ func (s *LocalSchemaStore) Add(sch *Schema) error {
 }
 
 func (s *LocalSchemaStore) Get(id string) (*Schema, error) {
-	path := getPath(s.path, id)
+	path := getSourcePath(s.path, id)
 
 	// TODO: schema must be explicitly added through schema store: add support in CLI
 	// schema doesn't exist - right now just write it and continue
@@ -93,7 +93,7 @@ func (s *LocalSchemaStore) Resolve(ctx context.Context, id string) *Schema {
 }
 
 func (s *LocalSchemaStore) Delete(id string) error {
-	return os.Remove(getPath(s.path, id))
+	return os.Remove(getSourcePath(s.path, id))
 }
 
 func ValidateSchemaBytes(ctx context.Context, sch *Schema, data []byte) error {

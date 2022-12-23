@@ -59,11 +59,18 @@ func NewDataProxy(ctx context.Context, p2pNode *p2p.Node, dataNodes map[string]*
 		proxyNodes[community] = httputil.NewSingleHostReverseProxy(url)
 	}
 	p := permissions.NewBasicPermissionsManager()
+
+	// TODO: for tests we should really pass in a mock p2pNode instead of doing this hacky stuff
+	nodeId := ""
+	if p2pNode != nil {
+		nodeId = p2pNode.Host().ID().String()
+	}
+
 	return &DataProxy{
 		schemaStore:         sources.NewLocalSchemaStore(compass.LocalSchemaPath()),
 		localSourcesHandler: sources.NewJSONReaderWriter(ctx, compass.LocalSourcesPath()),
 		dataNodes:           proxyNodes,
-		nodeId:              compass.NodeID(),
+		nodeId:              nodeId,
 		p2pNode:             p2pNode,
 		peers:               make(map[string]string),
 		appPermissions:      p,
@@ -106,15 +113,15 @@ func (s *DataProxy) ReadHandler(w http.ResponseWriter, r *http.Request) {
 			api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("cannot find p2p node for peer with node id %s", req.NodeID))
 			return
 		}
-		pid, addr, err := compass.DecomposeNodeMultiaddr(naddr)
-		fmt.Println("pid, addr ", pid, addr)
 		if err != nil {
 			api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error getting habitat libp2p addr: %s", err.Error()))
 			return
 		}
 
 		p2pReq, err := http.NewRequest("POST", "", bytes.NewReader(slurp))
-		fmt.Println("p2pReq", p2pReq)
+		if err != nil {
+			api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("unable to create POST request to forward: %s", err.Error()))
+		}
 
 		bytes, err := p2p.PostLibP2PRequestToAddress(s.p2pNode, naddr, "/data_read", p2pReq)
 		if err != nil {
@@ -209,16 +216,13 @@ func (s *DataProxy) WriteHandler(w http.ResponseWriter, r *http.Request) {
 			// TODO: schema must be explicitly added through schema store: add support in CLI
 			// if schema doesn't exist - right now just write it and continue
 			sch = s.schemaStore.Resolve(r.Context(), sreq.ID)
-			s.schemaStore.Add(sch)
-			// TODO: here need to resolve the schema and add it to the local allow list if the user grants permission
-			// for right now just always resolve and add the schema
-
-			sch = &sources.Schema{}
 			sch.Schema = jsonschema.GetSchemaRegistry().Get(context.Background(), sreq.ID)
 			if sch.Schema == nil {
 				api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("unable to resolve schema for $id: %s", sreq.ID))
-				return
 			}
+			s.schemaStore.Add(sch)
+			// TODO: here need to resolve the schema and add it to the local allow list if the user grants permission
+			// for right now just always resolve and add the schema
 		}
 
 		err = s.localSourcesHandler.Write(sreq.ID, sch, req.Data)
@@ -232,7 +236,19 @@ func (s *DataProxy) WriteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *DataProxy) AddDataNode(communityID string, dataNode *DataServerNode) error {
+func (s *DataProxy) AddSchemaHandler(w http.ResponseWriter, r *http.Request) {
+	return
+}
+
+func (s *DataProxy) LookupSchemaHandler(w http.ResponseWriter, r *http.Request) {
+	return
+}
+
+func (s *DataProxy) DeleteSchemaHandler(w http.ResponseWriter, r *http.Request) {
+	return
+}
+
+func (s *DataProxy) AddDataNode(communityID string, dataNode DataServerNode) error {
 	if _, found := s.dataNodes[communityID]; found {
 		// TODO: allow multiple data nodes per community
 		return fmt.Errorf("error: there already exists a data node for this community")
@@ -248,14 +264,16 @@ func (s *DataProxy) AddDataNode(communityID string, dataNode *DataServerNode) er
 
 func (s *DataProxy) AddPeerNode(nodeId string, addr string) {
 	s.peers[nodeId] = addr
-	fmt.Println("data proxy peer nodes: ", s.peers)
 }
 
 func (s *DataProxy) Serve(ctx context.Context, addr string) {
 
 	r := mux.NewRouter()
-	r.HandleFunc("/read", s.ReadHandler)
-	r.HandleFunc("/write", s.WriteHandler)
+	r.HandleFunc("/read_source", s.ReadHandler)
+	r.HandleFunc("/write_source", s.WriteHandler)
+	r.HandleFunc("/add_schema", s.AddSchemaHandler)
+	r.HandleFunc("/lookup_schema", s.LookupSchemaHandler)
+	r.HandleFunc("/delete_schema", s.DeleteSchemaHandler)
 
 	srv := &http.Server{
 		Handler:      r,

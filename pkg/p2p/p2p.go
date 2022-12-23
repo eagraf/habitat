@@ -133,7 +133,6 @@ func libP2PHTTPRequestWithRandomClient(addr ma.Multiaddr, route string, peerID p
 }
 
 func libP2PHTTPRequest(addr ma.Multiaddr, host host.Host, route string, peerID peer.ID, req *http.Request) (*http.Response, error) {
-	fmt.Println("libp2phttprequest called on ", addr, host, route, peerID, req)
 	host.Peerstore().AddAddr(peerID, addr, peerstore.PermanentAddrTTL)
 
 	tr := &http.Transport{}
@@ -144,7 +143,6 @@ func libP2PHTTPRequest(addr ma.Multiaddr, host host.Host, route string, peerID p
 	}
 	url, err := url.Parse(fmt.Sprintf("libp2p://%s%s", peerID.String(), route))
 	if err != nil {
-		fmt.Println("error on url parsing")
 		return nil, err
 	}
 	req.URL = url

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
@@ -82,10 +81,9 @@ func TestSourcesWriteRead(t *testing.T) {
 	}
 
 	b2, err := json.Marshal(req)
-	fmt.Println(string(b2))
 	require.Nil(t, err)
 
-	rsp, err := http.Post("http://"+addr+"/write", "application/json", bytes.NewReader(b2))
+	rsp, err := http.Post("http://"+addr+"/write_source", "application/json", bytes.NewReader(b2))
 	require.Nil(t, err)
 
 	slurp, err := ioutil.ReadAll(rsp.Body)
@@ -109,7 +107,7 @@ func TestSourcesWriteRead(t *testing.T) {
 	b2, err = json.Marshal(rreq)
 	require.Nil(t, err)
 
-	rsp, err = http.Post("http://"+addr+"/read", "application/json", bytes.NewReader(b2))
+	rsp, err = http.Post("http://"+addr+"/read_source", "application/json", bytes.NewReader(b2))
 	require.Nil(t, err)
 
 	slurp, err = ioutil.ReadAll(rsp.Body)

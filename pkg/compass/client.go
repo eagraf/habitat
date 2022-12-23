@@ -11,6 +11,10 @@ func DefaultHabitatAPIAddr() string {
 	return CustomHabitatAPIAddr("localhost", apiPort)
 }
 
+func DefaultReverseProxyPort() string {
+	return proxyPort
+}
+
 func CustomHabitatAPIAddr(host string, port string) string {
 	return fmt.Sprintf("http://%s:%s", host, port)
 }

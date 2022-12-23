@@ -27,7 +27,11 @@ func NewJSONReaderWriter(ctx context.Context, path string) *JSONReaderWriter {
 }
 
 func (rw *JSONReaderWriter) Read(id string) ([]byte, error) {
-	path := getPath(rw.Path, id)
+
+	// id is the %id field of the Schema
+	// locally, sources are stored by the base64($id) since file paths != URL paths
+
+	path := getSourcePath(rw.Path, id)
 
 	bytes, err := os.ReadFile(path)
 	if err != nil {
@@ -38,7 +42,10 @@ func (rw *JSONReaderWriter) Read(id string) ([]byte, error) {
 }
 
 func (rw *JSONReaderWriter) Write(id string, sch *Schema, data []byte) error {
-	path := getPath(rw.Path, id)
+
+	// id is the %id field of the Schema
+	// locally, sources are stored by the base64($id) since file paths != URL paths
+	path := getSourcePath(rw.Path, id)
 
 	if err := ValidateSchemaBytes(rw.ctx, sch, data); err != nil {
 		return fmt.Errorf("validation err: %s", err.Error())

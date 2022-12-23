@@ -237,6 +237,13 @@ func (m *Manager) CommunityJoinHandler(w http.ResponseWriter, r *http.Request) {
 		log.Error().Msgf("error writing final community join response to websocket: %s", err)
 		return
 	}
+
+	peer, _, err := compass.DecomposeNodeMultiaddr(commReq.AcceptingNodeAddr)
+	if err != nil {
+		log.Error().Msgf("error decomposing accepting node multiaddr: %s", err)
+		return
+	}
+	m.node.DataProxy.AddPeerNode(string(peer.String()), commReq.AcceptingNodeAddr)
 }
 
 func (m *Manager) CommunityStateHandler(w http.ResponseWriter, r *http.Request) {
