@@ -1,37 +1,35 @@
 # Habitat
 
-## Basic Architecture
+Habitat is a personal server for you and your friends. 
 
-Habitat runs as a service that accepts requests from `habitatctl` in a client server model. Habitat will start and stop apps using `start.sh` and `stop.sh` scripts held in subdirectories of the `procs` folder.
+## Build System
+Habitat uses GNU Make as a build system. The majority of the build framework is expressed in `common.mk`, and recursive Makefiles are used to build each subdirectory. On MacOS, `gmake` should be used instead of `make`.
 
-Right now, the flow of data is `notes frontend <- notes backend <- fs library <- ipfs`.
-
-## Building & Running
-
-To rebuild the notes app, run `make install-notes` from the root directory. This will rebuild both the frontend and backend, and then install them in the right directories in `procs`pp, run `make install-notes` from the root directory. This will rebuild both the frontend and backend, and then install them in the right directories in `procs`.
-
-To start the Habitat service, run `make run-dev` in the root directory of this repository. Habitat will start listening for commands from `habitatctl`. `make run-dev` will rebuild the `habitat` and `habitatctl` binaries.
-
-Right now, the two commands `habitatctl` supports are `habitatctl start` and `habitatctl stop` which are used to start and stop apps on Habitat. For example, to start the notes app, you would run the following:
-
+## Building and Running
+The two main binaries that can be built from this repository are `habitat` and `habitatctl`. The `habitat` program is a server, and `habitatctl` is a command line client for interacting with it. To build these, run
 ```
-habitatctl start ipfs
-habitatctl start notes_backend
-habitatctl start nginx
+make -C cmd build
 ```
+For local development, these binaries are placed in the `./dist/bin` folder relative to the project directory. To run the `habitat` server in development mode, run:
+```
+make run
+```
+Then, you can use the `habitatctl` client to interact with the server. For example:
+```
+./dist/bin/habitatctl inspect
+```
+This repository also contains a number of application projects, which are stored under the `./apps` directory. To build and install them for local development, run:
+```
+make -C apps all install
+```
+This will build all application binaries, web files, etc necesarry for `habitat` to start these apps as subprocesses. 
 
-### Development on notes app
+## Source Directories
+We do our best to follow the [standard Go project layout](https://github.com/golang-standards/project-layout). This is a work in progress, and many things should be moved into an `internal` folder that does not yet exist.
 
-For development on the Notes app, its usually better to just have IPFS running via `habitatctl start`, but then running the frontend and backend on your machine.
+## Runtime Directories
+All files generated at runtime are placed under the `HABITAT_PATH` directory. This includes all object store, Raft log stable storage, and node configuration. In development, `HABITAT_PATH` is set to the `.habitat` direectory under the root project directory. On a typical deployed instance of Habitat, it might be found at `~/.habitat` for the user running it.
 
-Frontend:
-Run `npm start` in the frontend directory. This will run the frontend with hot reloading.
+When Habitat is asked to start an application, it searches for an installation of the application using the `HABITAT_APP_PATH` environment variable. `HABITAT_APP_PATH` works similar to the `PATH` variable on Unix like systems. Multiple directores can be listed, separated by semicolons. This arrangement makes it easy for apps in other repositories to be found. Each entry in `HABITAT_APP_PATH` should be a directory with one or more subdirectories, each representing an application. 
 
-Backend:
-Right now, just `./out/backend/notes-api` from the notes app directory. We should find a better way of running this.
-
-### Running community inside Docker Container:
-
-Inside /habitat do `docker build -t habitat .`. Then do `docker run -dp 8009:8008 -dp 6001:6000 habitat`. This maps port 8009 on host --> 8008 on container, so we can send requests to the community backend and port 6001 on host --> 6000 on container so we can send requests to raft.
-
-Then do `make run` to run community on local.
+At the bare minimum, application directories need to provide a `habitat.yaml` file, and a `bin` directory. The `habitat.yaml` acts as an application manifest. Additionally, all binaries produced by the application should be placed under `bin/<arch_os>/<bin_name>` paths. All web content that the app serves should be placed under a directory named `web`. Both `bin` and `web` should sit at the top level in the application directory.
