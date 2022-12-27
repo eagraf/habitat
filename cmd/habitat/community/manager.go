@@ -83,7 +83,20 @@ func NewManager(path string, habitatNode *node.Node) (*Manager, error) {
 
 			err = manager.addCommunity(dir.Name(), stateMachine)
 			if err != nil {
-				log.Error().Err(err).Msgf("error restoring cluster for community %s", dir.Name())
+				return nil, err
+			}
+
+			state, err := stateMachine.State()
+			if err != nil {
+				return nil, err
+			}
+
+			for _, n := range state.Nodes {
+				addrInfo, err := n.AddrInfo()
+				if err != nil {
+					return nil, err
+				}
+				manager.node.P2PNode.AddPeerRoutingInfo(addrInfo)
 			}
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {

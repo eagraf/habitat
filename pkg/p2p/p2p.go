@@ -13,6 +13,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/routing"
 	"github.com/libp2p/go-libp2p/p2p/host/autorelay"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -24,7 +25,10 @@ type Node struct {
 	// When reachable peers join a community this node participates in
 	// they are fed through this channel so that libp2p can attempt to
 	// create a latent relay connection with them.
-	peerChan chan<- peer.AddrInfo
+	reachablePeerChan chan<- peer.AddrInfo
+
+	// router maintains a routing table for known libp2p peer addresses
+	router *HabitatPeerRouting
 }
 
 func NewNode(port string, priv crypto.PrivKey) (*Node, error) {
@@ -34,18 +38,21 @@ func NewNode(port string, priv crypto.PrivKey) (*Node, error) {
 	}
 
 	peerChan := make(chan peer.AddrInfo)
-
+	router := &HabitatPeerRouting{
+		peerRoutingTable: make(map[peer.ID]*peer.AddrInfo),
+	}
 	listen, _ := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%s", ip, port))
-	hostOpts := append(standardHostOpts(priv, []ma.Multiaddr{listen}), relayHostOpts(peerChan)...)
+	hostOpts := append(standardHostOpts(priv, []ma.Multiaddr{listen}), relayHostOpts(peerChan, router)...)
 	h, err := libp2p.New(hostOpts...)
 	if err != nil {
 		return nil, err
 	}
 
 	node := &Node{
-		listenAddr: listen,
-		host:       h,
-		peerChan:   peerChan,
+		listenAddr:        listen,
+		host:              h,
+		reachablePeerChan: peerChan,
+		router:            router,
 	}
 
 	return node, nil
@@ -72,6 +79,10 @@ func (n *Node) AnnounceReachableNode(node *community.Node) error {
 	return nil
 }
 
+func (n *Node) AddPeerRoutingInfo(addrs *peer.AddrInfo) {
+	n.router.peerRoutingTable[addrs.ID] = addrs
+}
+
 func (n *Node) PostHTTPRequest(addr ma.Multiaddr, route string, peerID peer.ID, req *http.Request) (*http.Response, error) {
 	return libP2PHTTPRequest(addr, n.host, route, peerID, req)
 }
@@ -85,7 +96,7 @@ func standardHostOpts(priv crypto.PrivKey, listenAddrs []ma.Multiaddr) []config.
 	}
 }
 
-func relayHostOpts(peerChan chan peer.AddrInfo) []config.Option {
+func relayHostOpts(peerChan chan peer.AddrInfo, router routing.PeerRouting) []config.Option {
 	return []config.Option{
 		//libp2p.Routing(),
 		libp2p.EnableHolePunching(),
@@ -112,5 +123,8 @@ func relayHostOpts(peerChan chan peer.AddrInfo) []config.Option {
 			}()
 			return r
 		}, 0)),
+		libp2p.Routing(func(host.Host) (routing.PeerRouting, error) {
+			return router, nil
+		}),
 	}
 }

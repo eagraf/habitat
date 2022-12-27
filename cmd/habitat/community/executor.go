@@ -38,6 +38,8 @@ func (e *CommunityExecutor) GetTransitionExecutor(transitionType string) Transit
 		return e.StartProcessInstance
 	case state.TransitionTypeStopProcessInstance:
 		return e.StopProcessInstance
+	case state.TransitionTypeAddNode:
+		return e.AddNode
 	case state.TransitionTypeNodeReachability:
 		return e.ReachabilityChange
 	default:
@@ -130,6 +132,22 @@ func (e *CommunityExecutor) StopProcessInstance(update *state.StateUpdate) error
 	return nil
 }
 
+func (e *CommunityExecutor) AddNode(update *state.StateUpdate) error {
+	var transition state.AddNodeTransition
+	err := json.Unmarshal(update.Transition, &transition)
+	if err != nil {
+		return err
+	}
+
+	addrInfo, err := transition.Node.AddrInfo()
+	if err != nil {
+		return err
+	}
+
+	e.node.P2PNode.AddPeerRoutingInfo(addrInfo)
+	return nil
+}
+
 func (e *CommunityExecutor) ReachabilityChange(update *state.StateUpdate) error {
 	var transition state.ReachabilityTransition
 	err := json.Unmarshal(update.Transition, &transition)
@@ -137,23 +155,23 @@ func (e *CommunityExecutor) ReachabilityChange(update *state.StateUpdate) error 
 		return err
 	}
 
-	// Push peer onto queue
-	if transition.Reachability == network.ReachabilityPublic {
-		state, err := update.State()
-		if err != nil {
-			return err
-		}
+	if transition.Reachability != network.ReachabilityPublic {
+		return nil
+	}
 
-		for _, n := range state.Nodes {
-			if n.ID == transition.NodeID {
-				err := e.node.P2PNode.AnnounceReachableNode(n)
-				if err != nil {
-					return err
-				}
+	// Push peer onto queue
+	state, err := update.State()
+	if err != nil {
+		return err
+	}
+
+	for _, n := range state.Nodes {
+		if n.ID == transition.NodeID {
+			err := e.node.P2PNode.AnnounceReachableNode(n)
+			if err != nil {
+				return err
 			}
 		}
-
-		return nil
 	}
 
 	return nil
