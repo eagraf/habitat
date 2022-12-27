@@ -37,12 +37,26 @@ func NewNode(port string, priv crypto.PrivKey) (*Node, error) {
 		return nil, err
 	}
 
+	publicMa, err := compass.PublicRaftMultiaddr()
+	if err != nil {
+		return nil, err
+	}
+
 	peerChan := make(chan peer.AddrInfo)
 	router := &HabitatPeerRouting{
 		peerRoutingTable: make(map[peer.ID]*peer.AddrInfo),
 	}
 	listen, _ := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%s", ip, port))
-	hostOpts := append(standardHostOpts(priv, []ma.Multiaddr{listen}), relayHostOpts(peerChan, router)...)
+	hostOpts := append(
+		standardHostOpts(
+			priv,
+			[]ma.Multiaddr{
+				listen,
+				publicMa,
+			}),
+		relayHostOpts(peerChan, router)...,
+	)
+
 	h, err := libp2p.New(hostOpts...)
 	if err != nil {
 		return nil, err
