@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/structs/community"
 	libp2p "github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/config"
@@ -32,27 +31,16 @@ type Node struct {
 }
 
 func NewNode(port string, priv crypto.PrivKey) (*Node, error) {
-	ip, err := compass.LocalIPv4()
-	if err != nil {
-		return nil, err
-	}
-
-	publicMa, err := compass.PublicRaftMultiaddr()
-	if err != nil {
-		return nil, err
-	}
-
 	peerChan := make(chan peer.AddrInfo)
 	router := &HabitatPeerRouting{
 		peerRoutingTable: make(map[peer.ID]*peer.AddrInfo),
 	}
-	listen, _ := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%s", ip, port))
+	listen, _ := ma.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%s", port))
 	hostOpts := append(
 		standardHostOpts(
 			priv,
 			[]ma.Multiaddr{
 				listen,
-				publicMa,
 			}),
 		relayHostOpts(peerChan, router)...,
 	)
@@ -61,6 +49,7 @@ func NewNode(port string, priv crypto.PrivKey) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(h.Addrs())
 
 	node := &Node{
 		listenAddr:        listen,
