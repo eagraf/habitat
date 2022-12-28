@@ -19,7 +19,7 @@ type JSONReaderWriter struct {
 }
 
 func NewJSONReaderWriter(ctx context.Context, path string) *JSONReaderWriter {
-	err := os.MkdirAll(path, 0777)
+	err := os.MkdirAll(path, 0700)
 	if err != nil {
 		log.Fatal().Msgf("error creating sources path: %s", err.Error())
 	}

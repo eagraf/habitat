@@ -35,7 +35,7 @@ var sourcesReadCmd = &cobra.Command{
 		fmt.Printf("Source Read Request for %s\n", id)
 
 		sourcereq := sources.SourceRequest{
-			Id: id,
+			ID: id,
 		}
 		b, err := json.Marshal(sourcereq)
 		if err != nil {
@@ -44,7 +44,7 @@ var sourcesReadCmd = &cobra.Command{
 		}
 
 		req := dataproxy.ReadRequest{
-			T:    dataproxy.SourcesRequest,
+			Type: dataproxy.SourcesRequest,
 			Body: json.RawMessage(b),
 		}
 		b2, err := json.Marshal(req)
@@ -83,7 +83,7 @@ var sourcesWriteCmd = &cobra.Command{
 		fmt.Printf("Source Write Request for %s, %s\n", id, data)
 
 		sourcereq := sources.SourceRequest{
-			Id: id,
+			ID: id,
 		}
 		b, err := json.Marshal(sourcereq)
 		if err != nil {
@@ -92,7 +92,7 @@ var sourcesWriteCmd = &cobra.Command{
 		}
 
 		req := dataproxy.WriteRequest{
-			T:    dataproxy.SourcesRequest,
+			Type: dataproxy.SourcesRequest,
 			Body: json.RawMessage(b),
 			Data: []byte(data),
 		}

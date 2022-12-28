@@ -38,7 +38,7 @@ var geoSource = &Source{
 
 var geoSchema = &Schema{
 	Schema:      []byte(geoSch),
-	B64id:       EncodeId("test-geo"),
+	B64ID:       EncodeId("test-geo"),
 	Name:        "geography",
 	Description: "test json schema",
 }
@@ -58,7 +58,7 @@ func init() {
 func TestSchemaLookupEmpty(t *testing.T) {
 	defer os.RemoveAll(tempSchPath)
 	sr := NewLocalSchemaStore(tempSchPath)
-	sch, err := sr.Get(geoSchema.B64id)
+	sch, err := sr.Get(geoSchema.B64ID)
 	assert.Nil(t, sch)
 	assert.Equal(t, "stat schema/dGVzdC1nZW8=.json: no such file or directory", err.Error())
 }
@@ -68,7 +68,7 @@ func TestSchemaAdd(t *testing.T) {
 	sr := NewLocalSchemaStore(tempSchPath)
 	err := sr.Add(geoSchema)
 	require.Nil(t, err)
-	sch, err := sr.Get(geoSchema.B64id)
+	sch, err := sr.Get(geoSchema.B64ID)
 	require.Nil(t, err)
 	assert.Equal(t, *geoSchema, *sch)
 	assert.Nil(t, err)
@@ -79,12 +79,12 @@ func TestSchemaDelete(t *testing.T) {
 	sr := NewLocalSchemaStore(tempSchPath)
 	err := sr.Add(geoSchema)
 	assert.Nil(t, err)
-	sch, err := sr.Get(geoSchema.B64id)
+	sch, err := sr.Get(geoSchema.B64ID)
 	assert.Equal(t, geoSchema, sch)
 	assert.Nil(t, err)
-	err = sr.Delete(geoSchema.B64id)
+	err = sr.Delete(geoSchema.B64ID)
 	assert.Nil(t, err)
-	sch, err = sr.Get(geoSchema.B64id)
+	sch, err = sr.Get(geoSchema.B64ID)
 	assert.Nil(t, sch)
 	assert.Equal(t, "stat schema/dGVzdC1nZW8=.json: no such file or directory", err.Error())
 }

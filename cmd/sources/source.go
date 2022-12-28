@@ -9,5 +9,5 @@ type Source struct {
 }
 
 type SourceRequest struct {
-	Id string `json:"sourceID,omitempty"`
+	ID string `json:"sourceID,omitempty"`
 }

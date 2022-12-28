@@ -25,15 +25,15 @@ const (
 )
 
 type ReadRequest struct {
-	T           dataType        `json:"dataType"`
-	CommunityID string          `json:"communityID"`
+	Type        dataType        `json:"data_type"`
+	CommunityID string          `json:"community_id"`
 	Token       string          `json:"token"`
 	Body        json.RawMessage `json:"body"`
 }
 
 type WriteRequest struct {
-	T           dataType        `json:"dataType"`
-	CommunityID string          `json:"communityID"`
+	Type        dataType        `json:"data_type"`
+	CommunityID string          `json:"community_id"`
 	Token       string          `json:"token"`
 	Body        json.RawMessage `json:"body"`
 	Data        []byte          `json:"data"`
@@ -51,11 +51,6 @@ type DataProxy struct {
 	// TODO: need localDb / filesystem if this node serves it
 	// map of community id to data node
 	dataNodes map[string]*httputil.ReverseProxy
-}
-
-func writeHeaderAndBytes(w http.ResponseWriter, status int, resp string) {
-	w.WriteHeader(status)
-	w.Write([]byte(resp))
 }
 
 func NewDataProxy(ctx context.Context, dataNodes map[string]*DataServerNode) *DataProxy {
@@ -82,12 +77,12 @@ func (s *DataProxy) ReadHandler(w http.ResponseWriter, r *http.Request) {
 	var req ReadRequest
 	slurp, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		writeHeaderAndBytes(w, http.StatusBadRequest, fmt.Sprintf("unable read body: %s", err.Error()))
+		http.Error(w, fmt.Sprintf("unable read body: %s", err.Error()), http.StatusBadRequest)
 		return
 	}
 	err = json.Unmarshal(slurp, &req)
 	if err != nil {
-		writeHeaderAndBytes(w, http.StatusBadRequest, fmt.Sprintf("unable read unmarshal json: %s", err.Error()))
+		http.Error(w, fmt.Sprintf("unable read unmarshal json: %s", err.Error()), http.StatusBadRequest)
 		return
 	}
 
@@ -101,24 +96,24 @@ func (s *DataProxy) ReadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch req.T {
+	switch req.Type {
 	case SourcesRequest:
 		// TODO: handle sources that are not stored locally
 		var sreq sources.SourceRequest
 		if err = json.Unmarshal(req.Body, &sreq); err != nil {
-			writeHeaderAndBytes(w, http.StatusBadRequest, fmt.Sprintf("unable to unmarshal json of sources request: %s", err.Error()))
+			http.Error(w, fmt.Sprintf("unable to unmarshal json of sources request: %s", err.Error()), http.StatusBadRequest)
 			return
 		}
 
-		if !s.sourcesPermissions.CheckCanRead(req.Token, sreq.Id) {
-			writeHeaderAndBytes(w, http.StatusInternalServerError, fmt.Sprintf("requester not allowed permission to read source %s", sreq.Id))
+		if !s.sourcesPermissions.CheckCanRead(req.Token, sreq.ID) {
+			http.Error(w, fmt.Sprintf("requester not allowed permission to read source %s", sreq.ID), http.StatusInternalServerError)
 			return
 		}
 
-		bytes, err := s.localSourcesHandler.Read(sreq.Id)
+		bytes, err := s.localSourcesHandler.Read(sreq.ID)
 
 		if err != nil {
-			writeHeaderAndBytes(w, http.StatusInternalServerError, fmt.Sprintf("error reading source: %s", err.Error()))
+			http.Error(w, fmt.Sprintf("error reading source: %s", err.Error()), http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -126,7 +121,7 @@ func (s *DataProxy) ReadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeHeaderAndBytes(w, http.StatusBadRequest, fmt.Sprintf("unrecognized data type: %s", req.T))
+	http.Error(w, fmt.Sprintf("unrecognized data type: %s", req.Type), http.StatusBadRequest)
 }
 
 func (s *DataProxy) WriteHandler(w http.ResponseWriter, r *http.Request) {
@@ -134,12 +129,12 @@ func (s *DataProxy) WriteHandler(w http.ResponseWriter, r *http.Request) {
 	var req WriteRequest
 	slurp, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		writeHeaderAndBytes(w, http.StatusBadRequest, fmt.Sprintf("unable read body: %s", err.Error()))
+		http.Error(w, fmt.Sprintf("unable read body: %s", err.Error()), http.StatusBadRequest)
 		return
 	}
 	err = json.Unmarshal(slurp, &req)
 	if err != nil {
-		writeHeaderAndBytes(w, http.StatusBadRequest, fmt.Sprintf("unable read unmarshal json: %s", err.Error()))
+		http.Error(w, fmt.Sprintf("unable read unmarshal json: %s", err.Error()), http.StatusBadRequest)
 		return
 	}
 
@@ -153,33 +148,33 @@ func (s *DataProxy) WriteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch req.T {
+	switch req.Type {
 	case SourcesRequest:
 		// TODO: handle sources that are not stored locally
 		var sreq sources.SourceRequest
 		if err = json.Unmarshal(req.Body, &sreq); err != nil {
-			writeHeaderAndBytes(w, http.StatusBadRequest, fmt.Sprintf("unable to unmarshal json of sources request: %s", err.Error()))
+			http.Error(w, fmt.Sprintf("unable to unmarshal json of sources request: %s", err.Error()), http.StatusBadRequest)
 			return
 		}
 
-		if !s.sourcesPermissions.CheckCanWrite(req.Token, sreq.Id) {
-			writeHeaderAndBytes(w, http.StatusInternalServerError, fmt.Sprintf("requester not allowed permission to write source %s: %s", sreq.Id, err.Error()))
+		if !s.sourcesPermissions.CheckCanWrite(req.Token, sreq.ID) {
+			http.Error(w, fmt.Sprintf("requester not allowed permission to write source %s: %s", sreq.ID, err.Error()), http.StatusInternalServerError)
 			return
 		}
 
-		sch, err := s.schemaStore.Get(sreq.Id)
+		sch, err := s.schemaStore.Get(sreq.ID)
 
 		if err != nil {
-			writeHeaderAndBytes(w, http.StatusBadRequest, fmt.Sprintf("error finding schema with id %s: %s", sreq.Id, err.Error()))
+			http.Error(w, fmt.Sprintf("error finding schema with id %s: %s", sreq.ID, err.Error()), http.StatusBadRequest)
 			return
 		} else if sch == nil {
-			writeHeaderAndBytes(w, http.StatusBadRequest, fmt.Sprintf("unable to find schema with matching Id"))
+			http.Error(w, fmt.Sprintf("unable to find schema with matching Id"), http.StatusBadRequest)
 			return
 		}
 
-		err = s.localSourcesHandler.Write(sreq.Id, sch, req.Data)
+		err = s.localSourcesHandler.Write(sreq.ID, sch, req.Data)
 		if err != nil {
-			writeHeaderAndBytes(w, http.StatusInternalServerError, fmt.Sprintf("unable to write sources data: %s", err.Error()))
+			http.Error(w, fmt.Sprintf("unable to write sources data: %s", err.Error()), http.StatusInternalServerError)
 			return
 		}
 
@@ -189,7 +184,7 @@ func (s *DataProxy) WriteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *DataProxy) AddDataNode(communityID string, dataNode DataServerNode) error {
+func (s *DataProxy) AddDataNode(communityID string, dataNode *DataServerNode) error {
 	if _, found := s.dataNodes[communityID]; found {
 		// TODO: allow multiple data nodes per community
 		return fmt.Errorf("error: there already exists a data node for this community")

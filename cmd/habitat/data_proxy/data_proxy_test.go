@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -43,7 +42,7 @@ var geoSch = `
 var id = sources.EncodeId(rawid)
 var geoSchema = &sources.Schema{
 	Schema:      []byte(geoSch),
-	B64id:       id,
+	B64ID:       id,
 	Name:        "geography",
 	Description: "test json schema",
 }
@@ -54,9 +53,7 @@ func TestSourcesWriteRead(t *testing.T) {
 
 	p := NewDataProxy(ctx, map[string]*DataServerNode{})
 
-	path := "tmp"
-	os.MkdirAll("tmp", os.ModePerm)
-	defer os.RemoveAll("tmp")
+	path := t.TempDir()
 
 	p.localSourcesHandler = sources.NewJSONReaderWriter(ctx, filepath.Join(path, "sources"))
 	p.schemaStore = sources.NewLocalSchemaStore(filepath.Join(path, "schema"))
@@ -69,13 +66,13 @@ func TestSourcesWriteRead(t *testing.T) {
 	data := `{"latitude":48,"longitude":90}`
 
 	sourcereq := sources.SourceRequest{
-		Id: id,
+		ID: id,
 	}
 	b, err := json.Marshal(sourcereq)
 	require.Nil(t, err)
 
 	req := WriteRequest{
-		T:    SourcesRequest,
+		Type: SourcesRequest,
 		Body: json.RawMessage(b),
 		Data: []byte(data),
 	}
@@ -91,13 +88,13 @@ func TestSourcesWriteRead(t *testing.T) {
 	assert.Equal(t, "success!", string(slurp))
 
 	sourcereq = sources.SourceRequest{
-		Id: id,
+		ID: id,
 	}
 	b, err = json.Marshal(sourcereq)
 	require.Nil(t, err)
 
 	rreq := ReadRequest{
-		T:    SourcesRequest,
+		Type: SourcesRequest,
 		Body: json.RawMessage(b),
 	}
 
