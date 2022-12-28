@@ -6,12 +6,14 @@ import (
 	"fmt"
 
 	"github.com/eagraf/habitat/structs/community"
+	"github.com/libp2p/go-libp2p/core/network"
 )
 
 const (
 	TransitionTypeInitializeCommunity = "initialize_community"
 	TransitionTypeAddMember           = "add_member"
 	TransitionTypeAddNode             = "add_node"
+	TransitionTypeNodeReachability    = "node_reachability"
 
 	TransitionTypeStartProcess         = "start_process"
 	TransitionTypeStopProcess          = "stop_process"
@@ -221,6 +223,43 @@ func (t *AddNodeTransition) Validate(oldState *community.CommunityState) error {
 		}
 	}
 
+	// make sure we have a valid LibP2P reachability value
+	if t.Node.Reachability != network.ReachabilityPrivate.String() &&
+		t.Node.Reachability != network.ReachabilityPublic.String() &&
+		t.Node.Reachability != network.ReachabilityUnknown.String() {
+		return fmt.Errorf("invalid reachability: %s", t.Node.Reachability)
+	}
+
+	return nil
+}
+
+type ReachabilityTransition struct {
+	NodeID       string
+	Reachability network.Reachability
+}
+
+func (t *ReachabilityTransition) Type() string {
+	return TransitionTypeNodeReachability
+}
+
+func (t *ReachabilityTransition) Patch(oldState *community.CommunityState) ([]byte, error) {
+	return []byte(fmt.Sprintf(`[{
+		"op": "replace",
+		"path": "/nodes/%s/reachability",
+		"value": "%s"
+	}]`, t.NodeID, t.Reachability.String())), nil
+}
+
+func (t *ReachabilityTransition) Validate(oldState *community.CommunityState) error {
+	found := false
+	for _, n := range oldState.Nodes {
+		if n.ID == t.NodeID {
+			found = true
+		}
+	}
+	if !found {
+		return fmt.Errorf("node %s could not be found in community %s", t.NodeID, oldState.CommunityID)
+	}
 	return nil
 }
 

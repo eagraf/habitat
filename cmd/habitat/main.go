@@ -17,13 +17,16 @@ func main() {
 	pflag.String("hostname", "", "hostname that this node can be reached at")
 	pflag.BoolP("docker", "d", false, "use docker host rather than localhost")
 	pflag.String("data-proxy-port", ":8675", "port used by the data proxy server")
+	pflag.StringP("p2p-port", "p", "6000", "port used by the libp2p host")
 
 	pflag.Parse()
 	viper.BindPFlags(pflag.CommandLine)
 
 	initHabitatDirectory()
 
-	node, err := node.NewNode()
+	p2pPort := viper.GetString("p2p-port")
+
+	node, err := node.NewNode(p2pPort)
 	if err != nil {
 		log.Fatal().Err(err).Msgf("error starting Habitat node")
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -26,7 +27,6 @@ const (
 	nodeIDRelativePath = "node_id"
 
 	apiPort = "2040"
-	p2pPort = "6000"
 )
 
 func HabitatPath() string {
@@ -174,6 +174,8 @@ func PublicRaftMultiaddr() (multiaddr.Multiaddr, error) {
 	if ip.To4() == nil {
 		ipVersion = "ip6"
 	}
+
+	p2pPort := viper.GetString("p2p-port")
 	addr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/%s/%s/tcp/%s/p2p/%s", ipVersion, ip.String(), p2pPort, PeerID().String()))
 	if err != nil {
 		return nil, err

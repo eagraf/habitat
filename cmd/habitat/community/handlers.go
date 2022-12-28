@@ -185,6 +185,9 @@ func (m *Manager) CommunityJoinHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	newNode.PeerID = m.node.PeerID.String()
+	newNode.Addresses = m.node.Addrs()
+	newNode.Reachability = m.reachability.String()
 	addMemberReq := &ctl.CommunityAddMemberRequest{
 		CommunityID:        commReq.CommunityID,
 		NodeID:             compass.PeerID().String(),

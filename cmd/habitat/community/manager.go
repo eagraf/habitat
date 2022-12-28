@@ -19,6 +19,8 @@ import (
 	"github.com/eagraf/habitat/pkg/ipfs"
 	"github.com/eagraf/habitat/structs/community"
 	"github.com/google/uuid"
+	"github.com/libp2p/go-libp2p/core/event"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/rs/zerolog/log"
 )
 
@@ -30,6 +32,9 @@ type Manager struct {
 	clusterManager  *cluster.ClusterManager
 	communities     map[string]*state.CommunityStateMachine
 	communitiesLock *sync.Mutex
+
+	nodeID       string
+	reachability network.Reachability
 }
 
 func NewManager(path string, habitatNode *node.Node) (*Manager, error) {
@@ -51,6 +56,8 @@ func NewManager(path string, habitatNode *node.Node) (*Manager, error) {
 		clusterManager:  clusterManager,
 		communities:     make(map[string]*state.CommunityStateMachine),
 		communitiesLock: &sync.Mutex{},
+
+		nodeID: compass.NodeID(),
 	}
 
 	// Restart any existing communities
@@ -76,12 +83,50 @@ func NewManager(path string, habitatNode *node.Node) (*Manager, error) {
 
 			err = manager.addCommunity(dir.Name(), stateMachine)
 			if err != nil {
-				log.Error().Err(err).Msgf("error restoring cluster for community %s", dir.Name())
+				return nil, err
+			}
+
+			state, err := stateMachine.State()
+			if err != nil {
+				return nil, err
+			}
+
+			for _, n := range state.Nodes {
+				addrInfo, err := n.AddrInfo()
+				if err != nil {
+					return nil, err
+				}
+				manager.node.P2PNode.AddPeerRoutingInfo(addrInfo)
 			}
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
+
+	// Subscribe to reachability updates from LibP2P. This lets us know when the node becomes dialable
+	// over the public internet. When this occurs, this status is announced via the community state machine.
+	sub, err := habitatNode.P2PNode.ReachabilitySubscription()
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		for e := range sub.Out() {
+			ev := e.(event.EvtLocalReachabilityChanged)
+
+			for communityID, c := range manager.communities {
+
+				_, err := c.ProposeTransitions([]state.CommunityStateTransition{
+					&state.ReachabilityTransition{
+						NodeID:       manager.nodeID,
+						Reachability: ev.Reachability,
+					},
+				})
+				if err != nil {
+					log.Error().Err(err).Msgf("error updating node reachability in community %s", communityID)
+				}
+			}
+		}
+	}()
 
 	return manager, nil
 }
@@ -142,6 +187,9 @@ func (m *Manager) CreateCommunity(name string, createIpfs bool, member *communit
 	}
 
 	// The first state transition in a new community is alway initialize_community, which sets the community_id
+	node.PeerID = m.node.PeerID.String()
+	node.Addresses = m.node.Addrs()
+	node.Reachability = m.reachability.String()
 	transitions := []state.CommunityStateTransition{
 		&state.InitializeCommunityTransition{
 			CommunityID: communityID,
@@ -296,6 +344,19 @@ func (m *Manager) addCommunity(communityID string, communityState *state.Communi
 		return fmt.Errorf("community %s is already running", communityID)
 	}
 	m.communitiesLock.Unlock()
+
+	state, err := communityState.State()
+	if err != nil {
+		return err
+	}
+	for _, n := range state.Nodes {
+		if n.Reachability == network.ReachabilityPublic.String() {
+			err := m.node.P2PNode.AnnounceReachableNode(n)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
