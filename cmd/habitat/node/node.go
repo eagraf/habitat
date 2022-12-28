@@ -25,8 +25,6 @@ import (
 const (
 	ReverseProxyHost = "0.0.0.0"
 	ReverseProxyPort = "2041"
-
-	P2PPort = "6000"
 )
 
 type Node struct {
@@ -39,14 +37,14 @@ type Node struct {
 	DataProxy      *dataproxy.DataProxy
 }
 
-func NewNode() (*Node, error) {
+func NewNode(port string) (*Node, error) {
 	priv, _ := compass.GetPeerIDKeyPair()
 
-	p2pNode, err := p2p.NewNode(P2PPort, priv)
+	p2pNode, err := p2p.NewNode(port, priv)
 	if err != nil {
 		return nil, err
 	}
-	log.Info().Msgf("starting LibP2P node with peer ID %s listening at port %s", p2pNode.Host().ID().Pretty(), P2PPort)
+	log.Info().Msgf("starting LibP2P node with peer ID %s listening at port %s", p2pNode.Host().ID().Pretty(), port)
 
 	procsDir := compass.ProcsPath()
 	reverseProxy := proxy.NewServer()

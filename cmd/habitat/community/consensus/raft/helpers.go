@@ -8,6 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -16,8 +17,6 @@ const (
 	Protocol   = "http"
 
 	MultiplexerPort = "6000"
-	RPCPort         = "6001"
-	P2PPort         = "6000"
 )
 
 func getMultiplexerAddress() string {
@@ -48,6 +47,7 @@ func getClusterProtocol(communityID string) protocol.ID {
 	return protocol.ID(filepath.Join("/habitat-raft", "0.0.1", communityID))
 }
 
+// TODO this should be integrated into compass, do after IPFS pr is in
 func getPublicMultiaddr() (ma.Multiaddr, error) {
 	ip, err := compass.PublicIP()
 	if err != nil {
@@ -57,7 +57,8 @@ func getPublicMultiaddr() (ma.Multiaddr, error) {
 	if ip.To4() == nil {
 		ipVersion = "ip6"
 	}
-	addr, err := ma.NewMultiaddr(fmt.Sprintf("/%s/%s/tcp/%s", ipVersion, ip.String(), P2PPort))
+	p2pPort := viper.GetString("p2p-port")
+	addr, err := ma.NewMultiaddr(fmt.Sprintf("/%s/%s/tcp/%s", ipVersion, ip.String(), p2pPort))
 	if err != nil {
 		return nil, err
 	}
