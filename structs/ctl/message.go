@@ -70,9 +70,9 @@ func requestType(req interface{}) (string, error) {
 		return CommandAddFile, nil
 	case GetFileRequest, *GetFileRequest, GetFileResponse, *GetFileResponse:
 		return CommandGetFile, nil
-	case DataReadRequest, *DataReadRequest:
+	case DataReadRequest, *DataReadRequest, DataReadResponse, *DataReadResponse:
 		return CommandDataServerRead, nil
-	case DataWriteRequest, *DataWriteRequest:
+	case DataWriteRequest, *DataWriteRequest, DataWriteResponse, *DataWriteResponse:
 		return CommandDataServerWrite, nil
 	default:
 		return "", fmt.Errorf("type %T is not a valid request type", req)

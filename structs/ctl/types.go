@@ -171,8 +171,7 @@ type DataReadRequest struct {
 }
 
 type DataReadResponse struct {
-	Error error  `json:"error"`
-	Data  []byte `json:"data"`
+	Data []byte `json:"data"`
 }
 
 type DataWriteRequest struct {
@@ -182,6 +181,8 @@ type DataWriteRequest struct {
 	Body        json.RawMessage `json:"body"`
 	Data        []byte          `json:"data"`
 }
+
+type DataWriteResponse struct{}
 
 type AddFileRequest struct {
 }

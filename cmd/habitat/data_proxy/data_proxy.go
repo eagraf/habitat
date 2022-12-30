@@ -55,30 +55,15 @@ func NewDataProxy(ctx context.Context, dataNodes map[string]*DataServerNode) *Da
 
 func (s *DataProxy) ReadHandler(w http.ResponseWriter, r *http.Request) {
 
-	writeError := func(e error) {
-		res := &ctl.DataReadResponse{
-			Error: e,
-		}
-
-		b, err := json.Marshal(res)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("unable to marshal json of sources response: %s", err.Error()), http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write(b)
-	}
-
 	var req ctl.DataReadRequest
 	slurp, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		writeError(fmt.Errorf("unable read body: %s", err.Error()))
+		api.WriteError(w, http.StatusBadRequest, fmt.Errorf("unable read body: %s", err.Error()))
 		return
 	}
 	err = json.Unmarshal(slurp, &req)
 	if err != nil {
-		writeError(fmt.Errorf("unable read unmarshal json: %s", err.Error()))
+		api.WriteError(w, http.StatusBadRequest, fmt.Errorf("unable read unmarshal json: %s", err.Error()))
 		return
 	}
 
@@ -86,7 +71,7 @@ func (s *DataProxy) ReadHandler(w http.ResponseWriter, r *http.Request) {
 		if proxy, ok := s.dataNodes[req.CommunityID]; ok {
 			proxy.ServeHTTP(w, r)
 		} else {
-			writeError(fmt.Errorf("error: could not locate data server for this community %s", req.CommunityID))
+			api.WriteError(w, http.StatusBadRequest, fmt.Errorf("error: could not locate data server for this community %s", req.CommunityID))
 		}
 		return
 	}
@@ -96,35 +81,27 @@ func (s *DataProxy) ReadHandler(w http.ResponseWriter, r *http.Request) {
 		// TODO: handle sources that are not stored locally
 		var sreq sources.SourceRequest
 		if err = json.Unmarshal(req.Body, &sreq); err != nil {
-			writeError(fmt.Errorf("unable to unmarshal json of sources request: %s", err.Error()))
+			api.WriteError(w, http.StatusBadRequest, fmt.Errorf("unable to unmarshal json of sources request: %s", err.Error()))
 			return
 		}
 
 		if !s.sourcesPermissions.CheckCanRead(req.Token, sreq.ID) {
-			writeError(fmt.Errorf("requester not allowed permission to read source %s", sreq.ID))
+			api.WriteError(w, http.StatusMethodNotAllowed, fmt.Errorf("requester not allowed permission to read source %s", sreq.ID))
 			return
 		}
 
 		bytes, err := s.localSourcesHandler.Read(sreq.ID)
 
 		if err != nil {
-			writeError(fmt.Errorf("error reading source: %s", err.Error()))
+			api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error reading source: %s", err.Error()))
 			return
 		}
 
 		res := ctl.DataReadResponse{
-			Error: nil,
-			Data:  bytes,
+			Data: bytes,
 		}
 
-		b, err := json.Marshal(res)
-		if err != nil {
-			writeError(fmt.Errorf("unable to marshal json of sources response: %s", err.Error()))
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		w.Write(b)
+		api.WriteResponse(w, res)
 		return
 	}
 
@@ -185,8 +162,8 @@ func (s *DataProxy) WriteHandler(w http.ResponseWriter, r *http.Request) {
 			api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("unable to write sources data: %s", err.Error()))
 			return
 		}
-		w.WriteHeader(http.StatusOK)
-		api.WriteResponse(w, "success!")
+
+		api.WriteResponse(w, &ctl.DataWriteResponse{})
 		return
 	}
 }

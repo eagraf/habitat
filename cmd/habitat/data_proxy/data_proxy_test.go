@@ -87,11 +87,9 @@ func TestSourcesWriteRead(t *testing.T) {
 	slurp, err := ioutil.ReadAll(rsp.Body)
 	require.Nil(t, err)
 
-	var res string
+	var res ctl.DataWriteResponse
 	err = json.Unmarshal(slurp, &res)
 	require.Nil(t, err)
-
-	assert.Equal(t, res, "success!")
 
 	sourcereq = sources.SourceRequest{
 		ID: id,
@@ -117,6 +115,5 @@ func TestSourcesWriteRead(t *testing.T) {
 	err = json.Unmarshal(slurp, &rres)
 	assert.Nil(t, err)
 
-	assert.Nil(t, rres.Error)
 	assert.Equal(t, data, string(rres.Data))
 }
