@@ -2,10 +2,8 @@ package sources
 
 import (
 	"context"
-	"errors"
-	"io/fs"
+	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/rs/zerolog/log"
 )
@@ -14,46 +12,42 @@ import (
 	JSON files implementation for sources. (key-value pairs)
 */
 
-// Shared functions
-func getPath(basePath string, source Source) string {
-	return filepath.Join(basePath, source.Name+".json")
-}
-
 // JSON source reader
-type JSONReader struct {
+type JSONReaderWriter struct {
+	ctx  context.Context
 	Path string // base path to the files
 }
 
-func NewJSONReader(path string) *JSONReader {
-	return &JSONReader{Path: path}
-}
-
-func (R *JSONReader) Read(req Source) (SourceData, error) {
-	path := getPath(R.Path, req)
-	bytes, err := os.ReadFile(path)
-	return SourceData(bytes), err
-}
-
-// JSON source writer
-type JSONWriter struct {
-	Path string // base path to the files
-}
-
-func NewJSONWriter(path string) *JSONWriter {
-	return &JSONWriter{Path: path}
-}
-
-func (W *JSONWriter) Write(source Source, data SourceData) error {
-	path := getPath(W.Path, source)
-	verrs, err := source.Schema.ValidateBytes(context.Background(), []byte(data))
+func NewJSONReaderWriter(ctx context.Context, path string) *JSONReaderWriter {
+	err := os.MkdirAll(path, 0700)
 	if err != nil {
-		log.Error().Msgf("Error validating schema bytes: %s", err.Error())
-	} else if len(verrs) > 0 {
-		for _, e := range verrs {
-			log.Error().Msgf("KeyError when validating source data against schema: %s", e.Error())
-		}
-		return errors.New("Unable to validate schema")
+		log.Fatal().Msgf("error creating sources path: %s", err.Error())
 	}
-	err = os.WriteFile(path, []byte(data), fs.FileMode(0600))
-	return err
+	return &JSONReaderWriter{ctx: ctx, Path: path}
+}
+
+func (rw *JSONReaderWriter) Read(id string) ([]byte, error) {
+	path := getPath(rw.Path, id)
+
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes, err
+}
+
+func (rw *JSONReaderWriter) Write(id string, sch *Schema, data []byte) error {
+	path := getPath(rw.Path, id)
+
+	if err := ValidateSchemaBytes(rw.ctx, sch, data); err != nil {
+		return fmt.Errorf("validation err: %s", err.Error())
+	}
+
+	err := os.WriteFile(path, data, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	log.Info().Msgf("wrote sources to %s", path)
+	return nil
 }

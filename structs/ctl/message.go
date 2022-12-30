@@ -21,6 +21,8 @@ const (
 	CommandCommunityPS           = "community_ps"
 	CommandCommunityStartProcess = "community_start_process"
 	CommandCommunityStopProcess  = "community_stop_process"
+	CommandDataServerRead        = "data_read"
+	CommandDataServerWrite       = "data_write"
 
 	CommandAddFile = "add_file"
 	CommandGetFile = "get_file"
@@ -68,6 +70,10 @@ func requestType(req interface{}) (string, error) {
 		return CommandAddFile, nil
 	case GetFileRequest, *GetFileRequest, GetFileResponse, *GetFileResponse:
 		return CommandGetFile, nil
+	case DataReadRequest, *DataReadRequest, DataReadResponse, *DataReadResponse:
+		return CommandDataServerRead, nil
+	case DataWriteRequest, *DataWriteRequest, DataWriteResponse, *DataWriteResponse:
+		return CommandDataServerWrite, nil
 	default:
 		return "", fmt.Errorf("type %T is not a valid request type", req)
 	}
