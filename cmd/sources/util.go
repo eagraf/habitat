@@ -6,8 +6,8 @@ import (
 )
 
 // Shared functions
-func getPath(basePath string, b64id string) string {
-	p := filepath.Join(basePath, string(b64id)+".json")
+func getPath(basePath string, id string) string {
+	p := filepath.Join(basePath, EncodeId(id)+".json")
 	return p
 }
 

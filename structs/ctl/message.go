@@ -21,6 +21,8 @@ const (
 	CommandCommunityPS           = "community_ps"
 	CommandCommunityStartProcess = "community_start_process"
 	CommandCommunityStopProcess  = "community_stop_process"
+	CommandDataServerRead        = "data/read"
+	CommandDataServerWrite       = "data/write"
 
 	CommandAddFile = "add_file"
 	CommandGetFile = "get_file"

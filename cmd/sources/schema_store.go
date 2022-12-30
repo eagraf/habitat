@@ -12,15 +12,15 @@ import (
 )
 
 type Schema struct {
-	Schema      []byte `json:"schema"`    // the jsonschema.Schema
-	B64ID       string `json:"base64_id"` // base64 encoded jsonschema $id field
-	Name        string `json:"name"`      // for easy access
-	Description string `json:"desc"`      // for easy access
+	Schema      *jsonschema.Schema `json:"schema"` // the jsonschema.Schema
+	ID          string             `json:"id"`     // base64 encoded jsonschema $id field
+	Name        string             `json:"name"`   // for easy access
+	Description string             `json:"desc"`   // for easy access
 }
 
 func (s *Schema) JsonSchema() *jsonschema.Schema {
 	// TODO: don't panic or recover() if schema parsing fails
-	return jsonschema.Must(string(s.Schema))
+	return s.Schema
 }
 
 type SchemaStore interface {
@@ -51,11 +51,12 @@ func (s *LocalSchemaStore) Add(sch *Schema) error {
 		return err
 	}
 
-	err = os.WriteFile(getPath(s.path, sch.B64ID), bytes, os.ModePerm)
+	path := getPath(s.path, sch.ID)
+	err = os.WriteFile(path, bytes, os.ModePerm)
 	if err != nil {
-		log.Error().Msgf("error writing schema to path %s: %s", getPath(s.path, sch.B64ID), err.Error())
+		log.Error().Msgf("error writing schema to path %s: %s", path, err.Error())
 	} else {
-		log.Info().Msgf("error wrote schema to path %s", getPath(s.path, sch.B64ID))
+		log.Info().Msgf("wrote schema to path %s", path)
 	}
 	return err
 }
@@ -64,9 +65,10 @@ func (s *LocalSchemaStore) Get(id string) (*Schema, error) {
 
 	path := getPath(s.path, id)
 
-	// schema doesn't exist
+	// TODO: schema must be explicitly added through schema store: add support in CLI
+	// schema doesn't exist - right now just write it and continue
 	if _, err := os.Stat(path); err != nil {
-		return nil, err
+		return nil, nil
 	}
 
 	bytes, err := os.ReadFile(path)
@@ -80,6 +82,14 @@ func (s *LocalSchemaStore) Get(id string) (*Schema, error) {
 	}
 
 	return &sch, err
+}
+
+func (s *LocalSchemaStore) Resolve(ctx context.Context, id string) *Schema {
+	// TODO handle errors when .Get() fails
+	return &Schema{
+		Schema: jsonschema.GetSchemaRegistry().Get(ctx, id),
+		ID:     id,
+	}
 }
 
 func (s *LocalSchemaStore) Delete(id string) error {

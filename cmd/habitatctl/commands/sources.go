@@ -1,16 +1,12 @@
 package commands
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 
 	dataproxy "github.com/eagraf/habitat/cmd/habitat/data_proxy"
 	"github.com/eagraf/habitat/cmd/sources"
-	"github.com/eagraf/habitat/pkg/compass"
-	"github.com/rs/zerolog/log"
+	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +25,6 @@ var sourcesReadCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// TODO: take in community ID flag & set
-		host := cmd.Flags().Lookup("host").Value.String()
 		id := cmd.Flags().Lookup("id").Value.String()
 
 		fmt.Printf("Source Read Request for %s\n", id)
@@ -47,26 +42,11 @@ var sourcesReadCmd = &cobra.Command{
 			Type: dataproxy.SourcesRequest,
 			Body: json.RawMessage(b),
 		}
-		b2, err := json.Marshal(req)
-		if err != nil {
-			fmt.Println("unable to marshal source request ", req, " err: ", err.Error())
-			return
-		}
 
-		target := fmt.Sprintf("http://%s:%s/read", host, compass.SourcesServerPort())
-		rsp, err := http.Post(target, "application/json", bytes.NewBuffer(b2))
-		if err != nil {
-			log.Error().Msgf("error writing POST to data proxy: %s", err.Error())
-			return
-		}
+		var res dataproxy.ReadResponse
+		postRequest(ctl.CommandDataServerRead, req, &res)
 
-		slurp, err := ioutil.ReadAll(rsp.Body)
-		if err != nil {
-			log.Error().Msgf("error reading response from data proxy: %s", err.Error())
-			return
-		}
-
-		fmt.Printf("Read Data: %s\n", string(slurp))
+		fmt.Printf("Read Data: %s\n", res)
 	},
 }
 
@@ -76,7 +56,6 @@ var sourcesWriteCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// TODO: take in community ID flag & set
-		host := cmd.Flags().Lookup("host").Value.String()
 		id := cmd.Flags().Lookup("id").Value.String()
 		data := cmd.Flags().Lookup("data").Value.String()
 
@@ -96,26 +75,10 @@ var sourcesWriteCmd = &cobra.Command{
 			Body: json.RawMessage(b),
 			Data: []byte(data),
 		}
-		b2, err := json.Marshal(req)
-		if err != nil {
-			fmt.Println("unable to marshal source request ", req, " err: ", err.Error())
-			return
-		}
 
-		target := fmt.Sprintf("http://%s:%s/write", host, compass.SourcesServerPort())
-		rsp, err := http.Post(target, "application/json", bytes.NewBuffer(b2))
-		if err != nil {
-			log.Error().Msgf("error writing POST to data proxy: %s", err.Error())
-			return
-		}
-
-		slurp, err := ioutil.ReadAll(rsp.Body)
-		if err != nil {
-			log.Error().Msgf("error reading response from data proxy: %s", err.Error())
-			return
-		}
-
-		fmt.Printf("Wrote Data: %s\n", string(slurp))
+		var res dataproxy.WriteResponse
+		postRequest(ctl.CommandDataServerWrite, req, &res)
+		fmt.Printf("Wrote Data: %s\n", res)
 	},
 }
 
@@ -127,8 +90,6 @@ func init() {
 	sourcesWriteCmd.Flags().StringP("data", "d", "", "data to write to the source")
 	sourcesWriteCmd.MarkFlagRequired("id")
 	sourcesWriteCmd.MarkFlagRequired("data")
-
-	sourcesCmd.PersistentFlags().String("host", "localhost", "the host sources server")
 
 	sourcesCmd.AddCommand(sourcesReadCmd)
 	sourcesCmd.AddCommand(sourcesWriteCmd)

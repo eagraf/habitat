@@ -20,7 +20,6 @@ import (
 	"github.com/eagraf/habitat/structs/ctl"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/rs/zerolog/log"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -85,10 +84,6 @@ func (n *Node) Start() error {
 		log.Fatal().Err(err)
 	}
 	go proxy.LibP2PHTTPProxy(n.P2PNode.Host(), redirectURL)
-
-	// Start data proxy
-	sourcesPort := viper.GetString("data-proxy-port")
-	go n.DataProxy.Serve(context.Background(), sourcesPort)
 
 	// Start process manager
 	go n.ProcessManager.ListenForErrors()

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/eagraf/habitat/cmd/sources"
+	"github.com/qri-io/jsonschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -41,8 +42,8 @@ var geoSch = `
 
 var id = sources.EncodeId(rawid)
 var geoSchema = &sources.Schema{
-	Schema:      []byte(geoSch),
-	B64ID:       id,
+	Schema:      jsonschema.Must(geoSch),
+	ID:          rawid,
 	Name:        "geography",
 	Description: "test json schema",
 }

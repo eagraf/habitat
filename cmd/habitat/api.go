@@ -33,6 +33,8 @@ func getRouter(n *node.Node, cm *community.Manager) *mux.Router {
 	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityPS), cm.CommunityPSHandler)
 	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityStartProcess), cm.CommunityStartProcessHandler)
 	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityStopProcess), cm.CommunityStopProcessHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandDataServerRead), n.DataProxy.ReadHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandDataServerWrite), n.DataProxy.WriteHandler)
 
 	router.HandleFunc(ctl.GetRoute(ctl.CommandAddFile), n.FS.AddHandler)
 	router.HandleFunc(ctl.GetRoute(ctl.CommandGetFile), n.FS.GetHandler)
