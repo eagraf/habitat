@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	dataproxy "github.com/eagraf/habitat/cmd/habitat/data_proxy"
 	"github.com/eagraf/habitat/cmd/sources"
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/spf13/cobra"
@@ -38,12 +37,12 @@ var sourcesReadCmd = &cobra.Command{
 			return
 		}
 
-		req := dataproxy.ReadRequest{
-			Type: dataproxy.SourcesRequest,
+		req := ctl.DataReadRequest{
+			Type: ctl.SourcesRequest,
 			Body: json.RawMessage(b),
 		}
 
-		var res dataproxy.ReadResponse
+		var res ctl.DataReadResponse
 		postRequest(ctl.CommandDataServerRead, req, &res)
 
 		fmt.Printf("Read Data: %s\n", res)
@@ -70,13 +69,13 @@ var sourcesWriteCmd = &cobra.Command{
 			return
 		}
 
-		req := dataproxy.WriteRequest{
-			Type: dataproxy.SourcesRequest,
+		req := ctl.DataWriteRequest{
+			Type: ctl.SourcesRequest,
 			Body: json.RawMessage(b),
 			Data: []byte(data),
 		}
 
-		var res dataproxy.WriteResponse
+		var res string
 		postRequest(ctl.CommandDataServerWrite, req, &res)
 		fmt.Printf("Wrote Data: %s\n", res)
 	},

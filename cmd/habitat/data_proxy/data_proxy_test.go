@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/eagraf/habitat/cmd/sources"
+	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/qri-io/jsonschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -71,8 +72,8 @@ func TestSourcesWriteRead(t *testing.T) {
 	b, err := json.Marshal(sourcereq)
 	require.Nil(t, err)
 
-	req := WriteRequest{
-		Type: SourcesRequest,
+	req := ctl.DataWriteRequest{
+		Type: ctl.SourcesRequest,
 		Body: json.RawMessage(b),
 		Data: []byte(data),
 	}
@@ -86,9 +87,11 @@ func TestSourcesWriteRead(t *testing.T) {
 	slurp, err := ioutil.ReadAll(rsp.Body)
 	require.Nil(t, err)
 
-	var res WriteResponse
-	json.Unmarshal(slurp, &res)
-	assert.Nil(t, res.Error)
+	var res string
+	err = json.Unmarshal(slurp, &res)
+	require.Nil(t, err)
+
+	assert.Equal(t, res, "success!")
 
 	sourcereq = sources.SourceRequest{
 		ID: id,
@@ -96,8 +99,8 @@ func TestSourcesWriteRead(t *testing.T) {
 	b, err = json.Marshal(sourcereq)
 	require.Nil(t, err)
 
-	rreq := ReadRequest{
-		Type: SourcesRequest,
+	rreq := ctl.DataReadRequest{
+		Type: ctl.SourcesRequest,
 		Body: json.RawMessage(b),
 	}
 
@@ -110,7 +113,7 @@ func TestSourcesWriteRead(t *testing.T) {
 	slurp, err = ioutil.ReadAll(rsp.Body)
 	assert.Nil(t, err)
 
-	var rres ReadResponse
+	var rres ctl.DataReadResponse
 	err = json.Unmarshal(slurp, &rres)
 	assert.Nil(t, err)
 

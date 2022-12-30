@@ -1,6 +1,10 @@
 package ctl
 
-import "github.com/eagraf/habitat/structs/community"
+import (
+	"encoding/json"
+
+	"github.com/eagraf/habitat/structs/community"
+)
 
 type InspectRequest struct{}
 
@@ -151,6 +155,32 @@ type SigningCertMsg struct {
 	NodeCertificate []byte `json:"node_certificate"`
 
 	WebsocketControl
+}
+
+type dataType string
+
+const (
+	SourcesRequest dataType = "sources"
+)
+
+type DataReadRequest struct {
+	Type        dataType        `json:"data_type"`
+	CommunityID string          `json:"community_id"`
+	Token       string          `json:"token"`
+	Body        json.RawMessage `json:"body"`
+}
+
+type DataReadResponse struct {
+	Error error  `json:"error"`
+	Data  []byte `json:"data"`
+}
+
+type DataWriteRequest struct {
+	Type        dataType        `json:"data_type"`
+	CommunityID string          `json:"community_id"`
+	Token       string          `json:"token"`
+	Body        json.RawMessage `json:"body"`
+	Data        []byte          `json:"data"`
 }
 
 type AddFileRequest struct {
