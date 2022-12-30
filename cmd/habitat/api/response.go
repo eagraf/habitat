@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// TODO this function should be removed and replaced by calls to http.Error
 func WriteError(w http.ResponseWriter, code int, err error) {
 	w.WriteHeader(code)
 	w.Write([]byte(err.Error() + "\n"))

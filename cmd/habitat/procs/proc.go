@@ -20,7 +20,8 @@ type Proc struct {
 	cmd     *exec.Cmd
 	errChan chan ProcError
 
-	config *configuration.App
+	config  *configuration.App
+	stopped bool
 }
 
 func NewProc(name, cmdPath string, errChan chan ProcError, env []string, flags []string, args []string, config *configuration.App) *Proc {
@@ -60,7 +61,7 @@ func (p *Proc) Start() error {
 
 	go func() {
 		err := cmd.Wait()
-		if err != nil {
+		if err != nil && !p.stopped {
 			if _, ok := err.(*exec.ExitError); ok {
 				procErr := ProcError{
 					proc:    p,
@@ -76,6 +77,7 @@ func (p *Proc) Start() error {
 }
 
 func (p *Proc) Stop() error {
+	p.stopped = true
 	terminateProcess := func(pid int) {
 		// force kill process afterwards
 		// TODO make sure this works on all operating systems

@@ -34,7 +34,7 @@ jobs:
       run: make && make install
 
     - name: Docker Build
-      run: docker build .
+      run: make docker-build
 
     - name: Test
       run: make test

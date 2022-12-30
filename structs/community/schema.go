@@ -18,10 +18,11 @@ var CommunityStateSchema = []byte(`{
 			"properties": {
 				"id": { "type": "string" },
 				"address": { "type": "string" },
+				"ipfs_swarm_address": { "type": "string" },
 				"certificate": { "type": "string" },
 				"member_id": { "type": "string" }
 			},
-			"required": [ "id", "address", "certificate", "member_id" ]
+			"required": [ "id", "address", "ipfs_swarm_address", "certificate", "member_id" ]
 		},
 		"process": {
 			"type": "object",
@@ -132,10 +133,11 @@ type Member struct {
 }
 
 type Node struct {
-	ID          string `json:"id"`
-	Address     string `json:"address"`
-	Certificate []byte `json:"certificate"`
-	MemberID    string `json:"member_id"`
+	ID               string `json:"id"`
+	Address          string `json:"address"`
+	IPFSSwarmAddress string `json:"ipfs_swarm_address"` // This should be temporary
+	Certificate      []byte `json:"certificate"`
+	MemberID         string `json:"member_id"`
 }
 
 type Process struct {

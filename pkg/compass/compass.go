@@ -154,7 +154,7 @@ func PublicIP() (net.IP, error) {
 	return ip, nil
 }
 
-func PublicRaftMultiaddr() (multiaddr.Multiaddr, error) {
+func IPMultiaddr() (multiaddr.Multiaddr, error) {
 	var ip net.IP
 	if InDockerContainer() {
 		localIP, err := LocalIPv4()
@@ -174,11 +174,37 @@ func PublicRaftMultiaddr() (multiaddr.Multiaddr, error) {
 	if ip.To4() == nil {
 		ipVersion = "ip6"
 	}
-	addr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/%s/%s/tcp/%s/p2p/%s", ipVersion, ip.String(), p2pPort, PeerID().String()))
+	addr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/%s/%s", ipVersion, ip.String()))
 	if err != nil {
 		return nil, err
 	}
 	return addr, nil
+}
+
+func IPFSSwarmAddr() (multiaddr.Multiaddr, error) {
+	ipMA, err := IPMultiaddr()
+	if err != nil {
+		return nil, err
+	}
+	tail, err := multiaddr.NewMultiaddr(fmt.Sprintf("/tcp/4001/p2p/%s", PeerID().String()))
+	if err != nil {
+		return nil, err
+	}
+	ma := ipMA.Encapsulate(tail)
+	return ma, nil
+}
+
+func PublicLibP2PMultiaddr() (multiaddr.Multiaddr, error) {
+	ipMA, err := IPMultiaddr()
+	if err != nil {
+		return nil, err
+	}
+	tail, err := multiaddr.NewMultiaddr(fmt.Sprintf("/tcp/%s/p2p/%s", p2pPort, PeerID().String()))
+	if err != nil {
+		return nil, err
+	}
+	ma := ipMA.Encapsulate(tail)
+	return ma, nil
 }
 
 // TODO this should really be something like InTestingDockerContainer

@@ -3,6 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/eagraf/habitat/pkg/compass"
@@ -36,6 +37,16 @@ func postRequest(reqType string, req, res interface{}) {
 		} else if apiErr != nil {
 			printError(apiErr)
 		}
+	}
+}
+
+func postFileRequest(reqType string, req, res interface{}, file *os.File) {
+	address := compass.CustomHabitatAPIAddr("localhost", viper.GetString("port")) + ctl.GetRoute(reqType)
+	err, apiErr := client.PostFileToAddress(address, &http.Client{}, file, res)
+	if err != nil {
+		printError(fmt.Errorf("error submitting request: %s", err))
+	} else if apiErr != nil {
+		printError(apiErr)
 	}
 }
 

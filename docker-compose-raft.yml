@@ -4,12 +4,13 @@ services:
         working_dir: /habitat
         volumes:
             - .habitat/procs:/habitat/procs
+            - .habitat/apps:/habitat/apps
             - ./dist/bin:/habitat/bin
         command: /habitat/bin/amd64-linux/habitat --hostname localhost
         environment:
             - HABITAT_PATH=/habitat
-        image: ubuntu:latest
-        build: .
+            - HABITAT_APP_PATH=/habitat/apps
+        image: habitat:latest
         ports:
             - 2000:2040
             - 3000:2041
@@ -17,12 +18,13 @@ services:
         working_dir: /habitat
         volumes:
             - .habitat/procs:/habitat/procs
+            - .habitat/apps:/habitat/apps
             - ./dist/bin:/habitat/bin
         command: /habitat/bin/amd64-linux/habitat --hostname localhost
         environment:
             - HABITAT_PATH=/habitat
-        image: ubuntu:latest
-        build: .
+            - HABITAT_APP_PATH=/habitat/apps
+        image: habitat:latest
         ports:
             - 2001:2040
             - 3001:2041
@@ -30,12 +32,13 @@ services:
         working_dir: /habitat
         volumes:
             - .habitat/procs:/habitat/procs
+            - .habitat/apps:/habitat/apps
             - ./dist/bin:/habitat/bin
         command: /habitat/bin/amd64-linux/habitat --hostname localhost
         environment:
             - HABITAT_PATH=/habitat
-        image: ubuntu:latest
-        build: .
+            - HABITAT_APP_PATH=/habitat/apps
+        image: habitat:latest
         ports:
             - 2002:2040
             - 3002:2041

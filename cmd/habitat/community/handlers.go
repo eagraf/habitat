@@ -112,12 +112,20 @@ func (m *Manager) CommunityCreateHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	publicMa, err := compass.PublicRaftMultiaddr()
+	publicMa, err := compass.PublicLibP2PMultiaddr()
 	if err != nil {
 		api.WriteWebsocketError(conn, err, &commRes)
 		return
 	}
 
+	ipfsSwarmMa, err := compass.IPFSSwarmAddr()
+	if err != nil {
+		api.WriteWebsocketError(conn, err, &commRes)
+		return
+	}
+
+	node.Address = publicMa.String()
+	node.IPFSSwarmAddress = ipfsSwarmMa.String()
 	community, err := m.CreateCommunity(commReq.CommunityName, commReq.CreateIPFSCluster, member, node)
 	if err != nil {
 		api.WriteWebsocketError(conn, err, &commRes)
@@ -179,12 +187,20 @@ func (m *Manager) CommunityJoinHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	publicMa, err := compass.PublicRaftMultiaddr()
+	publicMa, err := compass.PublicLibP2PMultiaddr()
 	if err != nil {
 		api.WriteWebsocketError(conn, err, &commRes)
 		return
 	}
 
+	ipfsSwarmMa, err := compass.IPFSSwarmAddr()
+	if err != nil {
+		api.WriteWebsocketError(conn, err, &commRes)
+		return
+	}
+
+	newNode.Address = publicMa.String()
+	newNode.IPFSSwarmAddress = ipfsSwarmMa.String()
 	addMemberReq := &ctl.CommunityAddMemberRequest{
 		CommunityID:        commReq.CommunityID,
 		NodeID:             compass.PeerID().String(),
@@ -377,6 +393,7 @@ func (m *Manager) CommunityStartProcessHandler(w http.ResponseWriter, r *http.Re
 	stateMachine, ok := m.communities[communityID]
 	if !ok {
 		api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("community %s is not on this instance", communityID))
+		return
 	}
 
 	processID := procs.RandomProcessID()
@@ -423,6 +440,7 @@ func (m *Manager) CommunityStopProcessHandler(w http.ResponseWriter, r *http.Req
 	stateMachine, ok := m.communities[communityID]
 	if !ok {
 		api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("community %s is not on this instance", communityID))
+		return
 	}
 
 	curState, err := stateMachine.State()

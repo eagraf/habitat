@@ -152,3 +152,17 @@ type SigningCertMsg struct {
 
 	WebsocketControl
 }
+
+type AddFileRequest struct {
+}
+
+type AddFileResponse struct {
+	ContentID string `json:"content_id"`
+}
+
+type GetFileRequest struct {
+	ContentID string `json:"content_id"`
+}
+
+type GetFileResponse struct {
+}
