@@ -60,8 +60,9 @@ func TestSchemaLookupEmpty(t *testing.T) {
 	defer os.RemoveAll(tempSchPath)
 	sr := NewLocalSchemaStore(tempSchPath)
 	sch, err := sr.Get(geoSchema.ID)
+	// if schmea is not found, return nil err but also nil schema
+	assert.Nil(t, err)
 	assert.Nil(t, sch)
-	assert.Equal(t, "stat schema/dGVzdC1nZW8=.json: no such file or directory", err.Error())
 }
 
 func TestSchemaAdd(t *testing.T) {
@@ -86,8 +87,8 @@ func TestSchemaDelete(t *testing.T) {
 	err = sr.Delete(geoSchema.ID)
 	assert.Nil(t, err)
 	sch, err = sr.Get(geoSchema.ID)
+	assert.Nil(t, err)
 	assert.Nil(t, sch)
-	assert.Equal(t, "stat schema/dGVzdC1nZW8=.json: no such file or directory", err.Error())
 }
 
 var readerwriter *JSONReaderWriter

@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const rawid = "https://json-schema.org/learn/examples/geographical-location.schema.json"
+const id = "https://json-schema.org/learn/examples/geographical-location.schema.json"
 
 var geoSch = `
 {
@@ -40,10 +40,9 @@ var geoSch = `
 	}
   }`
 
-var id = sources.EncodeId(rawid)
 var geoSchema = &sources.Schema{
 	Schema:      jsonschema.Must(geoSch),
-	ID:          rawid,
+	ID:          id,
 	Name:        "geography",
 	Description: "test json schema",
 }
@@ -86,7 +85,10 @@ func TestSourcesWriteRead(t *testing.T) {
 
 	slurp, err := ioutil.ReadAll(rsp.Body)
 	require.Nil(t, err)
-	assert.Equal(t, "success!", string(slurp))
+
+	var res WriteResponse
+	json.Unmarshal(slurp, &res)
+	assert.Nil(t, res.Error)
 
 	sourcereq = sources.SourceRequest{
 		ID: id,
@@ -106,6 +108,12 @@ func TestSourcesWriteRead(t *testing.T) {
 	require.Nil(t, err)
 
 	slurp, err = ioutil.ReadAll(rsp.Body)
-	require.Nil(t, err)
-	assert.Equal(t, data, string(slurp))
+	assert.Nil(t, err)
+
+	var rres ReadResponse
+	err = json.Unmarshal(slurp, &rres)
+	assert.Nil(t, err)
+
+	assert.Nil(t, rres.Error)
+	assert.Equal(t, data, string(rres.Data))
 }
