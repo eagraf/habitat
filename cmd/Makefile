@@ -1,6 +1,4 @@
-TARGETS = bin/amd64-linux/habitat \
-		bin/amd64-darwin/habitat \
-		bin/amd64-linux/habitatctl \
+TARGETS = bin/amd64-darwin/habitat \
 		bin/amd64-darwin/habitatctl
 
 include ../common.mk
@@ -10,7 +8,6 @@ all:: $(TARGETS)
 install::
 	mkdir -p $(BINDIR)/amd64-linux
 	$(CP) -r ./bin/$(CURARCH)/* $(BINDIR)
-	$(CP) -r ./bin/amd64-linux/* $(BINDIR)/amd64-linux
 
 clean::
 	rm -rf bin
