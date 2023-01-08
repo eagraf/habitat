@@ -42,5 +42,5 @@ func FindAppPath(appName string) (string, error) {
 		return potentialAppPath, nil
 	}
 
-	return "", fmt.Errorf("%s not found in any HABITAT_APP_PATH directories", appName)
+	return "", fmt.Errorf("%s not found in any HABITAT_APP_PATH directories at %s", appName, habitatAppPath)
 }

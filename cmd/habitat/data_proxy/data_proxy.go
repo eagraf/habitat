@@ -84,8 +84,6 @@ func (s *DataProxy) ReadHandler(w http.ResponseWriter, r *http.Request) {
 	slurp, err := ioutil.ReadAll(r.Body)
 	r.Body.Close()
 
-	fmt.Printf("got read request with body %s\n", string(slurp))
-
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, fmt.Errorf("unable read body: %s", err.Error()))
 		return
@@ -123,17 +121,15 @@ func (s *DataProxy) ReadHandler(w http.ResponseWriter, r *http.Request) {
 			api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("unable to create POST request to forward: %s", err.Error()))
 		}
 
-		bytes, err := p2p.PostLibP2PRequestToAddress(s.p2pNode, naddr, "/data_read", p2pReq)
+		bytes, err := p2p.PostLibP2PRequestToAddress(s.p2pNode, naddr, "/habitat"+ctl.GetRoute(ctl.CommandDataServerRead), p2pReq)
 		if err != nil {
 			api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error forwarding read request to other dataproxy: %s", err.Error()))
 			return
 		}
 
-		res := ctl.DataReadResponse{
-			Data: bytes,
-		}
-
-		api.WriteResponse(w, res)
+		// write the result from p2p as is
+		w.WriteHeader(http.StatusOK)
+		w.Write(bytes)
 		return
 	}
 

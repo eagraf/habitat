@@ -1,4 +1,4 @@
 name: ipfs-driver
-bin: ipfs-driver
+bin: amd64-linux/ipfs-driver
 ports:
 proxy-rules:

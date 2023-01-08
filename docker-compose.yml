@@ -5,9 +5,11 @@ services:
         working_dir: /habitat
         volumes:
             - .habitat/procs:/habitat/procs
+            - .habitat/apps:/habitat/apps
             - ./cmd/bin/amd64-linux:/habitat/bin
         command: /habitat/bin/habitat --hostname localhost
         environment:
+            - HABITAT_APP_PATH=/habitat/apps
             - HABITAT_PATH=/habitat
         build: .
         ports:
@@ -19,9 +21,11 @@ services:
         working_dir: /habitat
         volumes:
             - .habitat/procs:/habitat/procs
+            - .habitat/apps:/habitat/apps
             - ./cmd/bin/amd64-linux:/habitat/bin
         command: /habitat/bin/habitat --hostname localhost
         environment:
+            - HABITAT_APP_PATH=/habitat/apps
             - HABITAT_PATH=/habitat
         build: .
         ports:

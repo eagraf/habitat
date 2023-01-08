@@ -42,6 +42,10 @@ setup_community() {
     sleep 2
 }
 
+bob_join() {
+    $BOB_CMD community join --token $COMMUNITY_JOIN_CODE
+}
+
 bob_and_charlie_join() {
     $BOB_CMD community join --token $COMMUNITY_JOIN_CODE
     $CHARLIE_CMD community join --token $COMMUNITY_JOIN_CODE
