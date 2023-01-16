@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/eagraf/habitat/structs/community"
-	"github.com/qri-io/jsonschema"
+	"github.com/eagraf/habitat/structs/sources"
 )
 
 type InspectRequest struct{}
@@ -188,16 +188,26 @@ type DataWriteRequest struct {
 type DataWriteResponse struct{}
 
 type AddSchemaRequest struct {
-	Schema *jsonschema.Schema `json:"schema"`
+	Sch *sources.Schema `json:"schema"`
 }
 
-type LookupSchemaRequest struct {
+type AddSchemaResponse struct {
 	ID string `json:"id"`
+}
+
+type GetSchemaRequest struct {
+	Id string `json:"id"`
+}
+
+type GetSchemaResponse struct {
+	Sch *sources.Schema `json:"schema"`
 }
 
 type DeleteSchemaRequest struct {
 	ID string `json:"id"`
 }
+
+type DeleteSchemaResponse struct{}
 
 type AddFileRequest struct {
 }

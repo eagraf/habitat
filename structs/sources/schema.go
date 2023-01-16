@@ -5,10 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/qri-io/jsonschema"
 	"github.com/rs/zerolog/log"
+)
+
+var (
+	ErrEmptyId = fmt.Errorf("empty schema $id")
 )
 
 type Schema struct {
@@ -23,10 +28,39 @@ func (s *Schema) JsonSchema() *jsonschema.Schema {
 	return s.Schema
 }
 
-type SchemaStore interface {
-	Add(Schema) error
-	Get(string) (Schema, error)
-	Delete(string) error
+func GetSchemaIdRaw(sch *jsonschema.Schema) string {
+
+	if idprop := sch.JSONProp("$id"); idprop != nil {
+		return string(*idprop.(*jsonschema.ID))
+	}
+	return ""
+}
+
+func NewSchema(name string, desc string, jsonsch *jsonschema.Schema) (*Schema, error) {
+
+	id := GetSchemaIdRaw(jsonsch)
+	if id == "" {
+		return nil, ErrEmptyId
+	}
+	return &Schema{
+		Schema:      jsonsch,
+		ID:          GetSchemaIdRaw(jsonsch),
+		Name:        name,
+		Description: desc,
+	}, nil
+}
+
+func ValidateSchemaBytes(ctx context.Context, sch *Schema, data []byte) error {
+	jsonsch := sch.JsonSchema()
+	kerr, err := jsonsch.ValidateBytes(ctx, data)
+	es := make([]string, len(kerr))
+	for i, e := range kerr {
+		es[i] = e.Error()
+	}
+	if len(kerr) > 0 {
+		return fmt.Errorf("key errors: %s", strings.Join(es, ","))
+	}
+	return err
 }
 
 // store Schemas locally
@@ -44,6 +78,10 @@ func NewLocalSchemaStore(path string) *LocalSchemaStore {
 	}
 }
 
+func (s *LocalSchemaStore) getSchemaPath(id string) string {
+	return filepath.Join(s.path, id)
+}
+
 func (s *LocalSchemaStore) Add(sch *Schema) error {
 
 	bytes, err := json.Marshal(sch)
@@ -51,7 +89,11 @@ func (s *LocalSchemaStore) Add(sch *Schema) error {
 		return err
 	}
 
-	path := getSourcePath(s.path, GetSchemaIdRaw(sch))
+	id := GetSchemaIdRaw(sch.Schema)
+	if id == "" {
+		return ErrEmptyId
+	}
+	path := s.getSchemaPath(id)
 	err = os.WriteFile(path, bytes, os.ModePerm)
 	if err != nil {
 		log.Error().Msgf("error writing schema to path %s: %s", path, err.Error())
@@ -62,7 +104,7 @@ func (s *LocalSchemaStore) Add(sch *Schema) error {
 }
 
 func (s *LocalSchemaStore) Get(id string) (*Schema, error) {
-	path := getSourcePath(s.path, id)
+	path := s.getSchemaPath(id)
 
 	// TODO: schema must be explicitly added through schema store: add support in CLI
 	// schema doesn't exist - right now just write it and continue
@@ -93,35 +135,9 @@ func (s *LocalSchemaStore) Resolve(ctx context.Context, id string) *Schema {
 }
 
 func (s *LocalSchemaStore) Delete(id string) error {
-	return os.Remove(getSourcePath(s.path, id))
+	return os.Remove(s.getSchemaPath(id))
 }
 
-func ValidateSchemaBytes(ctx context.Context, sch *Schema, data []byte) error {
-	jsonsch := sch.JsonSchema()
-	kerr, err := jsonsch.ValidateBytes(ctx, data)
-	es := make([]string, len(kerr))
-	for i, e := range kerr {
-		es[i] = e.Error()
-	}
-	if len(kerr) > 0 {
-		return fmt.Errorf("key errors: %s", strings.Join(es, ","))
-	}
-	return err
-}
-
-func GetSchemaIdRaw(sch *Schema) string {
-	jsonsch := sch.JsonSchema()
-
-	if idprop := jsonsch.JSONProp("$id"); idprop != nil {
-		return string(*idprop.(*jsonschema.ID))
-	}
-	return ""
-}
-
-func CheckSchemaId(sch *Schema, id string) bool {
-	sid := GetSchemaIdRaw(sch)
-	if sid != "" && sid == id {
-		return true
-	}
-	return false
+type RemoteSchemaStore struct {
+	url string
 }

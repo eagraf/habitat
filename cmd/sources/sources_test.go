@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/eagraf/habitat/structs/sources"
 	"github.com/qri-io/jsonschema"
 	assert "github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,58 +40,16 @@ var geoSource = &Source{
 
 const idRaw = "test-geo"
 
-var geoSchema = &Schema{
+var geoSchema = &sources.Schema{
 	Schema:      jsonschema.Must(geoSch),
 	ID:          idRaw,
 	Name:        "geography",
 	Description: "test json schema",
 }
-
-// Schema Tests
-
-func TestSchemaId(t *testing.T) {
-	assert.Equal(t, idRaw, GetSchemaIdRaw(geoSchema))
-}
-
 var tempSchPath string = "schema"
 
 func init() {
 	os.RemoveAll(tempSchPath)
-}
-
-func TestSchemaLookupEmpty(t *testing.T) {
-	defer os.RemoveAll(tempSchPath)
-	sr := NewLocalSchemaStore(tempSchPath)
-	sch, err := sr.Get(idRaw)
-	// both schema and error are nil
-	assert.Nil(t, sch)
-	assert.Nil(t, err)
-}
-
-func TestSchemaAdd(t *testing.T) {
-	defer os.RemoveAll(tempSchPath)
-	sr := NewLocalSchemaStore(tempSchPath)
-	err := sr.Add(geoSchema)
-	require.Nil(t, err)
-	sch, err := sr.Get(idRaw)
-	require.Nil(t, err)
-	require.NotNil(t, sch)
-	assert.Equal(t, *geoSchema, *sch)
-}
-
-func TestSchemaDelete(t *testing.T) {
-	defer os.RemoveAll(tempSchPath)
-	sr := NewLocalSchemaStore(tempSchPath)
-	err := sr.Add(geoSchema)
-	assert.Nil(t, err)
-	sch, err := sr.Get(geoSchema.ID)
-	assert.Equal(t, geoSchema, sch)
-	assert.Nil(t, err)
-	err = sr.Delete(geoSchema.ID)
-	assert.Nil(t, err)
-	sch, err = sr.Get(geoSchema.ID)
-	assert.Nil(t, err)
-	assert.Nil(t, sch)
 }
 
 var readerwriter *JSONReaderWriter

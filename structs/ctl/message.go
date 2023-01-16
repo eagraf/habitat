@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 )
 
 const (
@@ -147,6 +149,15 @@ func (r *ResponseWrapper) Encode() ([]byte, error) {
 	msg := append([]byte(encoded), '\n')
 
 	return msg, nil
+}
+
+func RequestFromBody(r *http.Request, dest interface{}) error {
+	slurp, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(slurp, dest)
 }
 
 type WebsocketMessage interface {

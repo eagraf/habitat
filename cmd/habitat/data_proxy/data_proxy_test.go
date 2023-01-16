@@ -12,6 +12,7 @@ import (
 
 	"github.com/eagraf/habitat/cmd/sources"
 	"github.com/eagraf/habitat/structs/ctl"
+	sources2 "github.com/eagraf/habitat/structs/sources"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -27,7 +28,7 @@ func TestSourcesWriteRead(t *testing.T) {
 	path := t.TempDir()
 
 	p.localSourcesHandler = sources.NewJSONReaderWriter(ctx, filepath.Join(path, "sources"))
-	p.schemaStore = sources.NewLocalSchemaStore(filepath.Join(path, "schema"))
+	p.schemaStore = sources2.NewLocalSchemaStore(filepath.Join(path, "schema"))
 	// require.Nil(t, p.schemaStore.Add(geoSchema))
 
 	addr := "0.0.0.0:8765"

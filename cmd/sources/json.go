@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/eagraf/habitat/structs/sources"
 	"github.com/rs/zerolog/log"
 )
 
@@ -41,13 +42,13 @@ func (rw *JSONReaderWriter) Read(id string) ([]byte, error) {
 	return bytes, err
 }
 
-func (rw *JSONReaderWriter) Write(id string, sch *Schema, data []byte) error {
+func (rw *JSONReaderWriter) Write(id string, sch *sources.Schema, data []byte) error {
 
 	// id is the %id field of the Schema
 	// locally, sources are stored by the base64($id) since file paths != URL paths
 	path := getSourcePath(rw.Path, id)
 
-	if err := ValidateSchemaBytes(rw.ctx, sch, data); err != nil {
+	if err := sources.ValidateSchemaBytes(rw.ctx, sch, data); err != nil {
 		return fmt.Errorf("validation err: %s", err.Error())
 	}
 

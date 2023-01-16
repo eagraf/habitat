@@ -17,6 +17,7 @@ import (
 	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/eagraf/habitat/pkg/permissions"
 	"github.com/eagraf/habitat/structs/ctl"
+	sources2 "github.com/eagraf/habitat/structs/sources"
 	"github.com/qri-io/jsonschema"
 	"github.com/rs/zerolog/log"
 
@@ -33,7 +34,7 @@ const (
 
 type DataProxy struct {
 	// for sources
-	schemaStore         *sources.LocalSchemaStore
+	schemaStore         *sources2.LocalSchemaStore
 	localSourcesHandler *sources.JSONReaderWriter
 	sourcesPermissions  permissions.SourcesPermissionsManager
 
@@ -68,7 +69,7 @@ func NewDataProxy(ctx context.Context, p2pNode *p2p.Node, dataNodes map[string]*
 	}
 
 	return &DataProxy{
-		schemaStore:         sources.NewLocalSchemaStore(compass.LocalSchemaPath()),
+		schemaStore:         sources2.NewLocalSchemaStore(compass.LocalSchemaPath()),
 		localSourcesHandler: sources.NewJSONReaderWriter(ctx, compass.LocalSourcesPath()),
 		dataNodes:           proxyNodes,
 		nodeId:              nodeId,
@@ -277,9 +278,6 @@ func (s *DataProxy) Serve(ctx context.Context, addr string) {
 	r := mux.NewRouter()
 	r.HandleFunc("/read_source", s.ReadHandler)
 	r.HandleFunc("/write_source", s.WriteHandler)
-	r.HandleFunc("/add_schema", s.AddSchemaHandler)
-	r.HandleFunc("/lookup_schema", s.LookupSchemaHandler)
-	r.HandleFunc("/delete_schema", s.DeleteSchemaHandler)
 
 	srv := &http.Server{
 		Handler:      r,
