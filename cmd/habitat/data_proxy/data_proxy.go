@@ -121,7 +121,7 @@ func (s *DataProxy) ReadHandler(w http.ResponseWriter, r *http.Request) {
 			api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("unable to create POST request to forward: %s", err.Error()))
 		}
 
-		bytes, err := p2p.PostLibP2PRequestToAddress(s.p2pNode, naddr, "/habitat"+ctl.GetRoute(ctl.CommandDataServerRead), p2pReq)
+		bytes, err := s.p2pNode.PostRequestToPeer(naddr, "/habitat"+ctl.GetRoute(ctl.CommandDataServerRead), p2pReq)
 		if err != nil {
 			api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error forwarding read request to other dataproxy: %s", err.Error()))
 			return

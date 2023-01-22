@@ -73,7 +73,7 @@ func standardHostOpts(priv crypto.PrivKey, listenAddrs []ma.Multiaddr) []config.
 
 }
 
-func PostLibP2PRequestToAddress(node *Node, proxyAddr string, route string, req *http.Request) ([]byte, error) {
+func (n *Node) PostRequestToPeer(proxyAddr string, route string, req *http.Request) ([]byte, error) {
 
 	peerID, addr, err := compass.LibP2PHabitatAPIAddr(proxyAddr)
 	if err != nil {
@@ -81,19 +81,12 @@ func PostLibP2PRequestToAddress(node *Node, proxyAddr string, route string, req 
 	}
 
 	var p2pRes *http.Response
-	if node == nil {
-		randRes, err := libP2PHTTPRequestWithRandomClient(addr, route, peerID, req)
-		if err != nil {
-			return nil, err
-		}
-		p2pRes = randRes
-	} else {
-		nodeRes, err := node.PostHTTPRequest(addr, route, peerID, req)
-		if err != nil {
-			return nil, err
-		}
-		p2pRes = nodeRes
+
+	nodeRes, err := n.PostHTTPRequest(addr, route, peerID, req)
+	if err != nil {
+		return nil, err
 	}
+	p2pRes = nodeRes
 
 	resBody, err := io.ReadAll(p2pRes.Body)
 	if err != nil {
@@ -108,7 +101,7 @@ func PostLibP2PRequestToAddress(node *Node, proxyAddr string, route string, req 
 	return resBody, nil
 }
 
-func libP2PHTTPRequestWithRandomClient(addr ma.Multiaddr, route string, peerID peer.ID, req *http.Request) (*http.Response, error) {
+func LibP2PHTTPRequestWithRandomClient(addr ma.Multiaddr, route string, peerID peer.ID, req *http.Request) (*http.Response, error) {
 	// generate a temporary host to make the request
 	ip, err := compass.LocalIPv4()
 	if err != nil {

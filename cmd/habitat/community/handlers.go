@@ -15,7 +15,6 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/pkg/compass"
 	"github.com/eagraf/habitat/pkg/identity"
-	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/eagraf/habitat/structs/community"
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/gorilla/websocket"
@@ -222,7 +221,7 @@ func (m *Manager) CommunityJoinHandler(w http.ResponseWriter, r *http.Request) {
 		api.WriteWebsocketError(conn, err, &commRes)
 	}
 
-	bytes, err := p2p.PostLibP2PRequestToAddress(m.node.P2PNode, commReq.AcceptingNodeAddr, "/habitat"+ctl.GetRoute(ctl.CommandCommunityAddMember), p2pReq)
+	bytes, err := m.node.P2PNode.PostRequestToPeer(commReq.AcceptingNodeAddr, "/habitat"+ctl.GetRoute(ctl.CommandCommunityAddMember), p2pReq)
 	if err != nil {
 		api.WriteWebsocketError(conn, err, &commRes)
 		return
