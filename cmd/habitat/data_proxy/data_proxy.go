@@ -45,8 +45,9 @@ type DataProxy struct {
 	// TODO: need localDb / filesystem if this node serves it
 	// map of community id to data node
 	dataNodes map[string]*httputil.ReverseProxy
-	peers     map[string]string
-	p2pNode   *p2p.Node
+	// map of libp2p peer ID to libp2p multi addr
+	peers   map[string]string
+	p2pNode *p2p.Node
 }
 
 func NewDataProxy(ctx context.Context, p2pNode *p2p.Node, dataNodes map[string]*DataServerNode) *DataProxy {
@@ -261,8 +262,14 @@ func (s *DataProxy) AddDataNode(communityID string, dataNode DataServerNode) err
 	return nil
 }
 
-func (s *DataProxy) AddPeerNode(nodeId string, addr string) {
-	s.peers[nodeId] = addr
+func (s *DataProxy) AddPeerNode(maddr string) error {
+	id, _, err := compass.DecomposeNodeMultiaddr(maddr)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("adding data proxy peer node %s, %s\n", id.Pretty(), maddr)
+	s.peers[id.String()] = maddr
+	return nil
 }
 
 func (s *DataProxy) Serve(ctx context.Context, addr string) {

@@ -165,6 +165,7 @@ func (m *Manager) CommunityJoinHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		api.WriteError(w, http.StatusInternalServerError, err)
+		return
 	}
 	defer api.WriteWebsocketClose(conn)
 
@@ -214,11 +215,13 @@ func (m *Manager) CommunityJoinHandler(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := json.Marshal(addMemberReq)
 	if err != nil {
 		api.WriteWebsocketError(conn, err, &commRes)
+		return
 	}
 
 	p2pReq, err := http.NewRequest("POST", "", bytes.NewReader(reqBody))
 	if err != nil {
 		api.WriteWebsocketError(conn, err, &commRes)
+		return
 	}
 
 	bytes, err := m.node.P2PNode.PostRequestToPeer(commReq.AcceptingNodeAddr, "/habitat"+ctl.GetRoute(ctl.CommandCommunityAddMember), p2pReq)
@@ -237,12 +240,6 @@ func (m *Manager) CommunityJoinHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	peer, _, err := compass.DecomposeNodeMultiaddr(commReq.AcceptingNodeAddr)
-	if err != nil {
-		log.Error().Msgf("error decomposing accepting node multiaddr: %s", err)
-		return
-	}
-	m.node.DataProxy.AddPeerNode(string(peer.String()), commReq.AcceptingNodeAddr)
 }
 
 func (m *Manager) CommunityStateHandler(w http.ResponseWriter, r *http.Request) {
@@ -296,8 +293,6 @@ func (m *Manager) CommunityAddMemberHandler(w http.ResponseWriter, r *http.Reque
 		api.WriteError(w, http.StatusInternalServerError, err)
 		return
 	}
-
-	m.node.DataProxy.AddPeerNode(nodeID, address)
 
 	commRes := &ctl.CommunityAddMemberResponse{}
 	api.WriteResponse(w, commRes)

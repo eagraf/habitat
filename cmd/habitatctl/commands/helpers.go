@@ -27,7 +27,7 @@ func postRequest(reqType string, req, res interface{}) {
 		if err != nil {
 			printError(fmt.Errorf("error submitting request: %s", err))
 		} else if apiErr != nil {
-			printError(fmt.Errorf("habitat API error: %s", err.Error()))
+			printError(fmt.Errorf("habitat API error: %s", apiErr.Error()))
 		}
 	} else {
 		err, apiErr := client.PostRequestToAddress(compass.CustomHabitatAPIAddr("localhost", viper.GetString("port"))+ctl.GetRoute(reqType), req, res)
