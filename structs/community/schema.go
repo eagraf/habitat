@@ -7,7 +7,7 @@ var CommunityStateSchema = []byte(`{
 		"member": {
 			"type": "object",
 			"properties": {
-				"member_id": { "type": "string" },
+				"id": { "type": "string" },
 				"username": { "type": "string" },
 				"certificate": { "type": "string" }
 			},

@@ -188,15 +188,15 @@ type DataWriteRequest struct {
 type DataWriteResponse struct{}
 
 type AddSchemaRequest struct {
-	Sch *jsonschema.Schema `json:"schema"`
+	Schema *jsonschema.Schema `json:"schema"`
 }
 
 type LookupSchemaRequest struct {
-	Id string `json:"id"`
+	ID string `json:"id"`
 }
 
 type DeleteSchemaRequest struct {
-	Id string `json:"id"`
+	ID string `json:"id"`
 }
 
 type AddFileRequest struct {

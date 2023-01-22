@@ -233,14 +233,17 @@ func (s *DataProxy) WriteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *DataProxy) AddSchemaHandler(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "schema registry is unimplemented", http.StatusNotImplemented)
 	return
 }
 
 func (s *DataProxy) LookupSchemaHandler(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "schema registry is unimplemented", http.StatusNotImplemented)
 	return
 }
 
 func (s *DataProxy) DeleteSchemaHandler(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "schema registry is unimplemented", http.StatusNotImplemented)
 	return
 }
 

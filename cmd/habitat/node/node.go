@@ -95,7 +95,12 @@ func (n *Node) Start() error {
 	}
 
 	n.ReverseProxy.Rules.Add("data-proxy", &proxy.RedirectRule{
-		Matcher:         "/data",
+		Matcher:         "/data_read",
+		ForwardLocation: u,
+	})
+
+	n.ReverseProxy.Rules.Add("data-proxy", &proxy.RedirectRule{
+		Matcher:         "/data_write",
 		ForwardLocation: u,
 	})
 

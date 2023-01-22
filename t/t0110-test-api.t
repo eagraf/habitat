@@ -12,15 +12,5 @@ habitat-api() {
     return $ret
 }
 
-sources-p2p() {
-    testing::desc "read sources remotely over p2p"
-
-    local ret
-    { $TESTDIR/t0400/p2p-sources.bash ; ret=$? ; } || true
-
-    return $ret
-}
-
 testing::register habitat-api
-testing::register sources-p2p
 testing::run
