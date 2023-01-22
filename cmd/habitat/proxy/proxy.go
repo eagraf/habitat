@@ -118,10 +118,16 @@ func (r *RedirectRule) Match(url *url.URL) bool {
 }
 
 func (r *RedirectRule) Handler() http.Handler {
+	host, port, _ := net.SplitHostPort(r.ForwardLocation.Host)
+	target := r.ForwardLocation.Host
+	if host == "0.0.0.0" {
+		target = fmt.Sprintf("%s:%s", Hostname, port)
+	}
+
 	return &httputil.ReverseProxy{
 		Director: func(req *http.Request) {
 			req.URL.Scheme = r.ForwardLocation.Scheme
-			req.URL.Host = r.ForwardLocation.Host
+			req.URL.Host = target
 			req.URL.Path = strings.TrimPrefix(req.URL.Path, r.Matcher) // TODO this needs to be fixed when globs are implemented
 		},
 		Transport: &http.Transport{
