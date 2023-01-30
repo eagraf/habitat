@@ -33,7 +33,7 @@ type Manager struct {
 func NewManager(path string, habitatNode *node.Node) (*Manager, error) {
 	clusterManager := cluster.NewClusterManager(habitatNode.P2PNode.Host())
 
-	err := clusterManager.Start(&habitatNode.ReverseProxy.Rules)
+	err := clusterManager.Start(habitatNode.ReverseProxy.Rules)
 	if err != nil {
 		return nil, fmt.Errorf("error starting cluster manager: %s", err)
 	}

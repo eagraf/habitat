@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/eagraf/habitat/pkg/compass"
@@ -15,7 +16,17 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type RuleSet map[string]Rule
+type RuleSet struct {
+	lock  sync.RWMutex
+	rules map[string]Rule
+}
+
+func NewRuleSet() *RuleSet {
+	return &RuleSet{
+		lock:  sync.RWMutex{},
+		rules: make(map[string]Rule),
+	}
+}
 
 var Hostname string
 
@@ -24,17 +35,19 @@ func init() {
 }
 
 type Server struct {
-	Rules RuleSet
+	Rules *RuleSet
 }
 
 func NewServer() *Server {
 	return &Server{
-		Rules: make(RuleSet),
+		Rules: NewRuleSet(),
 	}
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	for _, rule := range s.Rules {
+	s.Rules.lock.RLock()
+	defer s.Rules.lock.RUnlock()
+	for _, rule := range s.Rules.rules {
 		if rule.Match(r.URL) {
 			rule.Handler().ServeHTTP(w, r)
 			return
@@ -48,19 +61,23 @@ func (s *Server) Start(host string) {
 	log.Fatal().Err(http.ListenAndServe(host, s)).Msg("reverse proxy server failed")
 }
 
-func (r RuleSet) Add(name string, rule Rule) error {
-	if _, ok := r[name]; ok {
+func (r *RuleSet) Add(name string, rule Rule) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	if _, ok := r.rules[name]; ok {
 		return fmt.Errorf("rule name %s is already taken", name)
 	}
-	r[name] = rule
+	r.rules[name] = rule
 	return nil
 }
 
-func (r RuleSet) Remove(name string) error {
-	if _, ok := r[name]; !ok {
+func (r *RuleSet) Remove(name string) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	if _, ok := r.rules[name]; !ok {
 		return fmt.Errorf("rule %s does not exist", name)
 	}
-	delete(r, name)
+	delete(r.rules, name)
 	return nil
 }
 

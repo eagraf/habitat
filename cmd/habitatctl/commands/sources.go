@@ -48,7 +48,7 @@ var sourcesReadCmd = &cobra.Command{
 		var res ctl.DataReadResponse
 		postRequest(ctl.CommandDataServerRead, req, &res)
 
-		fmt.Print(string(res.Data))
+		fmt.Println(string(res.Data))
 	},
 }
 
@@ -80,7 +80,7 @@ var sourcesWriteCmd = &cobra.Command{
 
 		var res ctl.DataWriteResponse
 		postRequest(ctl.CommandDataServerWrite, req, &res)
-		fmt.Print("success!")
+		fmt.Println("success!")
 	},
 }
 
