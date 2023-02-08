@@ -2,7 +2,7 @@ package proxy
 
 import (
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -11,6 +11,7 @@ import (
 	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLibP2PProxy(t *testing.T) {
@@ -26,18 +27,19 @@ func TestLibP2PProxy(t *testing.T) {
 	p2pNode, err := p2p.NewNode("6660", serverPrivKey)
 	assert.Nil(t, err)
 
-	url, err := url.Parse(redirectedServer.URL)
+	u, err := url.Parse(redirectedServer.URL)
 	assert.Nil(t, err)
 
-	go LibP2PHTTPProxy(p2pNode.Host(), url)
+	go LibP2PHTTPProxy(p2pNode.Host(), u)
 
 	req, err := http.NewRequest("GET", "", nil)
 	assert.Nil(t, err)
 
-	res, err := p2p.LibP2PHTTPRequestWithRandomClient(p2pNode.Host().Addrs()[0], "/hello", p2pNode.Host().ID(), req)
+	res, err := p2p.LibP2PHTTPRequestWithRandomClient(p2pNode.Addr(), "/hello", p2pNode.Host().ID(), req)
 	assert.Nil(t, err)
 
-	body, err := io.ReadAll(res.Body)
-	assert.Nil(t, err)
-	assert.Equal(t, "Hello, World!", string(body))
+	slurp, err := ioutil.ReadAll(res.Body)
+	require.Nil(t, err)
+
+	assert.Equal(t, "Hello, World!", string(slurp))
 }

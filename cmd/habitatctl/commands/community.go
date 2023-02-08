@@ -49,6 +49,7 @@ var communityCreateCmd = &cobra.Command{
 		userIdentity, err := loadUserIdentity(cmd)
 		if err != nil {
 			printError(fmt.Errorf("error loading user identity: %s", err))
+			return
 		}
 
 		name := cmd.Flags().Lookup("name")
@@ -137,6 +138,7 @@ var communityJoinCmd = &cobra.Command{
 		userIdentity, err := loadUserIdentity(cmd)
 		if err != nil {
 			printError(fmt.Errorf("error loading user identity: %s", err))
+			return
 		}
 
 		conn, err := getWebsocketConn(ctl.CommandCommunityJoin)

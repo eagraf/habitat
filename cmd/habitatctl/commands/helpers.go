@@ -23,12 +23,11 @@ func printError(err error) {
 func postRequest(reqType string, req, res interface{}) {
 	if viper.IsSet("libp2p-proxy") {
 		proxyAddr := viper.GetString("libp2p-proxy")
-
-		err, apiErr := client.PostLibP2PRequestToAddress(nil, proxyAddr, ctl.GetRoute(reqType), req, res)
+		err, apiErr := client.PostLibP2PRequestToAddress(nil, proxyAddr, "/habitat"+ctl.GetRoute(reqType), req, res)
 		if err != nil {
 			printError(fmt.Errorf("error submitting request: %s", err))
 		} else if apiErr != nil {
-			printError(apiErr)
+			printError(fmt.Errorf("habitat API error: %s", apiErr.Error()))
 		}
 	} else {
 		err, apiErr := client.PostRequestToAddress(compass.CustomHabitatAPIAddr("localhost", viper.GetString("port"))+ctl.GetRoute(reqType), req, res)
@@ -73,7 +72,7 @@ func loadUserIdentity(cmd *cobra.Command) (*identity.UserIdentity, error) {
 
 	userIdentity, err := identity.LoadUserIdentity(idPath, username, []byte(password))
 	if err != nil {
-		fmt.Printf("error loading user identity for %s\n", username)
+		fmt.Printf("error loading user identity for %s: %s\n", username, err.Error())
 		os.Exit(1)
 	}
 

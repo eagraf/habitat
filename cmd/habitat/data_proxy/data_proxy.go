@@ -1,6 +1,7 @@
 package dataproxy
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -13,11 +14,21 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/api"
 	"github.com/eagraf/habitat/cmd/sources"
 	"github.com/eagraf/habitat/pkg/compass"
+	"github.com/eagraf/habitat/pkg/p2p"
 	"github.com/eagraf/habitat/pkg/permissions"
 	"github.com/eagraf/habitat/structs/ctl"
+	"github.com/qri-io/jsonschema"
 	"github.com/rs/zerolog/log"
 
 	"github.com/gorilla/mux"
+)
+
+type nodeType string
+
+// TODO: we should really pull these out to the top level node
+const (
+	LocalNode     nodeType = "local"
+	CommunityNode nodeType = "community"
 )
 
 type DataProxy struct {
@@ -28,13 +39,18 @@ type DataProxy struct {
 
 	// for app permissions
 	appPermissions permissions.AppPermissionsManager
+	nodeType       nodeType
 	communityId    string
+	nodeId         string
 	// TODO: need localDb / filesystem if this node serves it
 	// map of community id to data node
 	dataNodes map[string]*httputil.ReverseProxy
+	// map of libp2p peer ID to libp2p multi addr
+	peers   map[string]string
+	p2pNode *p2p.Node
 }
 
-func NewDataProxy(ctx context.Context, dataNodes map[string]*DataServerNode) *DataProxy {
+func NewDataProxy(ctx context.Context, p2pNode *p2p.Node, dataNodes map[string]*DataServerNode) *DataProxy {
 	proxyNodes := make(map[string]*httputil.ReverseProxy)
 	for community, dataNode := range dataNodes {
 		url, err := dataNode.GetUrl()
@@ -44,10 +60,20 @@ func NewDataProxy(ctx context.Context, dataNodes map[string]*DataServerNode) *Da
 		proxyNodes[community] = httputil.NewSingleHostReverseProxy(url)
 	}
 	p := permissions.NewBasicPermissionsManager()
+
+	// TODO: for tests we should really pass in a mock p2pNode instead of doing this hacky stuff
+	nodeId := ""
+	if p2pNode != nil {
+		nodeId = p2pNode.Host().ID().String()
+	}
+
 	return &DataProxy{
 		schemaStore:         sources.NewLocalSchemaStore(compass.LocalSchemaPath()),
 		localSourcesHandler: sources.NewJSONReaderWriter(ctx, compass.LocalSourcesPath()),
 		dataNodes:           proxyNodes,
+		nodeId:              nodeId,
+		p2pNode:             p2pNode,
+		peers:               make(map[string]string),
 		appPermissions:      p,
 		sourcesPermissions:  p,
 	}
@@ -57,6 +83,8 @@ func (s *DataProxy) ReadHandler(w http.ResponseWriter, r *http.Request) {
 
 	var req ctl.DataReadRequest
 	slurp, err := ioutil.ReadAll(r.Body)
+	r.Body.Close()
+
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, fmt.Errorf("unable read body: %s", err.Error()))
 		return
@@ -67,12 +95,42 @@ func (s *DataProxy) ReadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.CommunityID != s.communityId {
+	if s.nodeType == CommunityNode && req.CommunityID != s.communityId {
 		if proxy, ok := s.dataNodes[req.CommunityID]; ok {
 			proxy.ServeHTTP(w, r)
 		} else {
 			api.WriteError(w, http.StatusBadRequest, fmt.Errorf("error: could not locate data server for this community %s", req.CommunityID))
 		}
+		return
+	}
+
+	// leave node id field empty to request local data
+	if req.NodeID != "" && req.NodeID != s.nodeId {
+		// need to use libp2p to talk to other data server
+		naddr, ok := s.peers[req.NodeID]
+		if !ok {
+			api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("cannot find p2p node for peer with node id %s", req.NodeID))
+			return
+		}
+		if err != nil {
+			api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error getting habitat libp2p addr: %s", err.Error()))
+			return
+		}
+
+		p2pReq, err := http.NewRequest("POST", "", bytes.NewReader(slurp))
+		if err != nil {
+			api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("unable to create POST request to forward: %s", err.Error()))
+		}
+
+		bytes, err := s.p2pNode.PostRequestToPeer(naddr, "/habitat"+ctl.GetRoute(ctl.CommandDataServerRead), p2pReq)
+		if err != nil {
+			api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error forwarding read request to other dataproxy: %s", err.Error()))
+			return
+		}
+
+		// write the result from p2p as is
+		w.WriteHeader(http.StatusOK)
+		w.Write(bytes)
 		return
 	}
 
@@ -116,6 +174,7 @@ func (s *DataProxy) WriteHandler(w http.ResponseWriter, r *http.Request) {
 		api.WriteError(w, http.StatusBadRequest, fmt.Errorf("unable read body: %s", err.Error()))
 		return
 	}
+
 	err = json.Unmarshal(slurp, &req)
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, fmt.Errorf("unable read unmarshal json: %s", err.Error()))
@@ -154,7 +213,13 @@ func (s *DataProxy) WriteHandler(w http.ResponseWriter, r *http.Request) {
 			// TODO: schema must be explicitly added through schema store: add support in CLI
 			// if schema doesn't exist - right now just write it and continue
 			sch = s.schemaStore.Resolve(r.Context(), sreq.ID)
+			sch.Schema = jsonschema.GetSchemaRegistry().Get(context.Background(), sreq.ID)
+			if sch.Schema == nil {
+				api.WriteError(w, http.StatusInternalServerError, fmt.Errorf("unable to resolve schema for $id: %s", sreq.ID))
+			}
 			s.schemaStore.Add(sch)
+			// TODO: here need to resolve the schema and add it to the local allow list if the user grants permission
+			// for right now just always resolve and add the schema
 		}
 
 		err = s.localSourcesHandler.Write(sreq.ID, sch, req.Data)
@@ -168,7 +233,22 @@ func (s *DataProxy) WriteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *DataProxy) AddDataNode(communityID string, dataNode *DataServerNode) error {
+func (s *DataProxy) AddSchemaHandler(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "schema registry is unimplemented", http.StatusNotImplemented)
+	return
+}
+
+func (s *DataProxy) LookupSchemaHandler(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "schema registry is unimplemented", http.StatusNotImplemented)
+	return
+}
+
+func (s *DataProxy) DeleteSchemaHandler(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "schema registry is unimplemented", http.StatusNotImplemented)
+	return
+}
+
+func (s *DataProxy) AddDataNode(communityID string, dataNode DataServerNode) error {
 	if _, found := s.dataNodes[communityID]; found {
 		// TODO: allow multiple data nodes per community
 		return fmt.Errorf("error: there already exists a data node for this community")
@@ -182,11 +262,24 @@ func (s *DataProxy) AddDataNode(communityID string, dataNode *DataServerNode) er
 	return nil
 }
 
+func (s *DataProxy) AddPeerNode(maddr string) error {
+	id, _, err := compass.DecomposeNodeMultiaddr(maddr)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("adding data proxy peer node %s, %s\n", id.Pretty(), maddr)
+	s.peers[id.String()] = maddr
+	return nil
+}
+
 func (s *DataProxy) Serve(ctx context.Context, addr string) {
 
 	r := mux.NewRouter()
-	r.HandleFunc("/read", s.ReadHandler)
-	r.HandleFunc("/write", s.WriteHandler)
+	r.HandleFunc("/read_source", s.ReadHandler)
+	r.HandleFunc("/write_source", s.WriteHandler)
+	r.HandleFunc("/add_schema", s.AddSchemaHandler)
+	r.HandleFunc("/lookup_schema", s.LookupSchemaHandler)
+	r.HandleFunc("/delete_schema", s.DeleteSchemaHandler)
 
 	srv := &http.Server{
 		Handler:      r,

@@ -1,6 +1,7 @@
 package community
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -13,7 +14,6 @@ import (
 	"github.com/eagraf/habitat/cmd/habitat/community/state"
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/pkg/compass"
-	client "github.com/eagraf/habitat/pkg/habitat_client"
 	"github.com/eagraf/habitat/pkg/identity"
 	"github.com/eagraf/habitat/structs/community"
 	"github.com/eagraf/habitat/structs/ctl"
@@ -81,6 +81,7 @@ func signKeyExchange(conn *websocket.Conn, finalMsg ctl.WebsocketMessage, nodeID
 
 	node := &community.Node{
 		ID:          nodeID,
+		P2PID:       compass.PeerID().String(),
 		MemberID:    userID,
 		Certificate: certMsg.NodeCertificate,
 	}
@@ -164,6 +165,7 @@ func (m *Manager) CommunityJoinHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		api.WriteError(w, http.StatusInternalServerError, err)
+		return
 	}
 	defer api.WriteWebsocketClose(conn)
 
@@ -209,12 +211,25 @@ func (m *Manager) CommunityJoinHandler(w http.ResponseWriter, r *http.Request) {
 		Node:               newNode,
 	}
 	var addMemberRes ctl.CommunityAddMemberResponse
-	err, apiErr := client.PostLibP2PRequestToAddress(m.node.P2PNode, commReq.AcceptingNodeAddr, ctl.GetRoute(ctl.CommandCommunityAddMember), addMemberReq, &addMemberRes)
+
+	reqBody, err := json.Marshal(addMemberReq)
 	if err != nil {
 		api.WriteWebsocketError(conn, err, &commRes)
 		return
-	} else if apiErr != nil {
-		api.WriteWebsocketError(conn, fmt.Errorf("accepting node could not add new member node: %s", apiErr), &commRes)
+	}
+
+	p2pReq, err := http.NewRequest("POST", "", bytes.NewReader(reqBody))
+	if err != nil {
+		api.WriteWebsocketError(conn, err, &commRes)
+		return
+	}
+
+	bytes, err := m.node.P2PNode.PostRequestToPeer(commReq.AcceptingNodeAddr, "/habitat"+ctl.GetRoute(ctl.CommandCommunityAddMember), p2pReq)
+	if err != nil {
+		api.WriteWebsocketError(conn, err, &commRes)
+		return
+	} else if err := json.Unmarshal(bytes, &addMemberRes); err != nil {
+		api.WriteWebsocketError(conn, err, &commRes)
 		return
 	}
 
@@ -224,6 +239,7 @@ func (m *Manager) CommunityJoinHandler(w http.ResponseWriter, r *http.Request) {
 		log.Error().Msgf("error writing final community join response to websocket: %s", err)
 		return
 	}
+
 }
 
 func (m *Manager) CommunityStateHandler(w http.ResponseWriter, r *http.Request) {

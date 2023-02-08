@@ -32,7 +32,7 @@ func LibP2PHTTPProxy(host host.Host, redirectURL *url.URL) {
 			return nil
 		},
 		ErrorHandler: func(rw http.ResponseWriter, r *http.Request, err error) {
-			log.Error().Err(err).Msgf("libp2p reverse proxy request forwarding error")
+			log.Error().Err(err).Msgf("libp2p reverse proxy request forwarding error. request to: %s", r.URL.String())
 			rw.WriteHeader(http.StatusInternalServerError)
 			rw.Write([]byte(err.Error()))
 		},

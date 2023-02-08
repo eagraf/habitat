@@ -26,6 +26,7 @@ const (
 	nodeIDRelativePath = "node_id"
 
 	apiPort     = "2040"
+	proxyPort   = "2041"
 	p2pPort     = "6000"
 	sourcesPort = "8765"
 )
@@ -224,6 +225,7 @@ func InDockerContainer() bool {
 }
 
 func DecomposeNodeMultiaddr(multiaddr string) (peer.ID, ma.Multiaddr, error) {
+
 	remoteMA, err := ma.NewMultiaddr(multiaddr)
 	if err != nil {
 		return "", nil, err

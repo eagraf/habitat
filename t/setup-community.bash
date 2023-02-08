@@ -1,8 +1,8 @@
 #!/bin/bash
 
 setup_community() {
-    docker-compose -f docker-compose-raft.yml up -V 2> /dev/null &
-    atexit "docker-compose -f docker-compose-raft.yml down"
+    docker-compose up -V 2> /dev/null &
+    atexit "docker-compose down"
     atexit "docker-compose rm -f"
 
     sleep 10
@@ -40,6 +40,10 @@ setup_community() {
     COMMUNITY_JOIN_CODE=`echo $COMMUNITY_CREATE_RES | jq -r .join_code`
 
     sleep 2
+}
+
+bob_join() {
+    $BOB_CMD community join --token $COMMUNITY_JOIN_CODE
 }
 
 bob_and_charlie_join() {

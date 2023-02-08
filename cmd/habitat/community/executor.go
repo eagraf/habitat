@@ -147,5 +147,11 @@ func (e *CommunityExecutor) AddNode(update *state.StateUpdate) error {
 		return err
 	}
 
+	// Add node to list of data proxy peer nodes
+	err = e.node.DataProxy.AddPeerNode(transition.Node.Address)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

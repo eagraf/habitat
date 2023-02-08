@@ -23,9 +23,11 @@ require (
 )
 
 require (
+	github.com/gorilla/websocket v1.5.0
 	github.com/ipfs/kubo v0.16.0
 	github.com/libp2p/go-libp2p-gostream v0.5.0
 	github.com/libp2p/go-libp2p-http v0.4.0
+	github.com/onsi/gomega v1.13.0
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
 )
 
@@ -54,7 +56,6 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20190812055157-5d271430af9f // indirect
-	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.0.0 // indirect
 	github.com/hashicorp/go-msgpack v0.5.5 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect

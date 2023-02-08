@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"fmt"
+	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -44,6 +45,14 @@ func NewNode(port string, priv crypto.PrivKey) (*Node, error) {
 	return node, nil
 }
 
+func (n *Node) ConstructMultiAddr() string {
+	return n.Addr().String() + "/p2p/" + n.Host().ID().Pretty()
+}
+
+func (n *Node) Addr() ma.Multiaddr {
+	return n.listenAddr
+}
+
 func (n *Node) Host() host.Host {
 	return n.host
 }
@@ -62,6 +71,34 @@ func standardHostOpts(priv crypto.PrivKey, listenAddrs []ma.Multiaddr) []config.
 		//	libp2p.EnableAutoRelay(),
 	}
 
+}
+
+func (n *Node) PostRequestToPeer(proxyAddr string, route string, req *http.Request) ([]byte, error) {
+
+	peerID, addr, err := compass.LibP2PHabitatAPIAddr(proxyAddr)
+	if err != nil {
+		return nil, fmt.Errorf("error decomposing multiaddr: %s", err)
+	}
+
+	var p2pRes *http.Response
+
+	nodeRes, err := n.PostHTTPRequest(addr, route, peerID, req)
+	if err != nil {
+		return nil, err
+	}
+	p2pRes = nodeRes
+
+	resBody, err := io.ReadAll(p2pRes.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %s", err)
+	}
+
+	// The request was fine, but we got an error back from server
+	if p2pRes.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%s: %s", p2pRes.Status, string(resBody))
+	}
+
+	return resBody, nil
 }
 
 func LibP2PHTTPRequestWithRandomClient(addr ma.Multiaddr, route string, peerID peer.ID, req *http.Request) (*http.Response, error) {

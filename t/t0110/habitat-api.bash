@@ -5,8 +5,8 @@ set -e
 TESTDIR=$(realpath "$(dirname "$0")")
 . "$TESTDIR/../../tools/lib.bash"
 
-docker-compose -f docker-compose-raft.yml up -V -- alice 2> /dev/null &
-atexit "docker-compose -f docker-compose-raft.yml down"
+docker-compose up -V -- alice 2> /dev/null &
+atexit "docker-compose down"
 atexit "docker-compose rm -f"
 
 sleep 5

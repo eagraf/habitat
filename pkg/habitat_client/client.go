@@ -89,31 +89,45 @@ func PostRequest(req, res interface{}, route string) (error, error) {
 // with an error.
 // TODO refactor so everything takes in a http.Client. This allows us to deduplicate libp2p and regular transport requests
 func PostRequestToAddress(address string, req, res interface{}) (error, error) {
-	reqBody, err := json.Marshal(req)
-	if err != nil {
-		return fmt.Errorf("error marshaling POST request body: %s", err), nil
+	resBody, cliErr, apiErr := PostRequestRaw(address, req)
+
+	if cliErr != nil {
+		return cliErr, nil
+	} else if apiErr != nil {
+		return nil, apiErr
 	}
 
-	r, err := http.Post(address, "application/json", bytes.NewReader(reqBody))
-	if err != nil {
-		return err, nil
-	}
-
-	resBody, err := io.ReadAll(r.Body)
-	if err != nil {
-		return fmt.Errorf("error reading response body: %s", err), nil
-	}
-	// The request was fine, but we got an error back from server
-	if r.StatusCode != http.StatusOK {
-		return nil, errors.New(string(resBody))
-	}
-
-	err = json.Unmarshal(resBody, res)
+	err := json.Unmarshal(resBody, res)
 	if err != nil {
 		return fmt.Errorf("error unmarshaling response body into result struct: %s", err), nil
 	}
 
 	return nil, nil
+}
+
+// PostRequestRaw posts the request to the given address. It first JSON marshals the request.
+// It returns the result in []byte form
+func PostRequestRaw(address string, req interface{}) ([]byte, error, error) {
+	reqBody, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling POST request body: %s", err), nil
+	}
+
+	r, err := http.Post(address, "application/json", bytes.NewReader(reqBody))
+	if err != nil {
+		return nil, fmt.Errorf("error on http.Post: %s", err.Error()), nil
+	}
+
+	resBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %s", err), nil
+	}
+	// The request was fine, but we got an error back from server
+	if r.StatusCode != http.StatusOK {
+		return nil, nil, errors.New(string(resBody))
+	}
+
+	return resBody, nil, nil
 }
 
 func PostFileToAddress(address string, client *http.Client, file *os.File, res interface{}) (error, error) {

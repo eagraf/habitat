@@ -15,13 +15,13 @@ import (
 type Manager struct {
 	ProcDir    string
 	Procs      map[string]*Proc
-	ProxyRules proxy.RuleSet
+	ProxyRules *proxy.RuleSet
 
 	errChan chan ProcError
 	lock    *sync.Mutex
 }
 
-func NewManager(procDir string, rules proxy.RuleSet) *Manager {
+func NewManager(procDir string, rules *proxy.RuleSet) *Manager {
 	return &Manager{
 		ProcDir:    compass.ProcsPath(),
 		Procs:      make(map[string]*Proc),

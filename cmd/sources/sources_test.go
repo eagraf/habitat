@@ -37,9 +37,11 @@ var geoSource = &Source{
 	Data: json.RawMessage(geoData),
 }
 
+const idRaw = "test-geo"
+
 var geoSchema = &Schema{
 	Schema:      jsonschema.Must(geoSch),
-	ID:          EncodeId("test-geo"),
+	ID:          idRaw,
 	Name:        "geography",
 	Description: "test json schema",
 }
@@ -47,7 +49,7 @@ var geoSchema = &Schema{
 // Schema Tests
 
 func TestSchemaId(t *testing.T) {
-	assert.Equal(t, "test-geo", GetSchemaIdRaw(geoSchema))
+	assert.Equal(t, idRaw, GetSchemaIdRaw(geoSchema))
 }
 
 var tempSchPath string = "schema"
@@ -59,10 +61,10 @@ func init() {
 func TestSchemaLookupEmpty(t *testing.T) {
 	defer os.RemoveAll(tempSchPath)
 	sr := NewLocalSchemaStore(tempSchPath)
-	sch, err := sr.Get(geoSchema.ID)
-	// if schmea is not found, return nil err but also nil schema
-	assert.Nil(t, err)
+	sch, err := sr.Get(idRaw)
+	// both schema and error are nil
 	assert.Nil(t, sch)
+	assert.Nil(t, err)
 }
 
 func TestSchemaAdd(t *testing.T) {
@@ -70,10 +72,10 @@ func TestSchemaAdd(t *testing.T) {
 	sr := NewLocalSchemaStore(tempSchPath)
 	err := sr.Add(geoSchema)
 	require.Nil(t, err)
-	sch, err := sr.Get(geoSchema.ID)
+	sch, err := sr.Get(idRaw)
 	require.Nil(t, err)
+	require.NotNil(t, sch)
 	assert.Equal(t, *geoSchema, *sch)
-	assert.Nil(t, err)
 }
 
 func TestSchemaDelete(t *testing.T) {
@@ -111,8 +113,8 @@ func getSourceRaw(path string) string {
 }
 func TestBasicReadWrite(t *testing.T) {
 	setupReaderWriter()
-	id := EncodeId("test-geo")
-	sourcePath := getPath(".", id)
+	id := "test-geo"
+	sourcePath := getSourcePath(".", id)
 	setupSource(string(geoSource.Data), sourcePath)
 	defer teardownSource(sourcePath)
 
