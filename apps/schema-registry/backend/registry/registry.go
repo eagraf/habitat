@@ -1,6 +1,7 @@
-package schema
+package registry
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/eagraf/habitat/structs/ctl"
 	"github.com/eagraf/habitat/structs/sources"
 	"github.com/gorilla/mux"
+	"github.com/rs/zerolog/log"
 )
 
 // Registry is a server that handles all state for storing schemas on a node in a community
@@ -29,11 +31,13 @@ func (r *Registry) AddSchemaHandler(w http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		http.Error(w, fmt.Sprintf("json unmarshal failed with %s", err.Error()), http.StatusBadRequest)
+		return
 	}
 
 	err = r.store.Add(addReq.Sch)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("error adding source schema %s", err.Error()), http.StatusInternalServerError)
+		return
 	}
 	api.WriteResponse(w, ctl.AddSchemaResponse{
 		ID: addReq.Sch.ID,
@@ -48,11 +52,13 @@ func (r *Registry) GetSchemaHandler(w http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		http.Error(w, fmt.Sprintf("json unmarshal failed with %s", err.Error()), http.StatusBadRequest)
+		return
 	}
 
 	sch, err := r.store.Get(getReq.Id)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("error looking up source schema %s", err.Error()), http.StatusInternalServerError)
+		return
 	}
 
 	api.WriteResponse(w, ctl.GetSchemaResponse{
@@ -66,17 +72,19 @@ func (r *Registry) DeleteSchemaHandler(w http.ResponseWriter, req *http.Request)
 
 	if err != nil {
 		http.Error(w, fmt.Sprintf("json unmarshal failed with %s", err.Error()), http.StatusBadRequest)
+		return
 	}
 
 	err = r.store.Delete(delReq.ID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("error looking up source schema %s", err.Error()), http.StatusInternalServerError)
+		return
 	}
 
 	api.WriteResponse(w, ctl.DeleteSchemaResponse{})
 }
 
-func (r *Registry) Serve(port string) error {
+func (r *Registry) Serve(closeCtx context.Context, port string) error {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/add_schema", r.AddSchemaHandler)
@@ -89,6 +97,13 @@ func (r *Registry) Serve(port string) error {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
+
+	go func() {
+		<-closeCtx.Done()
+		if err := srv.Shutdown(closeCtx); err != nil {
+			log.Error().Msgf("shutting down schema registry errored with %s", err.Error())
+		}
+	}()
 
 	return srv.ListenAndServe()
 }
