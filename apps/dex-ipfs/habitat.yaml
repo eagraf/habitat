@@ -1,0 +1,4 @@
+name: dex-ipfs
+bin: amd64-linux/dex-ipfs
+ports:
+proxy-rules:
