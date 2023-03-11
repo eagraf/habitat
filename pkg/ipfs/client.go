@@ -155,6 +155,46 @@ func (c *Client) ListFiles() (*ListFilesResponse, error) {
 	return &res, nil
 }
 
+type MkdirResponse struct{}
+
+func (c *Client) Mkdir(path string) (*MkdirResponse, error) {
+	var res MkdirResponse
+	err := c.postRequest(fmt.Sprintf("/files/mkdir?arg=%s", path), nil, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) ReadFile(path string) (io.Reader, error) {
+	resp, err := http.Post(c.getEndpointURL(fmt.Sprintf("/files/read?arg=%s", path)), "raw/json", nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %s", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("got exit code %s from IPFS: %s", resp.Status, body)
+	}
+
+	return resp.Body, nil
+}
+
+type WriteFileResponse struct{}
+
+func (c *Client) WriteFile(path string, filename string, file io.Reader) (*WriteFileResponse, error) {
+	var res AddFileResponse
+	err := c.postFile(fmt.Sprintf("/files/write?arg=%s&create=true&parents=true", path), filename, file, &res)
+	if err != nil {
+		return nil, err
+	}
+	return &WriteFileResponse{}, nil
+
+}
+
 type AddPeerResponse struct {
 	ID     string
 	Status string
