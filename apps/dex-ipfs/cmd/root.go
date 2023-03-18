@@ -25,5 +25,8 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringP("api-port", "a", "", "IPFS api port number")
+	rootCmd.PersistentFlags().StringP("api-port", "a", "5001", "IPFS api port number")
+	rootCmd.PersistentFlags().StringP("socket-path", "s", "/tmp/dex-ipfs.sock", "UNIX socket path")
+
+	rootCmd.AddCommand(serverCmd)
 }
