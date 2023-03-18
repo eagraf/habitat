@@ -41,7 +41,7 @@ func TestServer(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	client, err := NewClient(sockPath)
+	client, err := NewClient(sockPath, nil)
 	assert.Nil(t, err)
 
 	getRes, err := client.Get("abc")

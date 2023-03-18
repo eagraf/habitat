@@ -10,11 +10,23 @@ import (
 )
 
 type Client struct {
+	WriteClient
+
 	sockPath string
 }
 
-func NewClient(sockPath string) (*Client, error) {
-	return &Client{sockPath: sockPath}, nil
+type WriteClient interface {
+	WriteSchema(hash string, schema Schema) (*SchemaResult, error)
+	WriteInterface(hash string, iface *Interface) (*InterfaceResult, error)
+	AddImplementation(ifaceHash string, datastoreID string, query string) error
+	RemoveImplementation(ifaceHash string, datastoreID string) error
+}
+
+func NewClient(sockPath string, writeClient WriteClient) (*Client, error) {
+	return &Client{
+		sockPath:    sockPath,
+		WriteClient: writeClient,
+	}, nil
 }
 
 func (c *Client) httpClient() (*http.Client, error) {
