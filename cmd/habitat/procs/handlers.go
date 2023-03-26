@@ -21,7 +21,7 @@ func (m *Manager) StartProcessHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	processInstanceID, err := m.StartProcessInstance(startReq.CommunityID, procID, startReq.App, startReq.Args, startReq.Env, startReq.Flags)
+	processInstanceID, err := m.StartProcessInstance(startReq.CommunityID, procID, startReq.App, startReq.Args, startReq.Env)
 	if err != nil {
 		api.WriteError(w, http.StatusInternalServerError, err)
 		return

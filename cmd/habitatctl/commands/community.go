@@ -276,9 +276,9 @@ var communityStartProcessCmd = &cobra.Command{
 			return
 		}
 		procArgs := cmd.Flags().Args()[cmd.ArgsLenAtDash():]
-		flags, env := []string{}, []string{}
+		env, resArgs := []string{}, []string{}
 		if len(procArgs) > 1 {
-			flags, env = parseFlags(procArgs[1:])
+			env, resArgs = parseEnv(procArgs[1:])
 		}
 
 		if len(procArgs) < 1 {
@@ -289,8 +289,7 @@ var communityStartProcessCmd = &cobra.Command{
 		req := &ctl.CommunityStartProcessRequest{
 			CommunityID: communityID.Value.String(),
 			App:         procArgs[0],
-			Args:        args[1:],
-			Flags:       flags,
+			Args:        resArgs,
 			Env:         env,
 
 			InstancesNodes: instanceNodes,

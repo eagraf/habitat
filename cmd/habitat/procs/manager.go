@@ -32,7 +32,7 @@ func NewManager(procDir string, rules *proxy.RuleSet) *Manager {
 	}
 }
 
-func (m *Manager) StartProcessInstance(communityID, processID, app string, args, env, flags []string) (string, error) {
+func (m *Manager) StartProcessInstance(communityID, processID, app string, args, env []string) (string, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -52,7 +52,7 @@ func (m *Manager) StartProcessInstance(communityID, processID, app string, args,
 		return "", fmt.Errorf("process with name %s already exists", processInstanceID)
 	}
 
-	proc := NewProc(processInstanceID, binPath, m.errChan, env, flags, args, appConfig)
+	proc := NewProc(processInstanceID, binPath, m.errChan, env, args, appConfig)
 	err = proc.Start()
 	if err != nil {
 		return "", err

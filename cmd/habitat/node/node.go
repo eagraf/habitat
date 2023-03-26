@@ -111,7 +111,7 @@ func (n *Node) Start() error {
 	// start IPFS grand-child process
 	// Note that this is temporary, and we will likely eventually move away from IPFS
 	ipfsPath := filepath.Join(compass.HabitatPath(), "ipfs")
-	_, err = n.ProcessManager.StartProcessInstance("", "ipfs", "ipfs-driver", []string{ipfsPath}, []string{}, []string{})
+	_, err = n.ProcessManager.StartProcessInstance("", "ipfs", "ipfs-driver", []string{ipfsPath}, []string{})
 	if err != nil {
 		log.Fatal().Err(err).Msg("error start IPFS grandchild process")
 	}

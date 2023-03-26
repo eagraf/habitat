@@ -14,7 +14,6 @@ type Proc struct {
 	Name    string
 	CmdPath string
 	Env     []string
-	Flags   []string
 	Args    []string
 
 	cmd     *exec.Cmd
@@ -24,12 +23,11 @@ type Proc struct {
 	stopped bool
 }
 
-func NewProc(name, cmdPath string, errChan chan ProcError, env []string, flags []string, args []string, config *configuration.App) *Proc {
+func NewProc(name, cmdPath string, errChan chan ProcError, env, args []string, config *configuration.App) *Proc {
 	return &Proc{
 		Name:    name,
 		CmdPath: cmdPath,
 		Env:     env,
-		Flags:   flags,
 		Args:    args,
 
 		errChan: errChan,
@@ -40,7 +38,7 @@ func NewProc(name, cmdPath string, errChan chan ProcError, env []string, flags [
 func (p *Proc) Start() error {
 	cmd := &exec.Cmd{
 		Path: p.CmdPath,
-		Args: append(append([]string{p.CmdPath}, p.Args...), p.Flags...), // command [args] [flags]
+		Args: append([]string{p.CmdPath}, p.Args...),
 	}
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, p.Env...)

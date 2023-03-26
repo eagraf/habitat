@@ -420,7 +420,6 @@ func (m *Manager) CommunityStartProcessHandler(w http.ResponseWriter, r *http.Re
 				ID:      processID,
 				AppName: commReq.App,
 				Args:    commReq.Args,
-				Flags:   commReq.Flags,
 				Env:     commReq.Env,
 			},
 		},

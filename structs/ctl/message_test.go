@@ -8,10 +8,9 @@ import (
 
 func TestRequestSerialization(t *testing.T) {
 	startReq := &StartRequest{
-		App:   "myapp",
-		Args:  []string{"a", "b", "c"},
-		Env:   []string{"a", "b", "c"},
-		Flags: []string{"a", "b", "c"},
+		App:  "myapp",
+		Args: []string{"a", "b", "c"},
+		Env:  []string{"a", "b", "c"},
 	}
 
 	wrapped, err := NewRequestWrapper(startReq)

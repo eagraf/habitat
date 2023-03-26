@@ -8,17 +8,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func parseFlags(args []string) ([]string, []string) {
-	nonflags := []string{}
-	flags := []string{}
+func parseEnv(args []string) ([]string, []string) {
+	env := []string{}
+	resArgs := []string{}
 	for _, arg := range args {
-		if strings.HasPrefix(arg, "--") || strings.HasPrefix(arg, "-") {
-			flags = append(flags, arg)
+		if strings.Index(arg, "=") >= 1 {
+			env = append(env, arg)
 		} else {
-			nonflags = append(nonflags, arg)
+			resArgs = append(resArgs, arg)
 		}
 	}
-	return flags, nonflags
+	return env, resArgs
 }
 
 var commName string
@@ -64,7 +64,7 @@ var startCmd = &cobra.Command{
 			return
 		}
 
-		flags, nonflags := parseFlags(args[1:])
+		env, resArgs := parseEnv(args[1:])
 
 		reqArgs := args
 		if commName != "" {
@@ -72,10 +72,9 @@ var startCmd = &cobra.Command{
 		}
 
 		req := &ctl.StartRequest{
-			App:   args[0],
-			Args:  reqArgs,
-			Flags: flags,
-			Env:   nonflags,
+			App:  args[0],
+			Args: resArgs,
+			Env:  env,
 		}
 
 		var res ctl.StartResponse

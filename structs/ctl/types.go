@@ -19,7 +19,6 @@ type StartRequest struct {
 	CommunityID string   `json:"community_id"`
 	Args        []string `json:"args"`
 	Env         []string `json:"env"`
-	Flags       []string `json:"flags"`
 }
 
 type StartResponse struct {
@@ -115,10 +114,9 @@ type CommunityPSResponse struct {
 type CommunityStartProcessRequest struct {
 	CommunityID string `json:"community_id"`
 
-	App   string   `json:"app"`
-	Args  []string `json:"args"`
-	Env   []string `json:"env"`
-	Flags []string `json:"flags"`
+	App  string   `json:"app"`
+	Args []string `json:"args"`
+	Env  []string `json:"env"`
 
 	InstancesNodes []string `json:"instance_nodes"`
 }

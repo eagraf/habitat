@@ -87,7 +87,7 @@ func (e *CommunityExecutor) StartProcessInstance(update *state.StateUpdate) erro
 	// Hash together the process ID, community ID and node ID to get a process instance ID
 
 	if transition.ProcessInstance.NodeID == e.node.ID {
-		_, err := e.node.ProcessManager.StartProcessInstance(state.CommunityID, process.ID, process.AppName, process.Args, process.Env, process.Flags)
+		_, err := e.node.ProcessManager.StartProcessInstance(state.CommunityID, process.ID, process.AppName, process.Args, process.Env)
 		if err != nil {
 			return err
 		}
