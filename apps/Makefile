@@ -1,4 +1,4 @@
-SUBDIRS	=	ipfs-driver community
+SUBDIRS	=	ipfs-driver community dex-ipfs
 APPS	=	$(SUBDIRS)
 
 include ../common.mk
