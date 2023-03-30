@@ -48,11 +48,13 @@ func (c *Client) postRequest(endpointPath string, body, res interface{}) error {
 		return fmt.Errorf("error reading response: %s", err)
 	}
 
-	err = json.Unmarshal(buf, res)
-	if err != nil {
-		// assume that IPFS api will always return properly marshaled json, and that an unmarshaling error
-		// indicates that there was some sort of error with our request. return body text in error
-		return fmt.Errorf("ipfs client error: %s", string(buf))
+	if len(buf) > 0 {
+		err = json.Unmarshal(buf, res)
+		if err != nil {
+			// assume that IPFS api will always return properly marshaled json, and that an unmarshaling error
+			// indicates that there was some sort of error with our request. return body text in error
+			return fmt.Errorf("ipfs client error: %s (%s)", err, string(buf))
+		}
 	}
 
 	return nil
@@ -106,11 +108,13 @@ func (c *Client) postFile(endpointPath string, filename string, file io.Reader, 
 		return fmt.Errorf("error reading response: %s", err)
 	}
 
-	err = json.Unmarshal(buf, res)
-	if err != nil {
-		// assume that IPFS api will always return properly marshaled json, and that an unmarshaling error
-		// indicates that there was some sort of error with our request. return body text in error
-		return fmt.Errorf("ipfs client error: %s", string(buf))
+	if len(buf) > 0 {
+		err = json.Unmarshal(buf, res)
+		if err != nil {
+			// assume that IPFS api will always return properly marshaled json, and that an unmarshaling error
+			// indicates that there was some sort of error with our request. return body text in error
+			return fmt.Errorf("ipfs client error: %s (%s)", err, string(buf))
+		}
 	}
 
 	return nil
