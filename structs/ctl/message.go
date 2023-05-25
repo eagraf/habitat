@@ -23,6 +23,10 @@ const (
 	CommandCommunityStopProcess  = "community_stop_process"
 	CommandDataServerRead        = "data_read"
 	CommandDataServerWrite       = "data_write"
+	CommandDexSchemaGet          = "dex_schema_get"
+	CommandDexInterfaceGet       = "dex_interface_get"
+	CommandDexSchemaWrite        = "dex_schema_write"
+	CommandDexInterfaceWrite     = "dex_interface_write"
 
 	CommandAddFile = "add_file"
 	CommandGetFile = "get_file"
@@ -74,6 +78,15 @@ func requestType(req interface{}) (string, error) {
 		return CommandDataServerRead, nil
 	case DataWriteRequest, *DataWriteRequest, DataWriteResponse, *DataWriteResponse:
 		return CommandDataServerWrite, nil
+	case SchemaRequest, *SchemaRequest, SchemaResponse, *SchemaResponse:
+		return CommandDexSchemaGet, nil
+	case InterfaceRequest, *InterfaceRequest, InterfaceResponse, *InterfaceResponse:
+		return CommandDexInterfaceGet, nil
+	case SchemaWriteRequest, *SchemaWriteRequest, SchemaWriteResponse, *SchemaWriteResponse:
+		return CommandDexSchemaGet, nil
+	case InterfaceWriteRequest, *InterfaceWriteRequest, InterfaceWriteResponse, *InterfaceWriteResponse:
+		return CommandDexInterfaceGet, nil
+
 	default:
 		return "", fmt.Errorf("type %T is not a valid request type", req)
 	}
