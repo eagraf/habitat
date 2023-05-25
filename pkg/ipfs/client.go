@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 type Client struct {
@@ -48,11 +49,13 @@ func (c *Client) postRequest(endpointPath string, body, res interface{}) error {
 		return fmt.Errorf("error reading response: %s", err)
 	}
 
-	err = json.Unmarshal(buf, res)
-	if err != nil {
-		// assume that IPFS api will always return properly marshaled json, and that an unmarshaling error
-		// indicates that there was some sort of error with our request. return body text in error
-		return fmt.Errorf("ipfs client error: %s", string(buf))
+	if len(buf) > 0 {
+		err = json.Unmarshal(buf, res)
+		if err != nil {
+			// assume that IPFS api will always return properly marshaled json, and that an unmarshaling error
+			// indicates that there was some sort of error with our request. return body text in error
+			return fmt.Errorf("ipfs client error: %s (%s)", err, string(buf))
+		}
 	}
 
 	return nil
@@ -106,11 +109,13 @@ func (c *Client) postFile(endpointPath string, filename string, file io.Reader, 
 		return fmt.Errorf("error reading response: %s", err)
 	}
 
-	err = json.Unmarshal(buf, res)
-	if err != nil {
-		// assume that IPFS api will always return properly marshaled json, and that an unmarshaling error
-		// indicates that there was some sort of error with our request. return body text in error
-		return fmt.Errorf("ipfs client error: %s", string(buf))
+	if len(buf) > 0 {
+		err = json.Unmarshal(buf, res)
+		if err != nil {
+			// assume that IPFS api will always return properly marshaled json, and that an unmarshaling error
+			// indicates that there was some sort of error with our request. return body text in error
+			return fmt.Errorf("ipfs client error: %s (%s)", err, string(buf))
+		}
 	}
 
 	return nil
@@ -153,6 +158,52 @@ func (c *Client) ListFiles() (*ListFilesResponse, error) {
 	}
 
 	return &res, nil
+}
+
+type MkdirResponse struct{}
+
+func (c *Client) Mkdir(path string) (*MkdirResponse, error) {
+	var res MkdirResponse
+	err := c.postRequest(fmt.Sprintf("/files/mkdir?arg=%s", path), nil, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) ReadFile(path string) (io.Reader, bool, error) {
+	resp, err := http.Post(c.getEndpointURL(fmt.Sprintf("/files/read?arg=%s", path)), "raw/json", nil)
+	if err != nil {
+		return nil, false, fmt.Errorf("error creating request: %s", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, false, err
+		}
+
+		// Hax
+		if strings.Contains(string(body), "file does not exist") {
+			return nil, false, nil
+		}
+
+		return nil, false, fmt.Errorf("got exit code %s from IPFS: %s", resp.Status, body)
+	}
+
+	return resp.Body, true, nil
+}
+
+type WriteFileResponse struct{}
+
+func (c *Client) WriteFile(path string, filename string, file io.Reader) (*WriteFileResponse, error) {
+	var res AddFileResponse
+	err := c.postFile(fmt.Sprintf("/files/write?arg=%s&create=true&parents=true&truncate=true", path), filename, file, &res)
+	if err != nil {
+		return nil, err
+	}
+	return &WriteFileResponse{}, nil
+
 }
 
 type AddPeerResponse struct {
