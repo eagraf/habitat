@@ -40,6 +40,10 @@ func getRouter(n *node.Node, cm *community.Manager) *mux.Router {
 	router.HandleFunc(ctl.GetRoute(ctl.CommandStop), n.ProcessManager.StopProcessHandler)
 	router.HandleFunc(ctl.GetRoute(ctl.CommandAddFile), n.FS.AddHandler)
 	router.HandleFunc(ctl.GetRoute(ctl.CommandGetFile), n.FS.GetHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandDexSchemaGet), n.DexNodeAPI.GetSchemaHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandDexInterfaceGet), n.DexNodeAPI.GetInterfaceHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandDexSchemaWrite), n.DexNodeAPI.WriteSchemaHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandDexInterfaceWrite), n.DexNodeAPI.WriteInterfaceHandler)
 
 	return router
 }

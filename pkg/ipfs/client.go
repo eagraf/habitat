@@ -202,6 +202,7 @@ func (c *Client) WriteFile(path string, filename string, file io.Reader) (*Write
 	if err != nil {
 		return nil, err
 	}
+
 	return &WriteFileResponse{}, nil
 
 }
