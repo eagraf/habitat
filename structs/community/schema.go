@@ -58,6 +58,25 @@ var CommunityStateSchema = []byte(`{
 				"node_id": { "type": "string" }
 			},
 			"required": [ "process_id", "node_id" ]
+		},
+		"implementation": {
+			"type": "object",
+			"properties": {
+				"datastore_id": { "type": "string" },
+				"content_identifer": { "type": "string" }
+			},
+			"required": [ "datastore_id", "content_identifier" ]
+		},
+		"datastore_implementation_map": {
+			"type": "object",
+			"properties": {
+				"interface_hash": { "type": "string" },
+				"implementations": {
+					"type": "array", 
+					"items": { "$ref": "#/$defs/implementation" }
+				}
+			},
+			"required": [ "interface_hash", "implementations" ]
 		}
 	},
 	"title": "community state schema",
@@ -107,6 +126,12 @@ var CommunityStateSchema = []byte(`{
 			"items": {
 				"$ref": "#/$defs/process_instance"
 			}
+		},
+		"dex_implementations": {
+			"type": "object",
+			"additionalProperties": {
+				"$ref": "#/$defs/datastore_implementation_map"
+			}
 		}
 	},
 	"required": [ "community_id", "members", "nodes", "processes", "process_instances" ]
@@ -116,13 +141,14 @@ var CommunityStateSchema = []byte(`{
 // TODO look at ways to generate this from the schema or vice versa so there is a single
 // source of truth
 type CommunityState struct {
-	CommunityID      string             `json:"community_id"`
-	Counter          int                `json:"counter,omitempty"`
-	IPFSConfig       *IPFSConfig        `json:"ipfs_config"`
-	Members          []*Member          `json:"members"`
-	Nodes            []*Node            `json:"nodes"`
-	Processes        []*Process         `json:"processes"`
-	ProcessInstances []*ProcessInstance `json:"process_instances"`
+	CommunityID        string                                 `json:"community_id"`
+	Counter            int                                    `json:"counter,omitempty"`
+	IPFSConfig         *IPFSConfig                            `json:"ipfs_config"`
+	Members            []*Member                              `json:"members"`
+	Nodes              []*Node                                `json:"nodes"`
+	Processes          []*Process                             `json:"processes"`
+	ProcessInstances   []*ProcessInstance                     `json:"process_instances"`
+	DexImplementations map[string]*DatastoreImplementationMap `json:"dex_implementations"`
 }
 
 type IPFSConfig struct {
@@ -163,12 +189,23 @@ type ProcessInstance struct {
 	NodeID    string `json:"node_id"`
 }
 
+type DatastoreImplementationMap struct {
+	InterfaceHash   string            `json:"interface_hash"`
+	Implementations []*Implementation `json:"implementations"` // The keys must all be valid datastore identiferes
+}
+
+type Implementation struct {
+	DatastoreID       string `json:"datastore_id"` // Must be the process_id for a datastore process, or be marked "ipfs"
+	ContentIdentifier string `json:"content_identifier"`
+}
+
 func NewCommunityState() *CommunityState {
 	return &CommunityState{
-		Members:          []*Member{},
-		Nodes:            []*Node{},
-		Processes:        []*Process{},
-		ProcessInstances: []*ProcessInstance{},
+		Members:            []*Member{},
+		Nodes:              []*Node{},
+		Processes:          []*Process{},
+		ProcessInstances:   []*ProcessInstance{},
+		DexImplementations: map[string]*DatastoreImplementationMap{},
 	}
 }
 
