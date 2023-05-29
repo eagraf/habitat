@@ -20,33 +20,33 @@ func testTransitions(oldState *community.CommunityState, transitions []Community
 
 		err := t.Validate(state)
 		if err != nil {
-			return nil, fmt.Errorf("transition validation failed: %s", err)
+			return state, fmt.Errorf("transition validation failed: %s", err)
 		}
 
 		patch, err := t.Patch(state)
 		if err != nil {
-			return nil, err
+			return state, err
 		}
 
 		marshaledState, err := json.Marshal(state)
 		if err != nil {
-			return nil, err
+			return state, err
 		}
 
 		jsonState, err := NewJSONState(community.CommunityStateSchema, marshaledState)
 		if err != nil {
-			return nil, err
+			return state, err
 		}
 
 		newStateBytes, err := jsonState.ValidatePatch(patch)
 		if err != nil {
-			return nil, err
+			return state, err
 		}
 
 		var newState community.CommunityState
 		err = json.Unmarshal(newStateBytes, &newState)
 		if err != nil {
-			return nil, err
+			return state, err
 		}
 
 		state = &newState
@@ -271,4 +271,95 @@ func TestProcessManagement(t *testing.T) {
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(state.Processes))
+}
+
+func TestImplementations(t *testing.T) {
+	transitions := []CommunityStateTransition{
+		&InitializeCommunityTransition{
+			CommunityID: "abc",
+		},
+		&AddMemberTransition{
+			Member: &community.Member{
+				ID:          "jorts",
+				Certificate: []byte("mycert"),
+			},
+		},
+		&AddNodeTransition{
+			Node: &community.Node{
+				ID:          "node1",
+				MemberID:    "jorts",
+				Certificate: []byte("mycert"),
+			},
+		},
+		&StartProcessTransition{
+			Process: &community.Process{
+				ID:          "proc1",
+				AppName:     "app1",
+				Args:        []string{},
+				Env:         []string{},
+				Flags:       []string{},
+				IsDatastore: true,
+			},
+		},
+		&StartProcessTransition{
+			Process: &community.Process{
+				ID:          "proc2",
+				AppName:     "app2",
+				Args:        []string{},
+				Env:         []string{},
+				Flags:       []string{},
+				IsDatastore: true,
+			},
+		},
+		&AddImplementationTransition{
+			InterfaceHash: "abc",
+			DatastoreID:   "proc1",
+		},
+		&AddImplementationTransition{
+			InterfaceHash: "def",
+			DatastoreID:   "proc1",
+		},
+		&AddImplementationTransition{
+			InterfaceHash: "abc",
+			DatastoreID:   "proc2",
+		},
+		&AddImplementationTransition{
+			InterfaceHash: "def",
+			DatastoreID:   "ipfs",
+		},
+	}
+
+	state, err := testTransitions(nil, transitions)
+	fmt.Printf("%+v", state)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(state.DexImplementations))
+	assert.NotNil(t, state.DexImplementations["abc"])
+	assert.Equal(t, 2, len(state.DexImplementations["abc"].Implementations))
+	assert.Equal(t, 2, len(state.DexImplementations["def"].Implementations))
+
+	state, err = testTransitionsOnCopy(state, []CommunityStateTransition{
+		&AddImplementationTransition{
+			InterfaceHash: "abc",
+			DatastoreID:   "proc1",
+		},
+	})
+	assert.NotNil(t, err)
+
+	state, err = testTransitionsOnCopy(state, []CommunityStateTransition{
+		&RemoveImplementationTransition{
+			InterfaceHash: "abc",
+			DatastoreID:   "proc1",
+		},
+	})
+	assert.Nil(t, err)
+	assert.NotNil(t, state.DexImplementations["abc"])
+	assert.Equal(t, 1, len(state.DexImplementations["abc"].Implementations))
+
+	_, err = testTransitionsOnCopy(state, []CommunityStateTransition{
+		&RemoveImplementationTransition{
+			InterfaceHash: "abc",
+			DatastoreID:   "ipfs",
+		},
+	})
+	assert.NotNil(t, err)
 }

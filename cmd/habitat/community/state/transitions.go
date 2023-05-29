@@ -22,6 +22,9 @@ const (
 	TransitionTypeIncrementCounter  = "increment_counter"
 
 	TransitionTypeInitializeIPFSSwarm = "initialize_ipfs_swarm"
+
+	TransitionTypeAddImplementation    = "add_implementation"
+	TransitionTypeRemoveImplementation = "remove_implementation"
 )
 
 type TransitionWrapper struct {
@@ -377,4 +380,120 @@ func (t *StopProcessInstanceTransition) Validate(oldState *community.CommunitySt
 	}
 
 	return fmt.Errorf("process instance with matching process and node IDs not found")
+}
+
+type AddImplementationTransition struct {
+	InterfaceHash     string
+	DatastoreID       string
+	ContentIdentifier string
+}
+
+func (t *AddImplementationTransition) Type() string {
+	return TransitionTypeAddImplementation
+}
+
+func (t *AddImplementationTransition) Patch(oldState *community.CommunityState) ([]byte, error) {
+	// First try to see if there are other impls for the same hash that we can append to the list of
+	for _, impls := range oldState.DexImplementations {
+		if impls.InterfaceHash == t.InterfaceHash {
+			for _, impl := range impls.Implementations {
+				if impl.DatastoreID == t.DatastoreID {
+					return nil, fmt.Errorf("implementation with datastore %s already exists", t.DatastoreID)
+				}
+			}
+			return []byte(fmt.Sprintf(`[{
+				"op": "add",
+				"path": "/dex_implementations/%s/implementations/-",
+				"value": {
+					"datastore_id": "%s",
+					"content_identifier": "%s"
+				}
+			}]`, t.InterfaceHash, t.DatastoreID, t.ContentIdentifier)), nil
+		}
+	}
+
+	// If not available, create a new list
+	return []byte(fmt.Sprintf(`[{
+		"op": "add",
+		"path": "/dex_implementations/%s",
+		"value": {
+			"interface_hash": "%s",
+			"implementations": [
+				{
+					"datastore_id": "%s",
+					"content_identifier": "%s"
+				}
+			]
+		}
+	}]`, t.InterfaceHash, t.InterfaceHash, t.DatastoreID, t.ContentIdentifier)), nil
+}
+
+func (t *AddImplementationTransition) Validate(oldState *community.CommunityState) error {
+	// Check that datastore_id matches an existing process_id that has the is_datastore flag set, or that datastore_id is "ipfs"
+	validDatastore := false
+	if t.DatastoreID == "ipfs" {
+		validDatastore = true
+	}
+
+	for _, p := range oldState.Processes {
+		if p.ID == t.DatastoreID && p.IsDatastore {
+			validDatastore = true
+		}
+	}
+
+	if !validDatastore {
+		return fmt.Errorf("datastore ID %s not found in processes list", t.DatastoreID)
+	}
+
+	// Check that all interface hashes are unique
+	for _, impls := range oldState.DexImplementations {
+		if impls.InterfaceHash == t.InterfaceHash {
+			for _, impl := range impls.Implementations {
+				if impl.DatastoreID == t.DatastoreID {
+					return fmt.Errorf("interface hash %s already exists", t.InterfaceHash)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+type RemoveImplementationTransition struct {
+	InterfaceHash string
+	DatastoreID   string
+}
+
+func (t *RemoveImplementationTransition) Type() string {
+	return TransitionTypeRemoveImplementation
+}
+
+func (t *RemoveImplementationTransition) Patch(oldState *community.CommunityState) ([]byte, error) {
+	for i, impls := range oldState.DexImplementations {
+		if impls.InterfaceHash == t.InterfaceHash {
+			for j, impl := range impls.Implementations {
+				if impl.DatastoreID == t.DatastoreID {
+					return []byte(fmt.Sprintf(`[{
+						"op": "remove",
+						"path": "/dex_implementations/%s/implementations/%d"
+					}]`, i, j)), nil
+				}
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("implementation with datastore %s not found", t.DatastoreID)
+}
+
+func (t *RemoveImplementationTransition) Validate(oldState *community.CommunityState) error {
+	for _, impls := range oldState.DexImplementations {
+		if impls.InterfaceHash == t.InterfaceHash {
+			for _, impl := range impls.Implementations {
+				if impl.DatastoreID == t.DatastoreID {
+					return nil
+				}
+			}
+		}
+	}
+
+	return fmt.Errorf("implementation with datastore %s not found", t.DatastoreID)
 }
