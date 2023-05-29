@@ -44,9 +44,12 @@ var CommunityStateSchema = []byte(`{
 				},
 				"config": {
 					"type": [ "null", "object" ]
+				},
+				"is_datastore": {
+					"type": "boolean"
 				}
 			},
-			"required": [ "id", "app_name", "env", "flags", "args" ]
+			"required": [ "id", "app_name", "env", "flags", "args", "is_datastore" ]
 		},
 		"process_instance": {
 			"type": "object",
@@ -151,6 +154,8 @@ type Process struct {
 	Args    []string `json:"args"`
 
 	Config interface{} `json:"config"`
+
+	IsDatastore bool `json:"is_datastore"`
 }
 
 type ProcessInstance struct {
