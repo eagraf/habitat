@@ -12,5 +12,14 @@ sources-p2p() {
     return $ret
 }
 
-testing::register sources-p2p
+dex-node-api() {
+    testing::desc "dex node api"
+
+    local ret
+    { $TESTDIR/t0400/dex.bash ; ret=$? ; } || true
+
+    return $ret
+}
+
+testing::register sources-p2p dex-node-api
 testing::run

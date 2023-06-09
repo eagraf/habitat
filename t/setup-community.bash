@@ -1,6 +1,7 @@
 #!/bin/bash
 
-setup_community() {
+
+setup () {
     docker-compose up -V 2> /dev/null &
     atexit "docker-compose down"
     atexit "docker-compose rm -f"
@@ -18,7 +19,9 @@ setup_community() {
     ALICE_NODE_ID=`$ALICE_NODE_CLI_CMD community ls | head -n1 | awk '{print $3}'`
     BOB_NODE_ID=`$BOB_NODE_CLI_CMD community ls | head -n1 | awk '{print $3}'`
     CHARLIE_NODE_ID=`$CHARLIE_NODE_CLI_CMD community ls | head -n1 | awk '{print $3}'`
+}
 
+setup_community() {
     $ALICE_NODE_CLI_CMD id create --username alice --password abc
     $BOB_NODE_CLI_CMD id create --username bob --password abc
     $CHARLIE_NODE_CLI_CMD id create --username charlie --password abc
