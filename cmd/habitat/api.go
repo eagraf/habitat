@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/eagraf/habitat/cmd/habitat/api"
 	"github.com/eagraf/habitat/cmd/habitat/community"
 	"github.com/eagraf/habitat/cmd/habitat/node"
 	"github.com/eagraf/habitat/structs/ctl"
@@ -19,6 +20,8 @@ const (
 
 func getRouter(n *node.Node, cm *community.Manager) *mux.Router {
 	router := mux.NewRouter()
+	router.Use(api.CORSMiddleware)
+
 	router.HandleFunc(ctl.GetRoute(ctl.CommandInspect), n.InspectHandler)
 	router.HandleFunc(ctl.GetRoute(ctl.CommandListProcesses), n.ProcessManager.ListProcessesHandler)
 	router.HandleFunc(ctl.GetRoute(ctl.CommandStart), n.ProcessManager.StartProcessHandler)
