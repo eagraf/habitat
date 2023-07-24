@@ -383,8 +383,11 @@ func (t *StopProcessInstanceTransition) Validate(oldState *community.CommunitySt
 }
 
 type AddImplementationTransition struct {
-	InterfaceHash     string
-	DatastoreID       string
+	InterfaceHash string
+	DatastoreID   string
+	// We need to decide whether to keep the CID in the state machine. Clients should
+	// never need to know about the CID, so why keep it in the state machine. Each datastore
+	// could maintain the mapping of interface to CIDs instead.
 	ContentIdentifier string
 }
 
@@ -421,7 +424,7 @@ func (t *AddImplementationTransition) Patch(oldState *community.CommunityState) 
 			"implementations": [
 				{
 					"datastore_id": "%s",
-					"content_identifier": "%s"
+					"content_identifier": "%s" 
 				}
 			]
 		}
@@ -435,6 +438,10 @@ func (t *AddImplementationTransition) Validate(oldState *community.CommunityStat
 		validDatastore = true
 	}
 
+	// This validations should be removed eventually. If the datastore is restarted with a different
+	// process ID, we will enter a bad state.
+	// Option 1: cascade process id changes to datastore ids in impl mappings
+	// Option 2: create a persistent identifier for datastores that persists across restarts
 	for _, p := range oldState.Processes {
 		if p.ID == t.DatastoreID && p.IsDatastore {
 			validDatastore = true
