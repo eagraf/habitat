@@ -337,6 +337,7 @@ func TestImplementations(t *testing.T) {
 	assert.Equal(t, 2, len(state.DexImplementations["abc"].Implementations))
 	assert.Equal(t, 2, len(state.DexImplementations["def"].Implementations))
 
+	// Test adding and removing impl to proc1 datastore
 	state, err = testTransitionsOnCopy(state, []CommunityStateTransition{
 		&AddImplementationTransition{
 			InterfaceHash: "abc",
@@ -344,6 +345,7 @@ func TestImplementations(t *testing.T) {
 		},
 	})
 	assert.NotNil(t, err)
+	assert.Equal(t, 2, len(state.DexImplementations["abc"].Implementations))
 
 	state, err = testTransitionsOnCopy(state, []CommunityStateTransition{
 		&RemoveImplementationTransition{
@@ -362,4 +364,5 @@ func TestImplementations(t *testing.T) {
 		},
 	})
 	assert.NotNil(t, err)
+	assert.Equal(t, 2, len(state.DexImplementations["def"].Implementations))
 }
