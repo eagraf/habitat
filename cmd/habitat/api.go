@@ -19,11 +19,8 @@ const (
 
 func getRouter(n *node.Node, cm *community.Manager) *mux.Router {
 	router := mux.NewRouter()
-	router.HandleFunc(ctl.GetRoute(ctl.CommandInspect), n.InspectHandler)
-	router.HandleFunc(ctl.GetRoute(ctl.CommandListProcesses), n.ProcessManager.ListProcessesHandler)
-	router.HandleFunc(ctl.GetRoute(ctl.CommandStart), n.ProcessManager.StartProcessHandler)
-	router.HandleFunc(ctl.GetRoute(ctl.CommandStop), n.ProcessManager.StopProcessHandler)
 
+	// The community API is a user a control layer over the collection of nodes
 	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityCreate), cm.CommunityCreateHandler)
 	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityJoin), cm.CommunityJoinHandler)
 	router.HandleFunc(ctl.GetRoute(ctl.CommandCommunityAddMember), cm.CommunityAddMemberHandler)
@@ -36,8 +33,17 @@ func getRouter(n *node.Node, cm *community.Manager) *mux.Router {
 	router.HandleFunc(ctl.GetRoute(ctl.CommandDataServerRead), n.DataProxy.ReadHandler)
 	router.HandleFunc(ctl.GetRoute(ctl.CommandDataServerWrite), n.DataProxy.WriteHandler)
 
+	// The node API
+	router.HandleFunc(ctl.GetRoute(ctl.CommandInspect), n.InspectHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandListProcesses), n.ProcessManager.ListProcessesHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandStart), n.ProcessManager.StartProcessHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandStop), n.ProcessManager.StopProcessHandler)
 	router.HandleFunc(ctl.GetRoute(ctl.CommandAddFile), n.FS.AddHandler)
 	router.HandleFunc(ctl.GetRoute(ctl.CommandGetFile), n.FS.GetHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandDexSchemaGet), n.DexNodeAPI.GetSchemaHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandDexInterfaceGet), n.DexNodeAPI.GetInterfaceHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandDexSchemaWrite), n.DexNodeAPI.WriteSchemaHandler)
+	router.HandleFunc(ctl.GetRoute(ctl.CommandDexInterfaceWrite), n.DexNodeAPI.WriteInterfaceHandler)
 
 	return router
 }

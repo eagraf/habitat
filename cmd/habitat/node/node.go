@@ -11,6 +11,7 @@ import (
 
 	"github.com/eagraf/habitat/cmd/habitat/api"
 	dataproxy "github.com/eagraf/habitat/cmd/habitat/data_proxy"
+	"github.com/eagraf/habitat/cmd/habitat/node/dex"
 	"github.com/eagraf/habitat/cmd/habitat/node/fs"
 	"github.com/eagraf/habitat/cmd/habitat/procs"
 	"github.com/eagraf/habitat/cmd/habitat/proxy"
@@ -40,6 +41,7 @@ type Node struct {
 	ReverseProxy   *proxy.Server
 	DataProxy      *dataproxy.DataProxy
 	FS             *fs.FS
+	DexNodeAPI     *dex.DexNodeAPI
 
 	// Temporary IPFS
 	IPFSClient *ipfs.Client
@@ -64,6 +66,7 @@ func NewNode() (*Node, error) {
 	}
 
 	fs := fs.NewFS(ipfsClient)
+	dexNodeAPI := dex.NewDexNodeAPI(ipfsClient)
 
 	return &Node{
 		ID:             compass.NodeID(),
@@ -73,6 +76,7 @@ func NewNode() (*Node, error) {
 		ProcessManager: procs.NewManager(procsDir, reverseProxy.Rules),
 		FS:             fs,
 		IPFSClient:     ipfsClient,
+		DexNodeAPI:     dexNodeAPI,
 	}, nil
 }
 

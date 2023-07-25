@@ -1,6 +1,7 @@
 #!/bin/bash
 
-setup_community() {
+
+setup () {
     docker-compose up -V 2> /dev/null &
     atexit "docker-compose down"
     atexit "docker-compose rm -f"
@@ -11,13 +12,17 @@ setup_community() {
     export HABITATCTL_IDENTITY_PATH=$ID_PATH
 
     $HABITATCTL_PATH id init
-    ALICE_NODE_CLI_CMD="$HABITATCTL_PATH -p 2000"
-    BOB_NODE_CLI_CMD="$HABITATCTL_PATH -p 2001"
-    CHARLIE_NODE_CLI_CMD="$HABITATCTL_PATH -p 2002"
+    export ALICE_NODE_CLI_CMD="$HABITATCTL_PATH -p 2000"
+    export BOB_NODE_CLI_CMD="$HABITATCTL_PATH -p 2001"
+    export CHARLIE_NODE_CLI_CMD="$HABITATCTL_PATH -p 2002"
 
     ALICE_NODE_ID=`$ALICE_NODE_CLI_CMD community ls | head -n1 | awk '{print $3}'`
     BOB_NODE_ID=`$BOB_NODE_CLI_CMD community ls | head -n1 | awk '{print $3}'`
     CHARLIE_NODE_ID=`$CHARLIE_NODE_CLI_CMD community ls | head -n1 | awk '{print $3}'`
+}
+
+setup_community() {
+    setup
 
     $ALICE_NODE_CLI_CMD id create --username alice --password abc
     $BOB_NODE_CLI_CMD id create --username bob --password abc
