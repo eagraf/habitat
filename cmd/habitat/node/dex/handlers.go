@@ -44,7 +44,6 @@ func (d *DexNodeAPI) GetSchemaHandler(w http.ResponseWriter, r *http.Request) {
 		api.WriteError(w, http.StatusNotFound, fmt.Errorf("hash %s not found", req.Hash))
 		return
 	}
-	fmt.Println(schemaData)
 
 	buf, err := io.ReadAll(schemaData)
 	if err != nil {
