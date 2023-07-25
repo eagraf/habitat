@@ -8,12 +8,6 @@ TESTDIR=$(realpath "$(dirname "$0")")
 
 setup
 
-#bob_and_charlie_join
-
-#testfile="$(temp::file)"
-#CONTENTS="ABC123"
-#echo $CONTENTS > tempff
-
 schema_hash=`$ALICE_NODE_CLI_CMD dex schema write '{"foo":"bar"}' | jq -r .hash`
 schema_res=`$ALICE_NODE_CLI_CMD dex schema $schema_hash | jq -r .foo`
 iface_hash=`$ALICE_NODE_CLI_CMD dex interface write '{"schema_hash":"'$schema_hash'","description":"desc"}' | jq -r .hash`
